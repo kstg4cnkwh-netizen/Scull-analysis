@@ -1,902 +1,854 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Scull Analyser</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
-
-:root {
-–bg: #0b0e13;
-–s1: #111520;
-–s2: #181d2a;
-–s3: #1e2434;
-–border: #242c40;
-–g: #3affb4;        /* green - pace / good */
-–b: #4da6ff;        /* blue - HR */
-–y: #ffc947;        /* yellow - rate */
-–r: #ff6b6b;        /* red - catch jerk */
-–p: #c084fc;        /* purple - DPS */
-–text: #d8e0f0;
-–muted: #5a6480;
-–dim: #2d3450;
-–radius: 10px;
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@500;600;700&display=swap');
+:root{
+  --bg:#0b0e13;--s1:#111520;--s2:#181d2a;--s3:#1e2434;
+  --border:#242c40;--dim:#1a2030;
+  --g:#3affb4;--b:#4da6ff;--y:#ffc947;--r:#ff6b6b;--p:#c084fc;
+  --text:#d8e0f0;--muted:#5a6480;--faint:#2d3450;
 }
-
 *{box-sizing:border-box;margin:0;padding:0;}
-html,body{height:100%;background:var(–bg);color:var(–text);font-family:‘IBM Plex Mono’,monospace;font-size:13px;overflow-x:hidden;}
+html,body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:13px;overflow-x:hidden;}
 
-/* ── Header ── */
-#hdr{
-display:flex;align-items:center;gap:14px;
-padding:14px 20px;background:var(–s1);border-bottom:1px solid var(–border);
-position:sticky;top:0;z-index:200;
-}
-#hdr h1{font-family:‘IBM Plex Sans’,sans-serif;font-size:17px;font-weight:700;color:var(–g);letter-spacing:-0.3px;}
-#hdr .meta{color:var(–muted);font-size:11px;line-height:1.5;}
-#hdr .spacer{flex:1;}
-#hdr button{background:var(–s3);border:1px solid var(–border);color:var(–muted);padding:6px 14px;border-radius:6px;font-family:‘IBM Plex Mono’,monospace;font-size:11px;cursor:pointer;}
-#hdr button:hover{border-color:var(–g);color:var(–g);}
+/* Header */
+#hdr{display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--s1);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:200;flex-wrap:wrap;}
+#hdr h1{font-family:'IBM Plex Sans',sans-serif;font-size:16px;font-weight:700;color:var(--g);}
+#hdr .meta{color:var(--muted);font-size:10px;line-height:1.5;}
+#hdr .sp{flex:1;}
+#hdr button{background:var(--s3);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;}
+#hdr button:hover{border-color:var(--g);color:var(--g);}
 
-/* ── Drop zone ── */
-#dropzone{
-display:flex;flex-direction:column;align-items:center;justify-content:center;
-min-height:calc(100vh - 57px);gap:12px;
-border:2px dashed var(–border);margin:20px;border-radius:var(–radius);
-background:var(–s1);cursor:pointer;transition:border-color .2s,background .2s;
-text-align:center;padding:40px 20px;
-}
-#dropzone:hover,#dropzone.over{border-color:var(–g);background:rgba(58,255,180,.04);}
-#dropzone .ico{font-size:40px;}
-#dropzone h2{font-family:‘IBM Plex Sans’,sans-serif;font-size:15px;font-weight:600;color:var(–text);}
-#dropzone p{color:var(–muted);font-size:11px;line-height:1.7;}
-#dropzone .btn{margin-top:10px;padding:9px 24px;background:var(–g);color:#000;border:none;border-radius:7px;font-family:‘IBM Plex Sans’,sans-serif;font-weight:700;font-size:12px;cursor:pointer;}
-#file-in{display:none;}
+/* Drop zone */
+#dz{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 57px);gap:10px;border:2px dashed var(--border);margin:16px;border-radius:10px;background:var(--s1);cursor:pointer;text-align:center;padding:40px 20px;transition:border-color .2s;}
+#dz:hover,#dz.over{border-color:var(--g);background:rgba(58,255,180,.03);}
+#dz .ico{font-size:36px;}
+#dz h2{font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;}
+#dz p{color:var(--muted);font-size:11px;line-height:1.7;}
+#dz .btn{margin-top:8px;padding:8px 22px;background:var(--g);color:#000;border:none;border-radius:7px;font-family:'IBM Plex Sans',sans-serif;font-weight:700;font-size:12px;cursor:pointer;}
+#fin{display:none;}
 
-/* ── Main ── */
-#main{display:none;padding-bottom:40px;}
+/* App */
+#app{display:none;padding-bottom:40px;}
 
-/* ── Summary cards ── */
-#summary{display:flex;gap:8px;padding:14px 16px;overflow-x:auto;scrollbar-width:none;}
-#summary::-webkit-scrollbar{display:none;}
-.card{flex-shrink:0;background:var(–s1);border:1px solid var(–border);border-radius:var(–radius);padding:10px 16px;display:flex;flex-direction:column;gap:3px;min-width:100px;}
-.card .lbl{font-size:10px;color:var(–muted);text-transform:uppercase;letter-spacing:.7px;}
-.card .val{font-size:18px;font-family:‘IBM Plex Sans’,sans-serif;font-weight:700;}
-.card .sub{font-size:10px;color:var(–muted);}
-.c-g{border-top:2px solid var(–g);} .c-g .val{color:var(–g);}
-.c-b{border-top:2px solid var(–b);} .c-b .val{color:var(–b);}
-.c-y{border-top:2px solid var(–y);} .c-y .val{color:var(–y);}
-.c-r{border-top:2px solid var(–r);} .c-r .val{color:var(–r);}
-.c-p{border-top:2px solid var(–p);} .c-p .val{color:var(–p);}
-.c-w{border-top:2px solid var(–text);} .c-w .val{color:var(–text);}
+/* Cards */
+#cards{display:flex;gap:8px;padding:12px 14px;overflow-x:auto;scrollbar-width:none;}
+#cards::-webkit-scrollbar{display:none;}
+.card{flex-shrink:0;min-width:90px;background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:9px 14px;}
+.card .lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;}
+.card .val{font-size:17px;font-family:'IBM Plex Sans',sans-serif;font-weight:700;margin-top:2px;}
+.card .sub{font-size:9px;color:var(--muted);margin-top:1px;}
+.cg{border-top:2px solid var(--g);} .cg .val{color:var(--g);}
+.cb{border-top:2px solid var(--b);} .cb .val{color:var(--b);}
+.cy{border-top:2px solid var(--y);} .cy .val{color:var(--y);}
+.cr{border-top:2px solid var(--r);} .cr .val{color:var(--r);}
+.cp{border-top:2px solid var(--p);} .cp .val{color:var(--p);}
+.cw .val{color:var(--text);}
 
-/* ── Section wrapper ── */
-.sec{padding:0 16px 14px;}
-.sec-hd{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap;}
-.sec-hd h2{font-family:‘IBM Plex Sans’,sans-serif;font-size:12px;font-weight:600;color:var(–muted);text-transform:uppercase;letter-spacing:.8px;}
-.legend{display:flex;gap:12px;flex-wrap:wrap;align-items:center;}
-.leg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(–muted);cursor:pointer;user-select:none;padding:2px 6px;border-radius:4px;border:1px solid transparent;}
-.leg:hover{border-color:var(–border);}
-.leg.off{opacity:.35;}
-.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+/* Section */
+.sec{padding:0 14px 12px;}
+.sec-hd{display:flex;align-items:center;gap:10px;margin-bottom:7px;flex-wrap:wrap;}
+.sec-hd h2{font-family:'IBM Plex Sans',sans-serif;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;}
 
-/* ── Chart box ── */
-.chart-box{background:var(–s1);border:1px solid var(–border);border-radius:var(–radius);padding:14px 12px 6px;position:relative;}
-.chart-box canvas{display:block;width:100%!important;cursor:crosshair;touch-action:none;}
-.chart-hint{text-align:center;font-size:10px;color:var(–dim);margin-top:4px;}
+/* Legend */
+.legend{display:flex;gap:10px;flex-wrap:wrap;}
+.leg{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid transparent;}
+.leg:hover{border-color:var(--border);}
+.leg.off{opacity:.3;}
+.dot{width:8px;height:8px;border-radius:50%;}
 
-/* ── Selection bar ── */
-#sel-bar{
-margin:0 16px 10px;padding:10px 16px;
-background:var(–s2);border:1px solid var(–border);border-radius:var(–radius);
-display:none;flex-wrap:wrap;gap:16px;align-items:center;
-}
-#sel-bar.show{display:flex;}
-.sel-stat{display:flex;flex-direction:column;gap:1px;}
-.sel-stat .lbl{font-size:9px;color:var(–muted);text-transform:uppercase;}
-.sel-stat .val{font-size:13px;color:var(–y);font-weight:500;}
-#sel-clear{margin-left:auto;font-size:10px;color:var(–muted);background:none;border:1px solid var(–border);padding:4px 10px;border-radius:5px;cursor:pointer;}
-#sel-clear:hover{color:var(–g);border-color:var(–g);}
+/* X control */
+select{background:var(--s2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;outline:none;}
+select:focus{border-color:var(--g);}
 
-/* ── Overview ── */
-.ov-box{background:var(–s1);border:1px solid var(–border);border-radius:var(–radius);padding:8px 10px 4px;}
-.ov-box canvas{display:block;width:100%!important;cursor:col-resize;touch-action:none;}
-.ov-hint{text-align:right;font-size:9px;color:var(–dim);margin-top:2px;}
+/* Chart box */
+.cbox{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:12px 10px 4px;position:relative;}
+.cbox canvas{display:block;width:100%!important;touch-action:none;cursor:crosshair;}
+.hint{text-align:center;font-size:9px;color:var(--faint);margin-top:3px;}
 
-/* ── Controls row ── */
-.ctrl-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;}
-.ctrl-row label{font-size:10px;color:var(–muted);}
-select{background:var(–s2);border:1px solid var(–border);color:var(–text);padding:5px 8px;border-radius:6px;font-family:‘IBM Plex Mono’,monospace;font-size:11px;cursor:pointer;outline:none;}
-select:hover,select:focus{border-color:var(–g);}
+/* Selection bar */
+#selbar{display:none;margin:0 14px 10px;padding:10px 14px;background:var(--s2);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap;gap:12px;align-items:flex-start;}
+#selbar.on{display:flex;}
+.ss{display:flex;flex-direction:column;gap:1px;}
+.ss .l{font-size:9px;color:var(--muted);text-transform:uppercase;}
+.ss .v{font-size:12px;font-weight:500;}
+#selclear{margin-left:auto;align-self:center;font-size:10px;color:var(--muted);background:none;border:1px solid var(--border);padding:4px 10px;border-radius:5px;cursor:pointer;font-family:'IBM Plex Mono',monospace;}
+#selclear:hover{color:var(--g);border-color:var(--g);}
 
-/* ── HR section ── */
-#hr-sec{display:none;}
+/* Overview */
+.ovbox{background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:6px 8px 2px;}
+.ovbox canvas{display:block;width:100%!important;touch-action:none;cursor:col-resize;}
 
-/* ── Laps table ── */
-#laps-tbl{width:100%;border-collapse:collapse;font-size:11px;}
-#laps-tbl th{background:var(–s2);color:var(–muted);text-align:left;padding:8px 10px;border-bottom:1px solid var(–border);font-size:10px;text-transform:uppercase;letter-spacing:.5px;}
-#laps-tbl td{padding:7px 10px;border-bottom:1px solid var(–border);color:var(–muted);}
-#laps-tbl td:first-child{color:var(–text);}
-#laps-tbl tr:hover td{background:var(–s2);}
+/* HR zones legend */
+.zlegend{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;}
+.zl{font-size:9px;color:var(--muted);}
 
-/* ── Stroke table ── */
-#stroke-wrap{overflow-x:auto;max-height:220px;background:var(–s1);border:1px solid var(–border);border-radius:var(–radius);}
-#stroke-tbl{width:100%;border-collapse:collapse;font-size:10px;white-space:nowrap;}
-#stroke-tbl th{position:sticky;top:0;background:var(–s2);color:var(–muted);padding:7px 10px;border-bottom:1px solid var(–border);text-align:right;font-size:9px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer;}
-#stroke-tbl th:first-child{text-align:left;}
-#stroke-tbl th:hover{color:var(–g);}
-#stroke-tbl td{padding:5px 10px;border-bottom:1px solid var(–dim);color:var(–muted);text-align:right;}
-#stroke-tbl td:first-child{color:var(–text);text-align:left;}
-#stroke-tbl tr.sel td{background:rgba(58,255,180,.06)!important;}
-#stroke-tbl tr:hover td{background:var(–s2);}
+/* Table */
+.twrap{overflow:auto;max-height:200px;background:var(--s1);border:1px solid var(--border);border-radius:10px;}
+table{width:100%;border-collapse:collapse;font-size:10px;white-space:nowrap;}
+thead th{position:sticky;top:0;background:var(--s2);color:var(--muted);padding:7px 10px;border-bottom:1px solid var(--border);text-align:right;font-size:9px;text-transform:uppercase;letter-spacing:.4px;}
+thead th:first-child{text-align:left;}
+tbody tr{border-bottom:1px solid var(--dim);}
+tbody tr:hover td{background:var(--s2);}
+tbody tr.hl td{background:rgba(58,255,180,.06)!important;}
+tbody td{padding:5px 10px;color:var(--muted);text-align:right;}
+tbody td:first-child{color:var(--text);text-align:left;}
 
 @media(max-width:600px){
-#hdr{padding:12px 14px;}
-#summary{padding:10px 12px;}
-.sec{padding:0 12px 12px;}
-#sel-bar{margin:0 12px 10px;}
+  #cards{padding:10px 10px;}
+  .sec{padding:0 10px 10px;}
+  #selbar{margin:0 10px 10px;}
 }
 </style>
-
 </head>
 <body>
 
 <div id="hdr">
-  <h1>⊳ Scull Analyser</h1>
-  <div class="meta" id="hdr-meta"></div>
-  <div class="spacer"></div>
-  <button onclick="resetApp()">↩ New file</button>
+  <h1>⊳ Scull</h1>
+  <div class="meta" id="hdrmeta"></div>
+  <div class="sp"></div>
+  <button id="resetbtn">↩ New file</button>
 </div>
 
-<div id="dropzone" onclick="document.getElementById('file-in').click()">
+<div id="dz">
   <div class="ico">🚣</div>
-  <h2>Drop your SpeedCoach CSV</h2>
-  <p>Supports SpeedCoach GPS multi-section exports<br>Stroke data · Heart rate · GPS · Laps</p>
-  <button class="btn" onclick="event.stopPropagation();document.getElementById('file-in').click()">Browse</button>
-  <p style="margin-top:8px;font-size:10px;color:var(--dim)">Works offline · nothing leaves your device</p>
+  <h2>Drop SpeedCoach CSV</h2>
+  <p>Stroke data · Heart rate · Laps<br>Nothing leaves your device</p>
+  <button class="btn" id="browsebtn">Browse</button>
+  <p style="margin-top:6px;font-size:10px;color:var(--faint)">SpeedCoach GPS multi-section export</p>
 </div>
-<input type="file" id="file-in" accept=".csv,.txt">
+<input type="file" id="fin" accept=".csv,.txt">
 
-<div id="main">
-  <!-- Summary cards -->
-  <div id="summary"></div>
-
-  <!-- Main chart -->
+<div id="app">
+  <div id="cards"></div>
 
   <div class="sec">
     <div class="sec-hd">
-      <h2 id="chart-title">Stroke Chart</h2>
-      <div class="legend" id="legend"></div>
-      <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
-        <label>X:</label>
-        <select id="x-mode">
+      <h2>Stroke Chart</h2>
+      <div class="legend" id="leg"></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+        <span style="font-size:10px;color:var(--muted)">X:</span>
+        <select id="xmode">
           <option value="stroke">Stroke #</option>
-          <option value="distance">Distance (m)</option>
+          <option value="dist">Distance (m)</option>
           <option value="time">Time (min)</option>
         </select>
       </div>
     </div>
-    <div class="chart-box">
-      <canvas id="mainChart" height="260"></canvas>
-      <div class="chart-hint">Drag to select · overview below to zoom</div>
-    </div>
+    <div class="cbox"><canvas id="mainC" height="250"></canvas><div class="hint">Drag to select region</div></div>
   </div>
 
-  <!-- Selection info -->
-
-  <div id="sel-bar">
-    <div id="sel-stats"></div>
-    <button id="sel-clear" onclick="clearSel()">✕ Clear</button>
+  <div id="selbar">
+    <div id="selstats"></div>
+    <button id="selclear">✕ Clear</button>
   </div>
-
-  <!-- Overview -->
 
   <div class="sec">
-    <div class="ov-box">
-      <canvas id="ovChart" height="52"></canvas>
-      <div class="ov-hint">Drag window to navigate · tap outside to reset view</div>
-    </div>
+    <div class="ovbox"><canvas id="ovC" height="48"></canvas></div>
+    <div class="hint" style="margin-top:3px;">Drag shaded window · tap outside to reset zoom</div>
   </div>
 
-  <!-- HR chart -->
-
-  <div class="sec" id="hr-sec">
-    <div class="sec-hd"><h2>Heart Rate</h2><span style="font-size:10px;color:var(--muted)" id="hr-avg-lbl"></span></div>
-    <div class="chart-box">
-      <canvas id="hrChart" height="140"></canvas>
+  <div class="sec" id="hrsec" style="display:none;">
+    <div class="sec-hd">
+      <h2>Heart Rate</h2>
+      <span id="hrlbl" style="font-size:10px;color:var(--muted);"></span>
+      <div class="zlegend">
+        <span class="zl" style="color:#4da6ff">Z1 90–106</span>
+        <span class="zl" style="color:#3affb4">Z2 107–124</span>
+        <span class="zl" style="color:#ffc947">Z3 125–142</span>
+        <span class="zl" style="color:#ff9a3c">Z4 143–160</span>
+        <span class="zl" style="color:#ff6b6b">Z5 >160</span>
+      </div>
     </div>
+    <div class="cbox"><canvas id="hrC" height="130"></canvas></div>
   </div>
 
-  <!-- Laps -->
-
-  <div class="sec" id="laps-sec" style="display:none;">
+  <div class="sec" id="lapsec" style="display:none;">
     <div class="sec-hd"><h2>Laps</h2></div>
-    <div style="background:var(--s1);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;">
-      <table id="laps-tbl"><thead></thead><tbody></tbody></table>
-    </div>
+    <div class="twrap"><table id="laptbl"><thead></thead><tbody></tbody></table></div>
   </div>
 
-  <!-- Stroke table -->
-
   <div class="sec">
-    <div class="sec-hd"><h2>Stroke Data</h2><span id="tbl-count" style="font-size:10px;color:var(--muted);"></span></div>
-    <div id="stroke-wrap">
-      <table id="stroke-tbl"><thead id="st-head"></thead><tbody id="st-body"></tbody></table>
-    </div>
+    <div class="sec-hd"><h2>Stroke Data</h2><span id="tblcount" style="font-size:10px;color:var(--muted);"></span></div>
+    <div class="twrap"><table><thead id="sth"></thead><tbody id="stb"></tbody></table></div>
   </div>
 </div>
 
 <script>
-// ── State ──────────────────────────────────────────────────────────────────
-let strokes=[], hrData=[], lapData=[], summary={};
-let viewS=0, viewE=0;
-let selS=-1, selE=-1;
-let series={pace:true, rate:true, catch_jerk:true, dps:true};
-let isDragMain=false, isDragOv=false;
-let ovMode=null, ovAnchor=0, ovVS0=0, ovVE0=0;
+// ── Utils ──────────────────────────────────────────────────────────────────
+function arrMin(a){let m=Infinity;for(let i=0;i<a.length;i++)if(a[i]<m)m=a[i];return m;}
+function arrMax(a){let m=-Infinity;for(let i=0;i<a.length;i++)if(a[i]>m)m=a[i];return m;}
+function arrSum(a){let s=0;for(let i=0;i<a.length;i++)s+=a[i];return s;}
+function arrMean(a){return a.length?arrSum(a)/a.length:NaN;}
+function clamp(v,a,b){return v<a?a:v>b?b:v;}
 
-// ── Helpers ────────────────────────────────────────────────────────────────
-const fmt1 = v=>isNaN(v)?'—':v.toFixed(1);
-const fmt0 = v=>isNaN(v)?'—':Math.round(v).toString();
-const fmtPace = s=>{if(!s||isNaN(s))return'—';const m=Math.floor(s/60);const sec=Math.round(s%60);return`${m}:${String(sec).padStart(2,'0')}`;}
-const fmtTime = s=>{if(!s||isNaN(s))return'—';const h=Math.floor(s/3600);const m=Math.floor((s%3600)/60);const sec=Math.round(s%60);return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}`;}
-const mean = arr=>arr.length?arr.reduce((a,b)=>a+b,0)/arr.length:NaN;
-const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+function fmtPace(s){
+  if(!s||isNaN(s)||s<50||s>600)return'—';
+  return Math.floor(s/60)+':'+(Math.round(s%60)<10?'0':'')+Math.round(s%60);
+}
+function fmtTime(s){
+  if(!s||isNaN(s))return'0:00';
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.round(s%60);
+  if(h>0)return h+':'+(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec;
+  return m+':'+(sec<10?'0':'')+sec;
+}
+function f1(v){return isNaN(v)?'—':v.toFixed(1);}
+function f0(v){return isNaN(v)?'—':Math.round(v);}
 
 function niceSteps(min,max,n){
-  const r=max-min||1, step=Math.pow(10,Math.floor(Math.log10(r/n)));
-  const ns=[1,2,2.5,5,10].map(f=>f*step).find(s=>r/s<=n+1)||step;
-  const out=[]; const st=Math.ceil(min/ns)*ns;
-  for(let v=st;v<=max+ns*.01;v+=ns) out.push(parseFloat(v.toPrecision(8)));
+  const r=max-min||1;
+  const raw=r/n;
+  const mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  let step=mag;
+  for(const f of[1,2,2.5,5,10]){if(mag*f>=raw){step=mag*f;break;}}
+  const out=[];
+  const start=Math.ceil(min/step)*step;
+  for(let v=start;v<=max+step*.001;v+=step)out.push(parseFloat(v.toPrecision(8)));
   return out;
 }
 
+// ── State ──────────────────────────────────────────────────────────────────
+let ST=[],HR=[],LAPS=[];
+let viewS=0,viewE=0;
+let selS=-1,selE=-1;
+let vis={pace:true,rate:true,jerk:true,dps:true};
+let rafId=null;
+let isDragMain=false,isDragOv=false;
+let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
+
 // ── Parse ──────────────────────────────────────────────────────────────────
-function parseFile(text){
+function parseCSV(text){
   const lines=text.split(/\r?\n/);
-  const result={summary:{},strokes:[],hr:[],laps:[],garminLaps:[]};
-  let mode=null, headers=[];
+  const out={sum:{},strokes:[],hr:[],laps:[],glaps:[]};
+  let mode='',hdrs=[],t0=0;
 
   for(let i=0;i<lines.length;i++){
     const l=lines[i].trim();
-    if(!l) continue;
+    if(!l)continue;
+    if(l==='SESSION SUMMARY'){mode='sum';continue;}
+    if(l==='STROKE DATA'){mode='stroke';hdrs=[];continue;}
+    if(l==='LAPS'){mode='laps';hdrs=[];continue;}
+    if(l==='GARMIN LAPS'){mode='glaps';hdrs=[];continue;}
+    if(l==='HEART RATE'){mode='hr';hdrs=[];continue;}
+    if(l==='GARMIN SPEED'||l==='GPS TRACE'){mode='skip';continue;}
 
-    if(l==='SESSION SUMMARY'){mode='summary';continue;}
-    if(l==='STROKE DATA'){mode='stroke';headers=[];continue;}
-    if(l==='LAPS'){mode='laps';headers=[];continue;}
-    if(l==='GARMIN LAPS'){mode='garminlaps';headers=[];continue;}
-    if(l==='HEART RATE'){mode='hr';headers=[];continue;}
-    if(l==='GARMIN SPEED'){mode='gspeed';headers=[];continue;}
-    if(l==='GPS TRACE'){mode='gps';headers=[];continue;}
+    if(mode==='skip')continue;
 
-    const cols=l.split(',');
+    const c=l.split(',');
 
-    if(mode==='summary'){
-      if(cols.length>=2) result.summary[cols[0]]=cols[1];
-      continue;
-    }
+    if(mode==='sum'){if(c.length>=2)out.sum[c[0]]=c[1];continue;}
 
     if(mode==='stroke'){
-      if(!headers.length){headers=cols;continue;}
-      const row={};
-      headers.forEach((h,j)=>row[h]=cols[j]||'');
-      const o={
-        stroke:+row.stroke||0,
-        ts:row.timestamp,
-        catch_jerk:parseFloat(row.catch_jerk_ms3)||NaN,
-        stroke_char:parseFloat(row.stroke_char_pct)||NaN,
-        rate:parseFloat(row.stroke_rate_spm)||NaN,
-        pace:parseFloat(row.pace_s_per_500m)||NaN,
-        dist:parseFloat(row.distance_m)||NaN,
-        dps:parseFloat(row.dist_per_stroke_m)||NaN,
-        run_loss:parseFloat(row.run_loss_pct)||NaN,
-      };
-      // Compute elapsed seconds from timestamp
-      if(o.ts && result.strokes.length===0) result._t0=new Date(o.ts);
-      if(o.ts && result._t0) o.elapsed=(new Date(o.ts)-result._t0)/1000;
-      result.strokes.push(o);
+      if(!hdrs.length){hdrs=c;continue;}
+      const r={};hdrs.forEach((h,j)=>r[h]=c[j]||'');
+      const ts=r.timestamp;
+      if(!t0&&ts)t0=new Date(ts).getTime();
+      out.strokes.push({
+        n:+r.stroke||0,
+        elapsed:ts?(new Date(ts).getTime()-t0)/1000:NaN,
+        jerk:parseFloat(r.catch_jerk_ms3)||NaN,
+        schar:parseFloat(r.stroke_char_pct)||NaN,
+        rate:parseFloat(r.stroke_rate_spm)||NaN,
+        pace:parseFloat(r.pace_s_per_500m)||NaN,
+        dist:parseFloat(r.distance_m)||NaN,
+        dps:parseFloat(r.dist_per_stroke_m)||NaN,
+        rloss:parseFloat(r.run_loss_pct)||NaN,
+      });
       continue;
     }
 
-    if(mode==='laps'){
-      if(!headers.length){headers=cols;continue;}
-      const row={}; headers.forEach((h,j)=>row[h]=cols[j]||'');
-      if(+row.distance_m>0) result.laps.push(row);
+    if(mode==='laps'||mode==='glaps'){
+      if(!hdrs.length){hdrs=c;continue;}
+      const r={};hdrs.forEach((h,j)=>r[h]=c[j]||'');
+      if(+r.distance_m>0)(mode==='laps'?out.laps:out.glaps).push(r);
       continue;
     }
-    if(mode==='garminlaps'){
-      if(!headers.length){headers=cols;continue;}
-      const row={}; headers.forEach((h,j)=>row[h]=cols[j]||'');
-      if(+row.distance_m>0) result.garminLaps.push(row);
-      continue;
-    }
+
     if(mode==='hr'){
-      if(!headers.length){headers=cols;continue;}
-      result.hr.push({ts:cols[0],bpm:parseFloat(cols[1])||NaN});
+      if(!hdrs.length){hdrs=c;continue;}
+      const bpm=parseFloat(c[1]);
+      if(!isNaN(bpm)&&bpm>30&&bpm<220)out.hr.push({ts:c[0],bpm});
       continue;
     }
   }
-  return result;
+  return out;
 }
 
-// ── Load ───────────────────────────────────────────────────────────────────
-document.getElementById('file-in').addEventListener('change',e=>{
-  const f=e.target.files[0]; if(f) loadFile(f);
-});
-const dz=document.getElementById('dropzone');
-dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
-dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
-dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');const f=e.dataTransfer.files[0];if(f)loadFile(f);});
-
+// ── File IO ────────────────────────────────────────────────────────────────
 function loadFile(f){
   const r=new FileReader();
   r.onload=e=>{
-    const parsed=parseFile(e.target.result);
-    strokes=parsed.strokes;
-    hrData=parsed.hr;
-    lapData=[...parsed.laps,...parsed.garminLaps];
-    summary=parsed.summary;
-    if(!strokes.length){alert('No stroke data found.');return;}
-    viewS=0; viewE=strokes.length-1; selS=-1; selE=-1;
-    document.getElementById('dropzone').style.display='none';
-    document.getElementById('main').style.display='block';
-    buildHeader(f.name);
-    buildSummary();
+    const d=parseCSV(e.target.result);
+    if(!d.strokes.length){alert('No stroke data found.');return;}
+    ST=d.strokes; HR=d.hr;
+    LAPS=[...d.laps,...d.glaps];
+    viewS=0; viewE=ST.length-1; selS=-1; selE=-1;
+    document.getElementById('dz').style.display='none';
+    document.getElementById('app').style.display='block';
+    buildMeta(f.name,d.sum);
+    buildCards(d.sum);
     buildLaps();
     buildStrokeTable();
-    renderAll();
-    if(hrData.length>10){
-      document.getElementById('hr-sec').style.display='block';
-      drawHRChart();
-    }
+    if(HR.length>10){document.getElementById('hrsec').style.display='block';drawHR();}
+    schedRender();
   };
   r.readAsText(f);
 }
 
 function resetApp(){
-  document.getElementById('dropzone').style.display='';
-  document.getElementById('main').style.display='none';
-  document.getElementById('file-in').value='';
+  ST=[];HR=[];LAPS=[];
+  selS=-1;selE=-1;
+  document.getElementById('app').style.display='none';
+  document.getElementById('dz').style.display='flex';
+  document.getElementById('fin').value='';
+  document.getElementById('hrsec').style.display='none';
+  document.getElementById('lapsec').style.display='none';
+  document.getElementById('selbar').classList.remove('on');
+  // Clear canvases
+  ['mainC','ovC','hrC'].forEach(id=>{
+    const c=document.getElementById(id);
+    if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);
+  });
 }
 
-// ── Header ────────────────────────────────────────────────────────────────
-function buildHeader(fname){
-  const date=summary.start_time?summary.start_time.substring(0,10):'';
-  const dur=fmtTime(+summary.duration_s);
-  const dist=(+summary.distance_m/1000).toFixed(2);
-  document.getElementById('hdr-meta').innerHTML=
-    `${fname.replace(/\.csv$/i,'')}<br>${date} · ${dist}km · ${dur}`;
+document.getElementById('resetbtn').onclick=resetApp;
+document.getElementById('browsebtn').onclick=e=>{e.stopPropagation();document.getElementById('fin').click();};
+document.getElementById('dz').onclick=()=>document.getElementById('fin').click();
+document.getElementById('fin').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);};
+const dz=document.getElementById('dz');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+document.getElementById('xmode').onchange=schedRender;
+document.getElementById('selclear').onclick=()=>{selS=-1;selE=-1;document.getElementById('selbar').classList.remove('on');schedRender();};
+
+// ── Meta / Cards ───────────────────────────────────────────────────────────
+function buildMeta(fname,sum){
+  const date=(sum.start_time||'').substring(0,10);
+  const dur=fmtTime(+sum.duration_s);
+  const km=((+sum.distance_m||0)/1000).toFixed(2);
+  document.getElementById('hdrmeta').innerHTML=fname+'<br>'+date+' · '+km+'km · '+dur;
 }
 
-// ── Summary cards ─────────────────────────────────────────────────────────
-function buildSummary(){
-  const validPace=strokes.filter(s=>s.pace>50&&s.pace<500).map(s=>s.pace);
-  const avgPace=mean(validPace);
-  const validRate=strokes.filter(s=>s.rate>5&&s.rate<50).map(s=>s.rate);
-  const avgRate=mean(validRate);
-  const validJerk=strokes.filter(s=>!isNaN(s.catch_jerk)&&s.catch_jerk>0).map(s=>s.catch_jerk);
-  const avgJerk=mean(validJerk);
-  const maxJerk=validJerk.length?Math.max(...validJerk):NaN;
-  const validDPS=strokes.filter(s=>s.dps>3&&s.dps<20).map(s=>s.dps);
-  const avgDPS=mean(validDPS);
-  const hrVals=hrData.filter(h=>h.bpm>40&&h.bpm<220).map(h=>h.bpm);
-  const avgHR=mean(hrVals);
-  const maxHR=hrVals.length?Math.max(...hrVals):NaN;
+function sessionStats(){
+  const pv=[],rv=[],jv=[],dv=[],hv=[];
+  for(let i=0;i<ST.length;i++){
+    const s=ST[i];
+    if(s.pace>50&&s.pace<500)pv.push(s.pace);
+    if(s.rate>5&&s.rate<50)rv.push(s.rate);
+    if(s.jerk>0&&s.jerk<300)jv.push(s.jerk);
+    if(s.dps>1&&s.dps<25)dv.push(s.dps);
+  }
+  for(let i=0;i<HR.length;i++){const b=HR[i].bpm;if(b>40&&b<220)hv.push(b);}
+  return{pv,rv,jv,dv,hv};
+}
 
-  document.getElementById('summary').innerHTML=`
-    <div class="card c-w">
-      <div class="lbl">Distance</div>
-      <div class="val">${((+summary.distance_m||0)/1000).toFixed(2)}</div>
-      <div class="sub">km</div>
-    </div>
-    <div class="card c-w">
-      <div class="lbl">Duration</div>
-      <div class="val">${fmtTime(+summary.duration_s)}</div>
-      <div class="sub">${strokes.length} strokes</div>
-    </div>
-    <div class="card c-g">
-      <div class="lbl">Avg Pace</div>
-      <div class="val">${fmtPace(avgPace)}</div>
-      <div class="sub">/500m</div>
-    </div>
-    <div class="card c-y">
-      <div class="lbl">Avg Rate</div>
-      <div class="val">${fmt1(avgRate)}</div>
-      <div class="sub">spm</div>
-    </div>
-    <div class="card c-r">
-      <div class="lbl">Avg Jerk</div>
-      <div class="val">${fmt1(avgJerk)}</div>
-      <div class="sub">peak ${fmt1(maxJerk)} ms³</div>
-    </div>
-    <div class="card c-p">
-      <div class="lbl">Avg DPS</div>
-      <div class="val">${fmt1(avgDPS)}</div>
-      <div class="sub">m/stroke</div>
-    </div>
-    ${avgHR?`<div class="card c-b">
-      <div class="lbl">Avg HR</div>
-      <div class="val">${fmt0(avgHR)}</div>
-      <div class="sub">max ${fmt0(maxHR)} bpm</div>
-    </div>`:''}
+function buildCards(sum){
+  const{pv,rv,jv,dv,hv}=sessionStats();
+  const km=((+sum.distance_m||0)/1000).toFixed(2);
+  const dur=fmtTime(+sum.duration_s);
+  let html=`
+    <div class="card cw"><div class="lbl">Distance</div><div class="val">${km}</div><div class="sub">km</div></div>
+    <div class="card cw"><div class="lbl">Duration</div><div class="val">${dur}</div><div class="sub">${ST.length} strokes</div></div>
+    <div class="card cg"><div class="lbl">Avg Pace</div><div class="val">${fmtPace(arrMean(pv))}</div><div class="sub">/500m</div></div>
+    <div class="card cy"><div class="lbl">Avg Rate</div><div class="val">${f1(arrMean(rv))}</div><div class="sub">spm · max ${f0(arrMax(rv))}</div></div>
+    <div class="card cr"><div class="lbl">Avg Jerk</div><div class="val">${f1(arrMean(jv))}</div><div class="sub">peak ${f1(arrMax(jv))} ms³</div></div>
+    <div class="card cp"><div class="lbl">Avg DPS</div><div class="val">${f1(arrMean(dv))}</div><div class="sub">m/stroke</div></div>
   `;
-}
-
-// ── Laps ──────────────────────────────────────────────────────────────────
-function buildLaps(){
-  if(!lapData.length)return;
-  document.getElementById('laps-sec').style.display='block';
-  const thead=document.querySelector('#laps-tbl thead');
-  const tbody=document.querySelector('#laps-tbl tbody');
-  // Determine columns
-  const hasCal='calories' in lapData[0];
-  const hasHR='avg_hr_bpm' in lapData[0];
-  thead.innerHTML=`<tr>
-    <th>Lap</th><th>Dist (m)</th><th>Time</th><th>Pace /500m</th><th>Rate</th>
-    ${hasHR?'<th>Avg HR</th><th>Max HR</th>':''}
-    ${hasCal?'<th>Cal</th>':''}
-  </tr>`;
-  tbody.innerHTML=lapData.map((l,i)=>`<tr>
-    <td>${i+1}</td>
-    <td>${(+l.distance_m||0).toFixed(0)}</td>
-    <td>${fmtTime(+l.time_s)}</td>
-    <td>${fmtPace(+l.pace_s_per_500m)}</td>
-    <td>${l.avg_spm||l.stroke_rate_spm||'—'}</td>
-    ${hasHR?`<td style="color:var(--b)">${l.avg_hr_bpm||'—'}</td><td style="color:var(--b)">${l.max_hr_bpm||'—'}</td>`:''}
-    ${hasCal?`<td>${l.calories||'—'}</td>`:''}
-  </tr>`).join('');
+  if(hv.length)html+=`<div class="card cb"><div class="lbl">Avg HR</div><div class="val">${f0(arrMean(hv))}</div><div class="sub">max ${f0(arrMax(hv))} bpm</div></div>`;
+  document.getElementById('cards').innerHTML=html;
 }
 
 // ── Legend ────────────────────────────────────────────────────────────────
 const SERIES=[
-  {key:'pace',label:'Pace',color:'var(--g)'},
-  {key:'rate',label:'Rate',color:'var(--y)'},
-  {key:'catch_jerk',label:'Catch Jerk',color:'var(--r)'},
-  {key:'dps',label:'DPS',color:'var(--p)'},
+  {k:'pace',l:'Pace',c:'var(--g)'},
+  {k:'rate',l:'Rate',c:'var(--y)'},
+  {k:'jerk',l:'Catch Jerk',c:'var(--r)'},
+  {k:'dps',l:'DPS',c:'var(--p)'},
 ];
-
 function buildLegend(){
-  document.getElementById('legend').innerHTML=SERIES.map(s=>`
-    <div class="leg${series[s.key]?'':' off'}" data-key="${s.key}" onclick="toggleSeries('${s.key}')">
-      <div class="dot" style="background:${s.color}"></div>${s.label}
-    </div>`).join('');
+  document.getElementById('leg').innerHTML=SERIES.map(s=>
+    `<div class="leg${vis[s.k]?'':' off'}" onclick="toggleVis('${s.k}')"><div class="dot" style="background:${s.c}"></div>${s.l}</div>`
+  ).join('');
 }
-function toggleSeries(k){series[k]=!series[k];buildLegend();renderAll();}
+window.toggleVis=function(k){vis[k]=!vis[k];buildLegend();schedRender();};
 
-// ── X values ──────────────────────────────────────────────────────────────
+// ── X helper ──────────────────────────────────────────────────────────────
 function getX(s){
-  const mode=document.getElementById('x-mode').value;
-  if(mode==='distance') return s.dist||0;
-  if(mode==='time') return (s.elapsed||0)/60;
-  return s.stroke;
-}
-function xLabel(){
-  const m=document.getElementById('x-mode').value;
-  if(m==='distance')return 'Distance (m)';
-  if(m==='time')return 'Time (min)';
-  return 'Stroke #';
+  const m=document.getElementById('xmode').value;
+  if(m==='dist')return s.dist||0;
+  if(m==='time')return (s.elapsed||0)/60;
+  return s.n;
 }
 
-// ── Main render ───────────────────────────────────────────────────────────
-document.getElementById('x-mode').addEventListener('change',renderAll);
-
-function renderAll(){
-  buildLegend();
-  drawMainChart();
-  drawOvChart();
+// ── Render scheduler ──────────────────────────────────────────────────────
+function schedRender(){
+  if(rafId)cancelAnimationFrame(rafId);
+  rafId=requestAnimationFrame(()=>{rafId=null;buildLegend();drawMain();drawOv();});
 }
 
-// ── Main Chart ────────────────────────────────────────────────────────────
-function drawMainChart(){
-  const canvas=document.getElementById('mainChart');
+// ── Main chart ────────────────────────────────────────────────────────────
+function drawMain(){
+  const canvas=document.getElementById('mainC');
   const dpr=window.devicePixelRatio||1;
-  const W=canvas.parentElement.clientWidth-24;
-  const H=260;
+  const W=Math.floor(canvas.parentElement.clientWidth-22);
+  const H=250;
   canvas.width=W*dpr; canvas.height=H*dpr;
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
   const ctx=canvas.getContext('2d');
   ctx.scale(dpr,dpr);
-
-  const view=strokes.slice(viewS,viewE+1);
-  if(!view.length)return;
-
-  const pad={top:10,right:16,bot:32,left:50,right2:44};
-  const pw=W-pad.left-pad.right2;
-  const ph=H-pad.top-pad.bot;
-
   ctx.clearRect(0,0,W,H);
 
-  // Gather data for active series
-  const xVals=view.map(getX);
-  const xMin=Math.min(...xVals), xMax=Math.max(...xVals), xRng=xMax-xMin||1;
-  const toX=v=>pad.left+(v-xMin)/xRng*pw;
+  const view=ST.slice(viewS,viewE+1);
+  const N=view.length;
+  if(!N)return;
 
-  // Pace & DPS share left Y axis (inverted pace = faster up)
-  const paceVals=series.pace?view.map(s=>s.pace).filter(v=>v>50&&v<500):[];
-  const dpsVals=series.dps?view.map(s=>s.dps).filter(v=>v>1&&v<25):[];
+  const PL=48,PR=38,PT=10,PB=30;
+  const pw=W-PL-PR, ph=H-PT-PB;
 
-  // Rate & catch_jerk share right Y axis
-  const rateVals=series.rate?view.map(s=>s.rate).filter(v=>v>5&&v<50):[];
-  const jerkVals=series.catch_jerk?view.map(s=>s.catch_jerk).filter(v=>v>0&&v<200):[];
+  // Build X array
+  const xs=new Float32Array(N);
+  let xMin=Infinity,xMax=-Infinity;
+  for(let i=0;i<N;i++){
+    xs[i]=getX(view[i]);
+    if(xs[i]<xMin)xMin=xs[i];
+    if(xs[i]>xMax)xMax=xs[i];
+  }
+  const xRng=xMax-xMin||1;
+  const toX=v=>PL+(v-xMin)/xRng*pw;
 
-  // Left Y (pace): invert so faster = higher
-  let yLMin=80, yLMax=600;
-  if(paceVals.length){yLMin=Math.min(...paceVals)*0.95; yLMax=Math.max(...paceVals)*1.05;}
-  const toYL=v=>pad.top+ph-(1-(v-yLMin)/(yLMax-yLMin))*ph; // inverted
+  // Collect valid values per series (no spread)
+  const pv=[],rv=[],jv=[],dv=[];
+  for(let i=0;i<N;i++){
+    const s=view[i];
+    if(vis.pace&&s.pace>50&&s.pace<500)pv.push(s.pace);
+    if(vis.rate&&s.rate>5&&s.rate<50)rv.push(s.rate);
+    if(vis.jerk&&s.jerk>0&&s.jerk<300)jv.push(s.jerk);
+    if(vis.dps&&s.dps>1&&s.dps<25)dv.push(s.dps);
+  }
 
-  // Right Y (rate/jerk)
-  let yRMin=0, yRMax=40;
-  if(rateVals.length){yRMin=Math.min(...rateVals)*0.9; yRMax=Math.max(...rateVals)*1.1;}
-  if(jerkVals.length){yRMax=Math.max(yRMax,Math.max(...jerkVals)*1.1);}
-  const toYR=v=>pad.top+ph-(v-yRMin)/(yRMax-yRMin||1)*ph;
+  // Left Y: pace (inverted — faster=higher)
+  let yPMin=80,yPMax=550;
+  if(pv.length){yPMin=arrMin(pv)*.95;yPMax=arrMax(pv)*1.05;}
+  // toYP inverted
+  const toYP=v=>PT+ph-(1-(v-yPMin)/(yPMax-yPMin))*ph;
 
-  // DPS: uses left axis but different range
-  let yDPSMin=5,yDPSMax=15;
-  if(dpsVals.length){yDPSMin=Math.min(...dpsVals)*0.95;yDPSMax=Math.max(...dpsVals)*1.05;}
-  const toYDPS=v=>pad.top+ph-(v-yDPSMin)/(yDPSMax-yDPSMin||1)*ph;
+  // Right Y: rate + jerk combined
+  let yRMin=0,yRMax=40;
+  if(rv.length){yRMin=arrMin(rv)*.9;yRMax=arrMax(rv)*1.1;}
+  if(jv.length){const jmax=arrMax(jv)*1.1;if(jmax>yRMax)yRMax=jmax;}
+  const toYR=v=>PT+ph-(v-yRMin)/(yRMax-yRMin||1)*ph;
 
-  // Grid
-  ctx.strokeStyle='#1a2030'; ctx.lineWidth=1;
-  const gridY=niceSteps(yLMin,yLMax,5);
-  gridY.forEach(g=>{
-    const y=toYL(g);
-    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+pw,y);ctx.stroke();
-    ctx.fillStyle='#3a4460';ctx.font='9px IBM Plex Mono,monospace';
-    ctx.textAlign='right';
-    ctx.fillText(fmtPace(g),pad.left-4,y+3);
+  // DPS: secondary left, mapped to same pixel range
+  let yDMin=4,yDMax=14;
+  if(dv.length){yDMin=arrMin(dv)*.95;yDMax=arrMax(dv)*1.05;}
+  const toYD=v=>PT+ph-(v-yDMin)/(yDMax-yDMin||1)*ph;
+
+  // Grid lines
+  ctx.lineWidth=1;
+  ctx.strokeStyle='#1a2030';
+  const gy=niceSteps(yPMin,yPMax,5);
+  ctx.font='9px IBM Plex Mono,monospace';
+  gy.forEach(g=>{
+    const y=toYP(g);
+    ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+pw,y);ctx.stroke();
+    ctx.fillStyle='#3a4460';ctx.textAlign='right';
+    ctx.fillText(fmtPace(g),PL-4,y+3);
   });
-  const gridX=niceSteps(xMin,xMax,6);
-  gridX.forEach(g=>{
+  const gx=niceSteps(xMin,xMax,6);
+  gx.forEach(g=>{
     const x=toX(g);
-    ctx.beginPath();ctx.moveTo(x,pad.top);ctx.lineTo(x,pad.top+ph);ctx.stroke();
-    ctx.fillStyle='#3a4460';ctx.font='9px IBM Plex Mono,monospace';
-    ctx.textAlign='center';
-    ctx.fillText(g.toFixed(0),x,pad.top+ph+14);
+    ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+ph);ctx.stroke();
+    ctx.fillStyle='#3a4460';ctx.textAlign='center';
+    ctx.fillText(g.toFixed(0),x,PT+ph+14);
   });
-
-  // Right axis labels (rate)
-  if(series.rate||series.catch_jerk){
-    const gridR=niceSteps(yRMin,yRMax,5);
-    gridR.forEach(g=>{
-      const y=toYR(g);
-      ctx.fillStyle='#3a4460';ctx.font='9px IBM Plex Mono,monospace';
-      ctx.textAlign='left';
-      ctx.fillText(g.toFixed(0),pad.left+pw+4,y+3);
+  if(vis.rate||vis.jerk){
+    const gr=niceSteps(yRMin,yRMax,5);
+    gr.forEach(g=>{
+      ctx.fillStyle='#2d3850';ctx.textAlign='left';
+      ctx.fillText(g.toFixed(0),PL+pw+4,toYR(g)+3);
     });
   }
 
   // Selection highlight
   if(selS>=0&&selE>=0&&selS!==selE){
-    const s2=Math.min(selS,selE), e2=Math.max(selS,selE);
-    if(s2<view.length&&e2<view.length){
-      const x1=toX(xVals[s2]), x2=toX(xVals[e2]);
-      ctx.fillStyle='rgba(58,255,180,.07)';
-      ctx.fillRect(x1,pad.top,x2-x1,ph);
-      ctx.strokeStyle='rgba(58,255,180,.25)';ctx.lineWidth=1;
-      ctx.beginPath();ctx.moveTo(x1,pad.top);ctx.lineTo(x1,pad.top+ph);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(x2,pad.top);ctx.lineTo(x2,pad.top+ph);ctx.stroke();
+    const s2=clamp(Math.min(selS,selE),0,N-1);
+    const e2=clamp(Math.max(selS,selE),0,N-1);
+    const x1=toX(xs[s2]),x2=toX(xs[e2]);
+    ctx.fillStyle='rgba(58,255,180,.07)';
+    ctx.fillRect(x1,PT,x2-x1,ph);
+    ctx.strokeStyle='rgba(58,255,180,.3)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(x1,PT);ctx.lineTo(x1,PT+ph);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x2,PT);ctx.lineTo(x2,PT+ph);ctx.stroke();
+  }
+
+  // Draw pace line
+  if(vis.pace&&pv.length){
+    ctx.beginPath();let started=false;
+    for(let i=0;i<N;i++){
+      const v=view[i].pace;
+      if(isNaN(v)||v<50||v>500){started=false;continue;}
+      const x=toX(xs[i]),y=toYP(v);
+      started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true;
+    }
+    ctx.strokeStyle='#3affb4';ctx.lineWidth=1.8;ctx.stroke();
+  }
+
+  // Draw DPS line
+  if(vis.dps&&dv.length){
+    ctx.beginPath();let started=false;
+    for(let i=0;i<N;i++){
+      const v=view[i].dps;
+      if(isNaN(v)||v<1||v>25){started=false;continue;}
+      const x=toX(xs[i]),y=toYD(v);
+      started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true;
+    }
+    ctx.strokeStyle='rgba(192,132,252,.7)';ctx.lineWidth=1.3;ctx.stroke();
+  }
+
+  // Draw rate (dots)
+  if(vis.rate&&rv.length){
+    ctx.fillStyle='rgba(255,201,71,.65)';
+    for(let i=0;i<N;i++){
+      const v=view[i].rate;
+      if(isNaN(v)||v<5||v>50)continue;
+      ctx.beginPath();ctx.arc(toX(xs[i]),toYR(v),2.2,0,6.283);ctx.fill();
     }
   }
 
-  // Draw series
-  function drawLine(vals,toY,color,width,skipFn){
-    ctx.beginPath(); let started=false;
-    view.forEach((s,i)=>{
-      const v=vals(s);
-      if(isNaN(v)||skipFn&&skipFn(v)){started=false;return;}
-      const x=toX(xVals[i]), y=toY(v);
-      started?ctx.lineTo(x,y):ctx.moveTo(x,y);
-      started=true;
-    });
-    ctx.strokeStyle=color; ctx.lineWidth=width; ctx.stroke();
+  // Draw catch jerk (dots sized by magnitude)
+  if(vis.jerk&&jv.length){
+    for(let i=0;i<N;i++){
+      const v=view[i].jerk;
+      if(isNaN(v)||v<=0||v>300)continue;
+      const r=clamp(1.5+(v/arrMax(jv))*3.5,1.5,5);
+      ctx.beginPath();ctx.arc(toX(xs[i]),toYR(v),r,0,6.283);
+      ctx.fillStyle='rgba(255,107,107,.55)';ctx.fill();
+    }
   }
-
-  // Pace
-  if(series.pace) drawLine(s=>s.pace,toYL,'#3affb4',1.8,v=>v<50||v>500);
-
-  // DPS (subtle, lighter)
-  if(series.dps) drawLine(s=>s.dps,toYDPS,'#c084fc',1.4,v=>v<1||v>25);
-
-  // Rate (dots + line)
-  if(series.rate){
-    ctx.beginPath();
-    view.forEach((s,i)=>{
-      const v=s.rate; if(isNaN(v)||v<5||v>50)return;
-      ctx.beginPath();ctx.arc(toX(xVals[i]),toYR(v),2,0,Math.PI*2);
-      ctx.fillStyle='rgba(255,201,71,.7)';ctx.fill();
-    });
-    drawLine(s=>s.rate,toYR,'rgba(255,201,71,.5)',1,v=>v<5||v>50);
-  }
-
-  // Catch jerk (dots)
-  if(series.catch_jerk){
-    view.forEach((s,i)=>{
-      const v=s.catch_jerk; if(isNaN(v)||v<=0||v>200)return;
-      const r=clamp((v/80)*4,1.5,5);
-      ctx.beginPath();ctx.arc(toX(xVals[i]),toYR(v),r,0,Math.PI*2);
-      ctx.fillStyle='rgba(255,107,107,.6)';ctx.fill();
-    });
-  }
-
-  // Axis labels
-  ctx.fillStyle='#3a4460';ctx.font='9px IBM Plex Mono,monospace';
-  ctx.textAlign='center';
-  ctx.fillText(xLabel(),pad.left+pw/2,H-4);
-  if(series.pace||series.dps){ctx.save();ctx.translate(10,pad.top+ph/2);ctx.rotate(-Math.PI/2);ctx.fillText('Pace /500m',0,0);ctx.restore();}
 
   // Border
   ctx.strokeStyle='#1e2438';ctx.lineWidth=1;
-  ctx.strokeRect(pad.left,pad.top,pw,ph);
+  ctx.strokeRect(PL,PT,pw,ph);
 
-  // Store geo
-  canvas._geo={pad,pw,ph,xVals,W,H,viewLen:view.length};
+  // Store geo for hit testing
+  canvas._g={PL,PR,PT,PB,pw,ph,xs,N,W,H};
   setupMainEvents(canvas);
 }
 
-// ── Overview ───────────────────────────────────────────────────────────────
-function drawOvChart(){
-  const canvas=document.getElementById('ovChart');
+// ── Overview chart ────────────────────────────────────────────────────────
+function drawOv(){
+  const canvas=document.getElementById('ovC');
   const dpr=window.devicePixelRatio||1;
-  const W=canvas.parentElement.clientWidth-20;
-  const H=52;
+  const W=Math.floor(canvas.parentElement.clientWidth-18);
+  const H=48;
   canvas.width=W*dpr; canvas.height=H*dpr;
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
   const ctx=canvas.getContext('2d');
   ctx.scale(dpr,dpr);
-
-  const n=strokes.length;
-  const allPace=strokes.map(s=>s.pace);
-  const valid=allPace.filter(v=>v>50&&v<500);
-  if(!valid.length)return;
-  const pMin=Math.min(...valid), pMax=Math.max(...valid), pRng=pMax-pMin||1;
-
-  const pad={l:4,r:4,t:4,b:4};
-  const pw=W-pad.l-pad.r, ph=H-pad.t-pad.b;
-
   ctx.clearRect(0,0,W,H);
 
-  // Full pace line (dim)
-  ctx.beginPath();
-  strokes.forEach((s,i)=>{
-    const v=s.pace;if(v<50||v>500)return;
-    const x=pad.l+(i/(n-1))*pw;
-    const y=pad.t+ph-(1-(v-pMin)/pRng)*ph;
-    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-  });
-  ctx.strokeStyle='#222a3c';ctx.lineWidth=1;ctx.stroke();
+  const N=ST.length;
+  if(N<2)return;
+  const P=4;
+  const pw=W-P*2,ph=H-P*2;
+
+  // Get pace range without spread
+  let pMin=Infinity,pMax=-Infinity;
+  for(let i=0;i<N;i++){const v=ST[i].pace;if(v>50&&v<500){if(v<pMin)pMin=v;if(v>pMax)pMax=v;}}
+  if(pMin===Infinity){pMin=100;pMax=300;}
+  const pRng=pMax-pMin||1;
+
+  // Full session dim line
+  ctx.beginPath();let s=false;
+  for(let i=0;i<N;i++){
+    const v=ST[i].pace;if(v<50||v>500){s=false;continue;}
+    const x=P+(i/(N-1))*pw;
+    const y=P+ph-(1-(v-pMin)/pRng)*ph;
+    s?ctx.lineTo(x,y):ctx.moveTo(x,y);s=true;
+  }
+  ctx.strokeStyle='#1e2a3e';ctx.lineWidth=1;ctx.stroke();
 
   // View window
-  const vx1=pad.l+(viewS/(n-1))*pw;
-  const vx2=pad.l+(viewE/(n-1))*pw;
+  const vx1=P+(viewS/(N-1))*pw;
+  const vx2=P+(viewE/(N-1))*pw;
   ctx.fillStyle='rgba(58,255,180,.10)';
-  ctx.fillRect(vx1,pad.t,vx2-vx1,ph);
-  ctx.strokeStyle='rgba(58,255,180,.45)';ctx.lineWidth=1.5;
-  ctx.strokeRect(vx1,pad.t,vx2-vx1,ph);
+  ctx.fillRect(vx1,P,vx2-vx1,ph);
+  ctx.strokeStyle='rgba(58,255,180,.5)';ctx.lineWidth=1.5;
+  ctx.strokeRect(vx1,P,vx2-vx1,ph);
 
-  // Highlighted view line
-  ctx.beginPath();
-  strokes.slice(viewS,viewE+1).forEach((s,i)=>{
-    const v=s.pace;if(v<50||v>500)return;
-    const x=pad.l+((viewS+i)/(n-1))*pw;
-    const y=pad.t+ph-(1-(v-pMin)/pRng)*ph;
-    i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
-  });
+  // View segment highlighted
+  ctx.beginPath();s=false;
+  for(let i=viewS;i<=viewE;i++){
+    const v=ST[i].pace;if(v<50||v>500){s=false;continue;}
+    const x=P+(i/(N-1))*pw;
+    const y=P+ph-(1-(v-pMin)/pRng)*ph;
+    s?ctx.lineTo(x,y):ctx.moveTo(x,y);s=true;
+  }
   ctx.strokeStyle='#3affb4';ctx.lineWidth=1.5;ctx.stroke();
 
-  canvas._geo={pad,pw,ph,n,W,H};
+  canvas._g={P,pw,ph,N,W,H};
   setupOvEvents(canvas);
 }
 
-// ── HR chart ───────────────────────────────────────────────────────────────
-function drawHRChart(){
-  const canvas=document.getElementById('hrChart');
+// ── HR chart ──────────────────────────────────────────────────────────────
+function drawHR(){
+  const canvas=document.getElementById('hrC');
   const dpr=window.devicePixelRatio||1;
-  const W=canvas.parentElement.clientWidth-24;
-  const H=140;
+  const W=Math.floor(canvas.parentElement.clientWidth-22);
+  const H=130;
   canvas.width=W*dpr; canvas.height=H*dpr;
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
   const ctx=canvas.getContext('2d');
   ctx.scale(dpr,dpr);
-
-  const vals=hrData.filter(h=>h.bpm>40&&h.bpm<220);
-  if(!vals.length)return;
-  const t0=new Date(vals[0].ts);
-  const pts=vals.map(h=>({x:(new Date(h.ts)-t0)/60000,y:h.bpm}));
-  const xMax=pts[pts.length-1].x;
-  const yMin=Math.min(...pts.map(p=>p.y))*0.97;
-  const yMax=Math.max(...pts.map(p=>p.y))*1.02;
-  const avgHR=mean(pts.map(p=>p.y));
-
-  document.getElementById('hr-avg-lbl').textContent=`avg ${Math.round(avgHR)} bpm · max ${Math.round(yMax)} bpm`;
-
-  const pad={top:8,right:12,bot:24,left:40};
-  const pw=W-pad.left-pad.right, ph=H-pad.top-pad.bot;
   ctx.clearRect(0,0,W,H);
 
-  const toX=v=>pad.left+(v/xMax)*pw;
-  const toY=v=>pad.top+ph-(v-yMin)/(yMax-yMin)*ph;
+  const N=HR.length;
+  if(!N)return;
 
-  // HR zones (David's zones)
-  const zones=[[90,106,'rgba(100,200,255,.05)'],[107,124,'rgba(58,255,180,.05)'],[125,142,'rgba(255,201,71,.05)'],[143,160,'rgba(255,150,50,.05)'],[161,220,'rgba(255,107,107,.05)']];
+  const PL=40,PR=10,PT=8,PB=22;
+  const pw=W-PL-PR,ph=H-PT-PB;
+
+  const t0=new Date(HR[0].ts).getTime();
+  // Find range without spread
+  let xMax=0,yMin=200,yMax=0,hsum=0;
+  for(let i=0;i<N;i++){
+    const x=(new Date(HR[i].ts).getTime()-t0)/60000;
+    const b=HR[i].bpm;
+    if(x>xMax)xMax=x;
+    if(b<yMin)yMin=b;
+    if(b>yMax)yMax=b;
+    hsum+=b;
+  }
+  const avg=hsum/N;
+  yMin=yMin*.97;yMax=yMax*1.02;
+  document.getElementById('hrlbl').textContent='avg '+Math.round(avg)+' bpm · max '+Math.round(yMax)+' bpm';
+
+  const toX=v=>PL+(v/xMax)*pw;
+  const toY=v=>PT+ph-(v-yMin)/(yMax-yMin)*ph;
+
+  // Zone bands (David's Garmin zones)
+  const zones=[[90,106,'rgba(77,166,255,.07)'],[107,124,'rgba(58,255,180,.07)'],[125,142,'rgba(255,201,71,.07)'],[143,160,'rgba(255,154,60,.07)'],[161,300,'rgba(255,107,107,.07)']];
   zones.forEach(([a,b,c])=>{
-    if(b<yMin||a>yMax)return;
-    ctx.fillStyle=c;
-    ctx.fillRect(pad.left,toY(Math.min(b,yMax)),pw,toY(Math.max(a,yMin))-toY(Math.min(b,yMax)));
+    const y1=toY(Math.min(b,yMax)),y2=toY(Math.max(a,yMin));
+    if(y1<PT+ph&&y2>PT){ctx.fillStyle=c;ctx.fillRect(PL,Math.max(PT,y1),pw,Math.min(PT+ph,y2)-Math.max(PT,y1));}
   });
 
   // Grid
-  ctx.strokeStyle='#1a2030';ctx.lineWidth=1;
+  ctx.font='9px IBM Plex Mono,monospace';ctx.lineWidth=1;ctx.strokeStyle='#1a2030';
   niceSteps(yMin,yMax,5).forEach(g=>{
     const y=toY(g);
-    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(pad.left+pw,y);ctx.stroke();
-    ctx.fillStyle='#3a4460';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='right';
-    ctx.fillText(Math.round(g),pad.left-4,y+3);
+    ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+pw,y);ctx.stroke();
+    ctx.fillStyle='#3a4460';ctx.textAlign='right';ctx.fillText(Math.round(g),PL-4,y+3);
   });
   niceSteps(0,xMax,6).forEach(g=>{
     const x=toX(g);
-    ctx.beginPath();ctx.moveTo(x,pad.top);ctx.lineTo(x,pad.top+ph);ctx.stroke();
-    ctx.fillStyle='#3a4460';ctx.font='9px IBM Plex Mono,monospace';ctx.textAlign='center';
-    ctx.fillText(Math.round(g)+'m',x,pad.top+ph+14);
+    ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+ph);ctx.stroke();
+    ctx.fillStyle='#3a4460';ctx.textAlign='center';ctx.fillText(Math.round(g)+'m',x,PT+ph+14);
   });
 
   // Avg line
-  ctx.strokeStyle='rgba(77,166,255,.3)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
-  ctx.beginPath();ctx.moveTo(pad.left,toY(avgHR));ctx.lineTo(pad.left+pw,toY(avgHR));ctx.stroke();
+  ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(77,166,255,.3)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(PL,toY(avg));ctx.lineTo(PL+pw,toY(avg));ctx.stroke();
   ctx.setLineDash([]);
 
-  // HR line
-  const grad=ctx.createLinearGradient(0,pad.top,0,pad.top+ph);
-  grad.addColorStop(0,'rgba(77,166,255,.2)');
-  grad.addColorStop(1,'rgba(77,166,255,0)');
+  // HR line + fill
+  const grad=ctx.createLinearGradient(0,PT,0,PT+ph);
+  grad.addColorStop(0,'rgba(77,166,255,.18)');grad.addColorStop(1,'rgba(77,166,255,0)');
 
   ctx.beginPath();
-  pts.forEach((p,i)=>i===0?ctx.moveTo(toX(p.x),toY(p.y)):ctx.lineTo(toX(p.x),toY(p.y)));
+  const x0=toX(0),y0=toY(HR[0].bpm);
+  ctx.moveTo(x0,y0);
+  for(let i=1;i<N;i++){
+    const x=toX((new Date(HR[i].ts).getTime()-t0)/60000);
+    ctx.lineTo(x,toY(HR[i].bpm));
+  }
   ctx.strokeStyle='#4da6ff';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.lineTo(toX(xMax),PT+ph);ctx.lineTo(x0,PT+ph);ctx.closePath();
+  ctx.fillStyle=grad;ctx.fill();
 
-  ctx.lineTo(toX(pts[pts.length-1].x),pad.top+ph);
-  ctx.lineTo(toX(pts[0].x),pad.top+ph);
-  ctx.closePath();ctx.fillStyle=grad;ctx.fill();
-
-  ctx.strokeStyle='#1e2438';ctx.lineWidth=1;ctx.strokeRect(pad.left,pad.top,pw,ph);
+  ctx.strokeStyle='#1e2438';ctx.lineWidth=1;ctx.strokeRect(PL,PT,pw,ph);
 }
 
-// ── Selection ─────────────────────────────────────────────────────────────
-function getMainIdx(clientX,canvas){
-  const rect=canvas.getBoundingClientRect();
-  const {pad,pw,viewLen}=canvas._geo;
-  const frac=clamp((clientX-rect.left-pad.left)/pw,0,1);
-  return Math.round(frac*(viewLen-1));
+// ── Main interaction ──────────────────────────────────────────────────────
+let mainCanvas=null;
+function getMainIdx(cx){
+  if(!mainCanvas||!mainCanvas._g)return 0;
+  const rect=mainCanvas.getBoundingClientRect();
+  const{PL,pw,N}=mainCanvas._g;
+  return clamp(Math.round((cx-rect.left-PL)/pw*(N-1)),0,N-1);
 }
 
 function setupMainEvents(canvas){
-  canvas.onmousedown=canvas.ontouchstart=null;
+  if(mainCanvas===canvas)return; // already set up for this canvas instance
+  mainCanvas=canvas;
 
-  function startSel(cx){isDragMain=true;selS=selE=getMainIdx(cx,canvas);renderAll();}
-  function moveSel(cx){if(!isDragMain)return;selE=getMainIdx(cx,canvas);renderAll();}
-  function endSel(){if(isDragMain){isDragMain=false;updateSelBar();}}
-
-  canvas.addEventListener('mousedown',e=>{startSel(e.clientX);});
-  canvas.addEventListener('mousemove',e=>{moveSel(e.clientX);});
-  document.addEventListener('mouseup',endSel);
-  canvas.addEventListener('touchstart',e=>{startSel(e.touches[0].clientX);},{passive:true});
-  canvas.addEventListener('touchmove',e=>{moveSel(e.touches[0].clientX);},{passive:true});
-  canvas.addEventListener('touchend',()=>{isDragMain=false;updateSelBar();});
+  canvas.addEventListener('mousedown',e=>{isDragMain=true;selS=selE=getMainIdx(e.clientX);schedRender();});
+  canvas.addEventListener('mousemove',e=>{if(isDragMain){selE=getMainIdx(e.clientX);schedRender();}});
+  canvas.addEventListener('touchstart',e=>{isDragMain=true;selS=selE=getMainIdx(e.touches[0].clientX);schedRender();},{passive:true});
+  canvas.addEventListener('touchmove',e=>{if(isDragMain){selE=getMainIdx(e.touches[0].clientX);schedRender();}},{passive:true});
+  canvas.addEventListener('touchend',()=>{isDragMain=false;updateSel();});
 }
+document.addEventListener('mouseup',()=>{if(isDragMain){isDragMain=false;updateSel();}});
 
-function updateSelBar(){
-  const bar=document.getElementById('sel-bar');
-  if(selS<0||selE<0||selS===selE){bar.classList.remove('show');highlightRows([]);return;}
-  const s2=Math.min(selS,selE), e2=Math.max(selS,selE);
-  const view=strokes.slice(viewS,viewE+1);
+function updateSel(){
+  const bar=document.getElementById('selbar');
+  if(selS<0||selE<0||selS===selE){bar.classList.remove('on');hlRows([]);return;}
+
+  const s2=clamp(Math.min(selS,selE),0,ST.slice(viewS,viewE+1).length-1);
+  const e2=clamp(Math.max(selS,selE),0,ST.slice(viewS,viewE+1).length-1);
+  const view=ST.slice(viewS,viewE+1);
   const sel=view.slice(s2,e2+1);
-  const pVals=sel.map(s=>s.pace).filter(v=>v>50&&v<500);
-  const rVals=sel.map(s=>s.rate).filter(v=>v>5);
-  const jVals=sel.map(s=>s.catch_jerk).filter(v=>v>0);
-  const dVals=sel.map(s=>s.dps).filter(v=>v>1);
-  const distStart=view[s2]?.dist||0, distEnd=view[e2]?.dist||0;
+  if(!sel.length){bar.classList.remove('on');return;}
 
-  bar.classList.add('show');
-  document.getElementById('sel-stats').innerHTML=`
-    <div style="display:flex;flex-wrap:wrap;gap:16px;">
-      <div class="sel-stat"><div class="lbl">Strokes</div><div class="val">${sel.length}</div></div>
-      <div class="sel-stat"><div class="lbl">Distance</div><div class="val">${(distEnd-distStart).toFixed(0)}m</div></div>
-      ${pVals.length?`<div class="sel-stat"><div class="lbl">Avg Pace</div><div class="val" style="color:var(--g)">${fmtPace(mean(pVals))}</div></div>`:''}
-      ${rVals.length?`<div class="sel-stat"><div class="lbl">Avg Rate</div><div class="val" style="color:var(--y)">${fmt1(mean(rVals))} spm</div></div>`:''}
-      ${jVals.length?`<div class="sel-stat"><div class="lbl">Avg Jerk</div><div class="val" style="color:var(--r)">${fmt1(mean(jVals))}</div></div>`:''}
-      ${dVals.length?`<div class="sel-stat"><div class="lbl">Avg DPS</div><div class="val" style="color:var(--p)">${fmt1(mean(dVals))}m</div></div>`:''}
-    </div>
-  `;
-  const absIdxs=Array.from({length:e2-s2+1},(_,i)=>viewS+s2+i);
-  highlightRows(absIdxs);
+  // Collect all stats with loops
+  const pv=[],rv=[],jv=[],dv=[],scv=[],rlv=[];
+  for(let i=0;i<sel.length;i++){
+    const s=sel[i];
+    if(s.pace>50&&s.pace<500)pv.push(s.pace);
+    if(s.rate>5&&s.rate<50)rv.push(s.rate);
+    if(s.jerk>0&&s.jerk<300)jv.push(s.jerk);
+    if(s.dps>1&&s.dps<25)dv.push(s.dps);
+    if(!isNaN(s.schar)&&s.schar>=0)scv.push(s.schar);
+    if(!isNaN(s.rloss)&&s.rloss>=0)rlv.push(s.rloss);
+  }
+
+  const distStart=sel[0].dist||0;
+  const distEnd=sel[sel.length-1].dist||0;
+  const distCovered=distEnd-distStart;
+  const timeStart=sel[0].elapsed||0;
+  const timeEnd=sel[sel.length-1].elapsed||0;
+  const elapsed=timeEnd-timeStart;
+
+  function stat(lbl,val,clr){
+    return`<div class="ss"><div class="l">${lbl}</div><div class="v" style="color:${clr||'var(--text)'}">${val}</div></div>`;
+  }
+
+  bar.classList.add('on');
+  document.getElementById('selstats').innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:12px;">
+    ${stat('Strokes',sel.length,'var(--text)')}
+    ${stat('Distance',(distCovered>0?distCovered.toFixed(0):'—')+'m','var(--text)')}
+    ${stat('Time',fmtTime(elapsed>0?elapsed:0),'var(--text)')}
+    ${pv.length?stat('Avg Pace',fmtPace(arrMean(pv)),'var(--g)'):''}
+    ${pv.length?stat('Best Pace',fmtPace(arrMin(pv)),'var(--g)'):''}
+    ${rv.length?stat('Avg Rate',f1(arrMean(rv))+' spm','var(--y)'):''}
+    ${rv.length?stat('Max Rate',f0(arrMax(rv))+' spm','var(--y)'):''}
+    ${jv.length?stat('Avg Jerk',f1(arrMean(jv)),'var(--r)'):''}
+    ${jv.length?stat('Peak Jerk',f1(arrMax(jv)),'var(--r)'):''}
+    ${dv.length?stat('Avg DPS',f1(arrMean(dv))+'m','var(--p)'):''}
+    ${scv.length?stat('Avg Stroke Char',f1(arrMean(scv))+'%','var(--muted)'):''}
+    ${rlv.length?stat('Avg Run Loss',f1(arrMean(rlv))+'%','var(--muted)'):''}
+  </div>`;
+
+  const absIdxs=[];
+  for(let i=s2;i<=e2;i++)absIdxs.push(viewS+i);
+  hlRows(absIdxs);
 }
-
-function clearSel(){selS=-1;selE=-1;renderAll();document.getElementById('sel-bar').classList.remove('show');highlightRows([]);}
 
 // ── Overview events ────────────────────────────────────────────────────────
-function getOvIdx(clientX,canvas){
-  const rect=canvas.getBoundingClientRect();
-  const {pad,pw,n}=canvas._geo;
-  return Math.round(clamp((clientX-rect.left-pad.l)/pw,0,1)*(n-1));
+let ovCanvas=null;
+function getOvIdx(cx){
+  if(!ovCanvas||!ovCanvas._g)return 0;
+  const rect=ovCanvas.getBoundingClientRect();
+  const{P,pw,N}=ovCanvas._g;
+  return clamp(Math.round((cx-rect.left-P)/pw*(N-1)),0,N-1);
 }
 
 function setupOvEvents(canvas){
-  canvas.onmousedown=null;
+  if(ovCanvas===canvas)return;
+  ovCanvas=canvas;
 
-  function startOv(cx){
+  function start(cx){
     isDragOv=true;
-    const idx=getOvIdx(cx,canvas);
-    const margin=Math.max(2,Math.round((viewE-viewS)*.08));
-    if(Math.abs(idx-viewS)<=margin){ovMode='left';}
-    else if(Math.abs(idx-viewE)<=margin){ovMode='right';}
-    else if(idx>=viewS&&idx<=viewE){ovMode='pan';}
-    else{ovMode='jump';viewS=idx;viewE=Math.min(strokes.length-1,idx+Math.max(50,viewE-viewS));}
-    ovAnchor=cx; ovVS0=viewS; ovVE0=viewE;
-    selS=-1;selE=-1;
-    renderAll();
+    const idx=getOvIdx(cx);
+    const mg=Math.max(2,Math.round((viewE-viewS)*.08));
+    if(Math.abs(idx-viewS)<=mg)ovMode='L';
+    else if(Math.abs(idx-viewE)<=mg)ovMode='R';
+    else if(idx>=viewS&&idx<=viewE)ovMode='P';
+    else{ovMode='J';viewS=idx;viewE=Math.min(ST.length-1,idx+Math.max(50,viewE-viewS));}
+    ovAnch=cx;ovVS0=viewS;ovVE0=viewE;
+    selS=-1;selE=-1;schedRender();
   }
-  function moveOv(cx){
+  function move(cx){
     if(!isDragOv)return;
-    const n=strokes.length;
-    const delta=getOvIdx(cx,canvas)-getOvIdx(ovAnchor,canvas);
-    if(ovMode==='pan'){
-      const span=ovVE0-ovVS0;
-      viewS=clamp(ovVS0+delta,0,n-1-span);
-      viewE=viewS+span;
-    }else if(ovMode==='left'){viewS=clamp(ovVS0+delta,0,viewE-5);}
-    else if(ovMode==='right'){viewE=clamp(ovVE0+delta,viewS+5,n-1);}
-    renderAll();
+    const n=ST.length;
+    const d=getOvIdx(cx)-getOvIdx(ovAnch);
+    if(ovMode==='P'){const sp=ovVE0-ovVS0;viewS=clamp(ovVS0+d,0,n-1-sp);viewE=viewS+sp;}
+    else if(ovMode==='L')viewS=clamp(ovVS0+d,0,viewE-5);
+    else if(ovMode==='R')viewE=clamp(ovVE0+d,viewS+5,n-1);
+    schedRender();
   }
-  function endOv(){isDragOv=false;ovMode=null;}
+  function end(){isDragOv=false;ovMode=null;}
 
-  canvas.addEventListener('mousedown',e=>{startOv(e.clientX);});
-  document.addEventListener('mousemove',e=>{if(isDragOv)moveOv(e.clientX);});
-  document.addEventListener('mouseup',endOv);
-  canvas.addEventListener('touchstart',e=>{startOv(e.touches[0].clientX);},{passive:true});
-  canvas.addEventListener('touchmove',e=>{if(isDragOv)moveOv(e.touches[0].clientX);},{passive:true});
-  canvas.addEventListener('touchend',endOv);
+  canvas.addEventListener('mousedown',e=>start(e.clientX));
+  canvas.addEventListener('touchstart',e=>start(e.touches[0].clientX),{passive:true});
+  canvas.addEventListener('touchmove',e=>{if(isDragOv)move(e.touches[0].clientX);},{passive:true});
+  canvas.addEventListener('touchend',end);
   canvas.addEventListener('click',e=>{
-    const idx=getOvIdx(e.clientX,canvas);
-    if(idx<viewS||idx>viewE){viewS=0;viewE=strokes.length-1;selS=-1;selE=-1;renderAll();}
+    const idx=getOvIdx(e.clientX);
+    if(idx<viewS||idx>viewE){viewS=0;viewE=ST.length-1;selS=-1;selE=-1;schedRender();}
   });
+  document.addEventListener('mousemove',e=>{if(isDragOv)move(e.clientX);});
+  document.addEventListener('mouseup',end);
+}
+
+// ── Laps ──────────────────────────────────────────────────────────────────
+function buildLaps(){
+  if(!LAPS.length)return;
+  document.getElementById('lapsec').style.display='block';
+  const hasHR='avg_hr_bpm' in LAPS[0];
+  const hasCal='calories' in LAPS[0];
+  document.querySelector('#laptbl thead').innerHTML=`<tr>
+    <th>Lap</th><th>Dist</th><th>Time</th><th>Pace</th><th>Rate</th>
+    ${hasHR?'<th>Avg HR</th><th>Max HR</th>':''}${hasCal?'<th>Cal</th>':''}
+  </tr>`;
+  document.querySelector('#laptbl tbody').innerHTML=LAPS.map((l,i)=>`<tr>
+    <td>Lap ${i+1}</td>
+    <td>${(+l.distance_m||0).toFixed(0)}m</td>
+    <td>${fmtTime(+l.time_s)}</td>
+    <td style="color:var(--g)">${fmtPace(+l.pace_s_per_500m)}</td>
+    <td style="color:var(--y)">${l.avg_spm||l.stroke_rate_spm||'—'}</td>
+    ${hasHR?`<td style="color:var(--b)">${l.avg_hr_bpm||'—'}</td><td style="color:var(--b)">${l.max_hr_bpm||'—'}</td>`:''}
+    ${hasCal?`<td>${l.calories||'—'}</td>`:''}
+  </tr>`).join('');
 }
 
 // ── Stroke table ───────────────────────────────────────────────────────────
 function buildStrokeTable(){
-  const cols=['#','Dist (m)','Time','Pace /500m','Rate','Catch Jerk','DPS','Stroke Char%'];
-  document.getElementById('st-head').innerHTML=`<tr>${cols.map(c=>`<th>${c}</th>`).join('')}</tr>`;
-  renderStrokeRows(strokes);
-  document.getElementById('tbl-count').textContent=`${strokes.length} strokes`;
+  document.getElementById('sth').innerHTML=`<tr>
+    <th>#</th><th>Dist m</th><th>Time</th><th>Pace /500</th>
+    <th>Rate</th><th>Catch Jerk</th><th>DPS m</th><th>Stroke Char%</th>
+  </tr>`;
+  const rows=ST.slice(0,1000).map(s=>`<tr data-i="${s.n-1}">
+    <td>${s.n}</td>
+    <td>${isNaN(s.dist)?'—':s.dist.toFixed(0)}</td>
+    <td>${fmtTime(s.elapsed)}</td>
+    <td style="color:var(--g)">${fmtPace(s.pace)}</td>
+    <td style="color:var(--y)">${isNaN(s.rate)||s.rate<1?'—':f0(s.rate)}</td>
+    <td style="color:var(--r)">${isNaN(s.jerk)||s.jerk<=0?'—':f1(s.jerk)}</td>
+    <td style="color:var(--p)">${isNaN(s.dps)||s.dps<1?'—':f1(s.dps)}</td>
+    <td>${isNaN(s.schar)?'—':f0(s.schar)+'%'}</td>
+  </tr>`).join('');
+  document.getElementById('stb').innerHTML=rows;
+  document.getElementById('tblcount').textContent=ST.length+' strokes';
 }
 
-function renderStrokeRows(data){
-  document.getElementById('st-body').innerHTML=data.slice(0,1000).map((s,i)=>`
-    <tr data-idx="${s.stroke-1}">
-      <td style="color:var(--muted)">${s.stroke}</td>
-      <td>${isNaN(s.dist)?'—':s.dist.toFixed(0)}</td>
-      <td>${fmtTime(s.elapsed||0)}</td>
-      <td style="color:var(--g)">${fmtPace(s.pace)}</td>
-      <td style="color:var(--y)">${isNaN(s.rate)||s.rate<1?'—':s.rate.toFixed(0)}</td>
-      <td style="color:var(--r)">${isNaN(s.catch_jerk)?'—':s.catch_jerk.toFixed(1)}</td>
-      <td style="color:var(--p)">${isNaN(s.dps)||s.dps<1?'—':s.dps.toFixed(1)}</td>
-      <td>${isNaN(s.stroke_char)?'—':s.stroke_char.toFixed(0)+'%'}</td>
-    </tr>
-  `).join('');
-}
-
-function highlightRows(idxs){
-  document.querySelectorAll('#st-body tr').forEach(r=>{
-    r.classList.toggle('sel',idxs.includes(+r.dataset.idx));
+function hlRows(idxs){
+  const set=new Set(idxs);
+  document.querySelectorAll('#stb tr').forEach(r=>{
+    r.classList.toggle('hl',set.has(+r.dataset.i));
   });
   if(idxs.length){
-    const f=document.querySelector(`#st-body tr[data-idx="${idxs[0]}"]`);
-    if(f) f.scrollIntoView({block:'nearest',behavior:'smooth'});
+    const f=document.querySelector(`#stb tr[data-i="${idxs[0]}"]`);
+    if(f)f.scrollIntoView({block:'nearest',behavior:'smooth'});
   }
 }
 
-window.addEventListener('resize',()=>{if(strokes.length)renderAll();});
+window.addEventListener('resize',()=>{if(ST.length)schedRender();});
 </script>
-
 </body>
 </html>

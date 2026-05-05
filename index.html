@@ -47,6 +47,7 @@ html,body{background:var(--bg);color:var(--text);font-family:'IBM Plex Mono',mon
 .cy{border-top:2px solid var(--y);} .cy .val{color:var(--y);}
 .cr{border-top:2px solid var(--r);} .cr .val{color:var(--r);}
 .cp{border-top:2px solid var(--p);} .cp .val{color:var(--p);}
+.co{border-top:2px solid #ff9a3c;} .co .val{color:#ff9a3c;}
 .cw .val{color:var(--text);}
 
 /* Section */
@@ -116,10 +117,10 @@ tbody td:first-child{color:var(--text);text-align:left;}
 
 <div id="dz">
   <div class="ico">🚣</div>
-  <h2>Drop SpeedCoach CSV</h2>
+  <h2>Drop Scull Metrics CSV</h2>
   <p>Stroke data · Heart rate · Laps<br>Nothing leaves your device</p>
   <button class="btn" id="browsebtn">Browse</button>
-  <p style="margin-top:6px;font-size:10px;color:var(--faint)">SpeedCoach GPS multi-section export</p>
+  <p style="margin-top:6px;font-size:10px;color:var(--faint)">Scull Metrics session export</p>
 </div>
 <input type="file" id="fin" accept=".csv,.txt">
 
@@ -197,6 +198,7 @@ function fmtTime(s){
   return m+':'+(sec<10?'0':'')+sec;
 }
 function f1(v){return isNaN(v)?'—':v.toFixed(1);}
+function f2(v){return isNaN(v)?'—':v.toFixed(2);}
 function f0(v){return isNaN(v)?'—':Math.round(v);}
 
 function niceSteps(min,max,n){
@@ -215,7 +217,7 @@ function niceSteps(min,max,n){
 let ST=[],HR=[],LAPS=[];
 let viewS=0,viewE=0;
 let selS=-1,selE=-1;
-let vis={pace:true,rate:true,jerk:true,dps:true};
+let vis={pace:true,rate:true,jerk:true,dps:true,impulse:true,rloss:false};
 let rafId=null;
 let isDragMain=false,isDragOv=false;
 let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
@@ -257,6 +259,9 @@ function parseCSV(text){
         dist:parseFloat(r.distance_m)||NaN,
         dps:parseFloat(r.dist_per_stroke_m)||NaN,
         rloss:parseFloat(r.run_loss_pct)||NaN,
+        impulse:parseFloat(r.drive_impulse)||NaN,
+        consistency:parseFloat(r.catch_consistency_stdev)||NaN,
+        runeff:parseFloat(r.run_efficiency_vmin_vmax)||NaN,
       });
       continue;
     }
@@ -308,7 +313,6 @@ function resetApp(){
   document.getElementById('hrsec').style.display='none';
   document.getElementById('lapsec').style.display='none';
   document.getElementById('selbar').classList.remove('on');
-  // Clear canvases
   ['mainC','ovC','hrC'].forEach(id=>{
     const c=document.getElementById(id);
     if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);
@@ -335,20 +339,21 @@ function buildMeta(fname,sum){
 }
 
 function sessionStats(){
-  const pv=[],rv=[],jv=[],dv=[],hv=[];
+  const pv=[],rv=[],jv=[],dv=[],iv=[],hv=[];
   for(let i=0;i<ST.length;i++){
     const s=ST[i];
     if(s.pace>50&&s.pace<500)pv.push(s.pace);
     if(s.rate>5&&s.rate<50)rv.push(s.rate);
     if(s.jerk>0&&s.jerk<300)jv.push(s.jerk);
     if(s.dps>1&&s.dps<25)dv.push(s.dps);
+    if(s.impulse>0&&s.impulse<10)iv.push(s.impulse);
   }
   for(let i=0;i<HR.length;i++){const b=HR[i].bpm;if(b>40&&b<220)hv.push(b);}
-  return{pv,rv,jv,dv,hv};
+  return{pv,rv,jv,dv,iv,hv};
 }
 
 function buildCards(sum){
-  const{pv,rv,jv,dv,hv}=sessionStats();
+  const{pv,rv,jv,dv,iv,hv}=sessionStats();
   const km=((+sum.distance_m||0)/1000).toFixed(2);
   const dur=fmtTime(+sum.duration_s);
   let html=`
@@ -358,6 +363,7 @@ function buildCards(sum){
     <div class="card cy"><div class="lbl">Avg Rate</div><div class="val">${f1(arrMean(rv))}</div><div class="sub">spm · max ${f0(arrMax(rv))}</div></div>
     <div class="card cr"><div class="lbl">Avg Jerk</div><div class="val">${f1(arrMean(jv))}</div><div class="sub">peak ${f1(arrMax(jv))} ms³</div></div>
     <div class="card cp"><div class="lbl">Avg DPS</div><div class="val">${f1(arrMean(dv))}</div><div class="sub">m/stroke</div></div>
+    ${iv.length?`<div class="card cb"><div class="lbl">Avg Impulse</div><div class="val">${f1(arrMean(iv))}</div><div class="sub">peak ${f1(arrMax(iv))}</div></div>`:''}
   `;
   if(hv.length)html+=`<div class="card cb"><div class="lbl">Avg HR</div><div class="val">${f0(arrMean(hv))}</div><div class="sub">max ${f0(arrMax(hv))} bpm</div></div>`;
   document.getElementById('cards').innerHTML=html;
@@ -369,6 +375,8 @@ const SERIES=[
   {k:'rate',l:'Rate',c:'var(--y)'},
   {k:'jerk',l:'Catch Jerk',c:'var(--r)'},
   {k:'dps',l:'DPS',c:'var(--p)'},
+  {k:'impulse',l:'Impulse',c:'var(--b)'},
+  {k:'rloss',l:'Run Loss',c:'#ff9a3c'},
 ];
 function buildLegend(){
   document.getElementById('leg').innerHTML=SERIES.map(s=>
@@ -421,20 +429,21 @@ function drawMain(){
   const xRng=xMax-xMin||1;
   const toX=v=>PL+(v-xMin)/xRng*pw;
 
-  // Collect valid values per series (no spread)
-  const pv=[],rv=[],jv=[],dv=[];
+  // Collect valid values per series
+  const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[];
   for(let i=0;i<N;i++){
     const s=view[i];
     if(vis.pace&&s.pace>50&&s.pace<500)pv.push(s.pace);
     if(vis.rate&&s.rate>5&&s.rate<50)rv.push(s.rate);
     if(vis.jerk&&s.jerk>0&&s.jerk<300)jv.push(s.jerk);
     if(vis.dps&&s.dps>1&&s.dps<25)dv.push(s.dps);
+    if(vis.impulse&&s.impulse>0&&s.impulse<10)iv.push(s.impulse);
+    if(vis.rloss&&s.rloss>0&&s.rloss<100)rlv.push(s.rloss);
   }
 
   // Left Y: pace (inverted — faster=higher)
   let yPMin=80,yPMax=550;
   if(pv.length){yPMin=arrMin(pv)*.95;yPMax=arrMax(pv)*1.05;}
-  // toYP inverted
   const toYP=v=>PT+ph-(1-(v-yPMin)/(yPMax-yPMin))*ph;
 
   // Right Y: rate + jerk combined
@@ -443,10 +452,20 @@ function drawMain(){
   if(jv.length){const jmax=arrMax(jv)*1.1;if(jmax>yRMax)yRMax=jmax;}
   const toYR=v=>PT+ph-(v-yRMin)/(yRMax-yRMin||1)*ph;
 
-  // DPS: secondary left, mapped to same pixel range
+  // DPS: secondary left
   let yDMin=4,yDMax=14;
   if(dv.length){yDMin=arrMin(dv)*.95;yDMax=arrMax(dv)*1.05;}
   const toYD=v=>PT+ph-(v-yDMin)/(yDMax-yDMin||1)*ph;
+
+  // Impulse Y scale
+  let yImpMin=0.2,yImpMax=2.0;
+  if(iv.length){yImpMin=arrMin(iv)*.9;yImpMax=arrMax(iv)*1.1;}
+  const toYImp=v=>PT+ph-(v-yImpMin)/(yImpMax-yImpMin||1)*ph;
+
+  // Run loss Y scale
+  let yRLMax=30;
+  if(rlv.length)yRLMax=Math.max(arrMax(rlv)*1.2,10);
+  const toYRL=v=>PT+ph-(v/yRLMax)*ph;
 
   // Grid lines
   ctx.lineWidth=1;
@@ -531,11 +550,30 @@ function drawMain(){
     }
   }
 
+  // Draw impulse dots
+  if(vis.impulse&&iv.length){
+    ctx.fillStyle='rgba(77,166,255,.7)';
+    for(let i=0;i<N;i++){
+      const v=view[i].impulse;
+      if(isNaN(v)||v<=0||v>10)continue;
+      ctx.beginPath();ctx.arc(toX(xs[i]),toYImp(v),2.5,0,6.283);ctx.fill();
+    }
+  }
+
+  // Draw run loss dots
+  if(vis.rloss&&rlv.length){
+    ctx.fillStyle='rgba(255,154,60,.65)';
+    for(let i=0;i<N;i++){
+      const v=view[i].rloss;
+      if(isNaN(v)||v<=0||v>=100)continue;
+      ctx.beginPath();ctx.arc(toX(xs[i]),toYRL(v),2.2,0,6.283);ctx.fill();
+    }
+  }
+
   // Border
   ctx.strokeStyle='#1e2438';ctx.lineWidth=1;
   ctx.strokeRect(PL,PT,pw,ph);
 
-  // Store geo for hit testing
   canvas._g={PL,PR,PT,PB,pw,ph,xs,N,W,H};
   setupMainEvents(canvas);
 }
@@ -557,13 +595,11 @@ function drawOv(){
   const P=4;
   const pw=W-P*2,ph=H-P*2;
 
-  // Get pace range without spread
   let pMin=Infinity,pMax=-Infinity;
   for(let i=0;i<N;i++){const v=ST[i].pace;if(v>50&&v<500){if(v<pMin)pMin=v;if(v>pMax)pMax=v;}}
   if(pMin===Infinity){pMin=100;pMax=300;}
   const pRng=pMax-pMin||1;
 
-  // Full session dim line
   ctx.beginPath();let s=false;
   for(let i=0;i<N;i++){
     const v=ST[i].pace;if(v<50||v>500){s=false;continue;}
@@ -573,7 +609,6 @@ function drawOv(){
   }
   ctx.strokeStyle='#1e2a3e';ctx.lineWidth=1;ctx.stroke();
 
-  // View window
   const vx1=P+(viewS/(N-1))*pw;
   const vx2=P+(viewE/(N-1))*pw;
   ctx.fillStyle='rgba(58,255,180,.10)';
@@ -581,7 +616,6 @@ function drawOv(){
   ctx.strokeStyle='rgba(58,255,180,.5)';ctx.lineWidth=1.5;
   ctx.strokeRect(vx1,P,vx2-vx1,ph);
 
-  // View segment highlighted
   ctx.beginPath();s=false;
   for(let i=viewS;i<=viewE;i++){
     const v=ST[i].pace;if(v<50||v>500){s=false;continue;}
@@ -614,7 +648,6 @@ function drawHR(){
   const pw=W-PL-PR,ph=H-PT-PB;
 
   const t0=new Date(HR[0].ts).getTime();
-  // Find range without spread
   let xMax=0,yMin=200,yMax=0,hsum=0;
   for(let i=0;i<N;i++){
     const x=(new Date(HR[i].ts).getTime()-t0)/60000;
@@ -638,7 +671,6 @@ function drawHR(){
     if(y1<PT+ph&&y2>PT){ctx.fillStyle=c;ctx.fillRect(PL,Math.max(PT,y1),pw,Math.min(PT+ph,y2)-Math.max(PT,y1));}
   });
 
-  // Grid
   ctx.font='9px IBM Plex Mono,monospace';ctx.lineWidth=1;ctx.strokeStyle='#1a2030';
   niceSteps(yMin,yMax,5).forEach(g=>{
     const y=toY(g);
@@ -651,12 +683,10 @@ function drawHR(){
     ctx.fillStyle='#3a4460';ctx.textAlign='center';ctx.fillText(Math.round(g)+'m',x,PT+ph+14);
   });
 
-  // Avg line
   ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(77,166,255,.3)';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(PL,toY(avg));ctx.lineTo(PL+pw,toY(avg));ctx.stroke();
   ctx.setLineDash([]);
 
-  // HR line + fill
   const grad=ctx.createLinearGradient(0,PT,0,PT+ph);
   grad.addColorStop(0,'rgba(77,166,255,.18)');grad.addColorStop(1,'rgba(77,166,255,0)');
 
@@ -684,7 +714,7 @@ function getMainIdx(cx){
 }
 
 function setupMainEvents(canvas){
-  if(mainCanvas===canvas)return; // already set up for this canvas instance
+  if(mainCanvas===canvas)return;
   mainCanvas=canvas;
 
   canvas.addEventListener('mousedown',e=>{isDragMain=true;selS=selE=getMainIdx(e.clientX);schedRender();});
@@ -705,8 +735,7 @@ function updateSel(){
   const sel=view.slice(s2,e2+1);
   if(!sel.length){bar.classList.remove('on');return;}
 
-  // Collect all stats with loops
-  const pv=[],rv=[],jv=[],dv=[],scv=[],rlv=[];
+  const pv=[],rv=[],jv=[],dv=[],scv=[],rlv=[],iv=[];
   for(let i=0;i<sel.length;i++){
     const s=sel[i];
     if(s.pace>50&&s.pace<500)pv.push(s.pace);
@@ -715,6 +744,7 @@ function updateSel(){
     if(s.dps>1&&s.dps<25)dv.push(s.dps);
     if(!isNaN(s.schar)&&s.schar>=0)scv.push(s.schar);
     if(!isNaN(s.rloss)&&s.rloss>=0)rlv.push(s.rloss);
+    if(s.impulse>0&&s.impulse<10)iv.push(s.impulse);
   }
 
   const distStart=sel[0].dist||0;
@@ -741,7 +771,9 @@ function updateSel(){
     ${jv.length?stat('Peak Jerk',f1(arrMax(jv)),'var(--r)'):''}
     ${dv.length?stat('Avg DPS',f1(arrMean(dv))+'m','var(--p)'):''}
     ${scv.length?stat('Avg Stroke Char',f1(arrMean(scv))+'%','var(--muted)'):''}
-    ${rlv.length?stat('Avg Run Loss',f1(arrMean(rlv))+'%','var(--muted)'):''}
+    ${rlv.length?stat('Avg Run Loss',f1(arrMean(rlv))+'%','#ff9a3c'):''}
+    ${iv.length?stat('Avg Impulse',f1(arrMean(iv)),'var(--b)'):''}
+    ${iv.length?stat('Peak Impulse',f1(arrMax(iv)),'var(--b)'):''}
   </div>`;
 
   const absIdxs=[];
@@ -821,7 +853,8 @@ function buildLaps(){
 function buildStrokeTable(){
   document.getElementById('sth').innerHTML=`<tr>
     <th>#</th><th>Dist m</th><th>Time</th><th>Pace /500</th>
-    <th>Rate</th><th>Catch Jerk</th><th>DPS m</th><th>Stroke Char%</th>
+    <th>Rate</th><th>Catch Jerk</th><th>Consist σ</th><th>DPS m</th>
+    <th>Stroke Char%</th><th>Run Loss%</th><th>Impulse</th>
   </tr>`;
   const rows=ST.slice(0,1000).map(s=>`<tr data-i="${s.n-1}">
     <td>${s.n}</td>
@@ -830,8 +863,11 @@ function buildStrokeTable(){
     <td style="color:var(--g)">${fmtPace(s.pace)}</td>
     <td style="color:var(--y)">${isNaN(s.rate)||s.rate<1?'—':f0(s.rate)}</td>
     <td style="color:var(--r)">${isNaN(s.jerk)||s.jerk<=0?'—':f1(s.jerk)}</td>
+    <td>${isNaN(s.consistency)||s.consistency<=0?'—':f1(s.consistency)}</td>
     <td style="color:var(--p)">${isNaN(s.dps)||s.dps<1?'—':f1(s.dps)}</td>
     <td>${isNaN(s.schar)?'—':f0(s.schar)+'%'}</td>
+    <td style="color:#ff9a3c">${isNaN(s.rloss)||s.rloss<=0?'—':f0(s.rloss)+'%'}</td>
+    <td style="color:var(--b)">${isNaN(s.impulse)||s.impulse<=0?'—':s.impulse.toFixed(2)}</td>
   </tr>`).join('');
   document.getElementById('stb').innerHTML=rows;
   document.getElementById('tblcount').textContent=ST.length+' strokes';

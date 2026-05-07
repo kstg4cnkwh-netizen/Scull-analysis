@@ -431,7 +431,7 @@ function drawMain(){
   const toX=v=>PL+(v-xMin)/xRng*pw;
 
   // Collect valid values per series
-  const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[];
+  const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[];
   for(let i=0;i<N;i++){
     const s=view[i];
     if(vis.pace&&s.pace>50&&s.pace<500)pv.push(s.pace);

@@ -469,7 +469,9 @@ function drawMain(){
   if(rlv.length)yRLMax=Math.max(arrMax(rlv)*1.2,10);
   const toYRL=v=>PT+ph-(v/yRLMax)*ph;
 
+  //Stroke Char Y scale
   const toYSC=v=>PT+ph-(v/100)*ph;
+
   // Grid lines
   ctx.lineWidth=1;
   ctx.strokeStyle='#1a2030';
@@ -753,7 +755,7 @@ function updateSel(){
   const sel=view.slice(s2,e2+1);
   if(!sel.length){bar.classList.remove('on');return;}
 
-  const pv=[],rv=[],jv=[],dv=[],scv=[],rlv=[],iv=[],scv=[];
+  const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[];
   for(let i=0;i<sel.length;i++){
     const s=sel[i];
     if(s.pace>50&&s.pace<500)pv.push(s.pace);

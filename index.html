@@ -439,7 +439,7 @@ function drawMain(){
     if(vis.jerk&&s.jerk>0&&s.jerk<300)jv.push(s.jerk);
     if(vis.dps&&s.dps>1&&s.dps<25)dv.push(s.dps);
     if(vis.impulse&&s.impulse>0&&s.impulse<10)iv.push(s.impulse);
-    if(vis.rloss&&s.rloss>0&&s.rloss<100)rlv.push(s.rloss);
+    if(vis.rloss&&s.rloss>0&&s.rloss<10)rlv.push(s.rloss);
     if(vis.schar&&!isNaN(s.schar)&&s.schar>=0&&s.schar<=100)scv.push(s.schar);
   }
 
@@ -465,7 +465,7 @@ function drawMain(){
   const toYImp=v=>PT+ph-(v-yImpMin)/(yImpMax-yImpMin||1)*ph;
 
   // Run loss Y scale
-  let yRLMax=30;
+  let yRLMax=10;
   if(rlv.length)yRLMax=Math.max(arrMax(rlv)*1.2,10);
   const toYRL=v=>PT+ph-(v/yRLMax)*ph;
 

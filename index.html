@@ -247,11 +247,18 @@ function parseCSV(text){
     if(mode==='stroke'){
       if(!hdrs.length){hdrs=c;continue;}
       const r={};hdrs.forEach((h,j)=>r[h]=c[j]||'');
-      const ts=r.timestamp;
-      if(!t0&&ts)t0=new Date(ts).getTime();
-      out.strokes.push({
-        n:+r.stroke||0,
-        elapsed:ts?(new Date(ts).getTime()-t0)/1000:NaN,
+      const ts = r.timestamp;
+
+// Safer timestamp parsing for iPad/Safari
+const t = ts
+  ? Date.parse(ts.replace(' ', 'T'))
+  : NaN;
+
+if (!t0 && !isNaN(t)) t0 = t;
+
+out.strokes.push({
+  n:+r.stroke||0,
+  elapsed:!isNaN(t) ? (t - t0) / 1000 : NaN,
         jerk:parseFloat(r.catch_jerk_ms3)||NaN,
         schar:parseFloat(r.stroke_char_pct)||NaN,
         rate:parseFloat(r.stroke_rate_spm)||NaN,

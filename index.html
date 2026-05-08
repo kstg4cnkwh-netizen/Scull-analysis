@@ -227,7 +227,6 @@ function parseCSV(text){
   const lines=text.split(/\r?\n/);
   const out={sum:{},strokes:[],hr:[],laps:[],glaps:[]};
   let mode='',hdrs=[],t0=0;
-
   for(let i=0;i<lines.length;i++){
     const l=lines[i].trim();
     if(!l)continue;
@@ -451,8 +450,8 @@ function drawMain(){
   }
 
   // Left Y: pace (inverted — faster=higher)
-  let yPMin=80,yPMax=550;
-  if(pv.length){yPMin=arrMin(pv)*.95;yPMax=arrMax(pv)*1.05;}
+  let yPMin=80,yPMax=210; //550->210
+  if(pv.length){yPMin=arrMin(pv)*.95;yPMax=210} //if(pv.length){yPMin=arrMin(pv)*.95;yPMax=arrMax(pv)*1.05;}
   const toYP=v=>PT+ph-(1-(v-yPMin)/(yPMax-yPMin))*ph;
 
   // Right Y: rate + jerk combined

@@ -148,7 +148,7 @@
 
   <div class="sec">
     <div class="ovbox"><canvas id="ovC" height="48"></canvas></div>
-    <div class="hint" style="margin-top:3px;">Drag shaded window · tap outside to reset zoom</div>
+    <div class="hint" style="margin-top:3px;">Drag shaded window · double click to reset zoom</div>
   </div>
 
   <div class="sec" id="hrsec" style="display:none;">
@@ -409,6 +409,13 @@ function zoomToSel(){
   } else {
     updateSel();
   }
+  schedRender();
+}
+
+function resetZoom(){
+  viewS = 0;
+  viewE = ST.length - 1;
+  selS = -1; selE = -1;
   schedRender();
 }
 
@@ -815,6 +822,7 @@ function setupMainEvents(canvas){
   canvas.addEventListener('touchstart',e=>{isDragMain=true;selS=selE=getMainIdx(e.touches[0].clientX);schedRender();},{passive:true});
   canvas.addEventListener('touchmove',e=>{if(isDragMain){selE=getMainIdx(e.touches[0].clientX);schedRender();}},{passive:true});
   canvas.addEventListener('touchend',()=>{isDragMain=false;zoomToSel();});
+  canvas.addEventListener('dblclick', () => resetZoom());
 }
 document.addEventListener('mouseup',()=>{if(isDragMain){isDragMain=false;zoomToSel();}});
 

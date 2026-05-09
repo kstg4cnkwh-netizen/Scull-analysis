@@ -217,7 +217,7 @@ function niceSteps(min,max,n){
 let ST=[],HR=[],LAPS=[];
 let viewS=0,viewE=0;
 let selS=-1,selE=-1;
-let vis={pace:true,rate:true,jerk:true,dps:true,impulse:true,rloss:false,schar:false};
+let vis={pace:true,rate:true,jerk:true,dps:true,impulse:true,rloss:false,schar:false,rdi:false};
 let rafId=null;
 let isDragMain=false,isDragOv=false;
 let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
@@ -268,6 +268,7 @@ out.strokes.push({
         impulse:parseFloat(r.drive_impulse)||NaN,
         consistency:parseFloat(r.catch_consistency_stdev)||NaN,
         runeff:parseFloat(r.run_efficiency_vmin_vmax)||NaN,
+        rdi: parseFloat(r.rdi) || NaN,
       });
       continue;
     }
@@ -384,6 +385,7 @@ const SERIES=[
   {k:'impulse',l:'Impulse',c:'var(--b)'},
   {k:'rloss',l:'Run Loss',c:'#ff9a3c'},
   {k:'schar',l:'Stroke Char',c:'#a8d8a8'},
+  {k:'rdi',l:'RDI',c:'#66ffd9'},
 ];
 function buildLegend(){
   document.getElementById('leg').innerHTML=SERIES.map(s=>
@@ -437,7 +439,7 @@ function drawMain(){
   const toX=v=>PL+(v-xMin)/xRng*pw;
 
   // Collect valid values per series
-  const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[];
+  const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[],rdiv=[];
   for(let i=0;i<N;i++){
     const s=view[i];
     if(vis.pace&&s.pace>50&&s.pace<500)pv.push(s.pace);
@@ -447,6 +449,7 @@ function drawMain(){
     if(vis.impulse&&s.impulse>0&&s.impulse<10)iv.push(s.impulse);
     if(vis.rloss&&s.rloss>0&&s.rloss<10)rlv.push(s.rloss);
     if(vis.schar&&!isNaN(s.schar)&&s.schar>=0&&s.schar<=100)scv.push(s.schar);
+    if(vis.rdi&&!isNaN(s.rdi)&&s.rdi>=-1&&s.rdi<=1)rdiv.push(s.rdi);
   }
 
   // Left Y: pace (inverted — faster=higher)
@@ -477,6 +480,9 @@ function drawMain(){
 
   //Stroke Char Y scale
   const toYSC=v=>PT+ph-(v/100)*ph;
+
+  //Stroke RDI Y scale
+  const toYRDI=v=>PT+ph-((v+1)/2)*ph;
 
   // Grid lines
   ctx.lineWidth=1;
@@ -588,6 +594,18 @@ function drawMain(){
       const v=view[i].schar;
       if(isNaN(v)||v<0||v>100)continue;
       ctx.beginPath();ctx.arc(toX(xs[i]),toYSC(v),2.2,0,6.283);ctx.fill();
+    }
+  }
+
+  // Draw RDI dots
+  if(vis.rdi&&rdiv.length){
+    ctx.fillStyle='rgba(102,255,217,.75)';
+    for(let i=0;i<N;i++){
+      const v=view[i].rdi;
+      if(isNaN(v)||v<-1||v>1)continue;
+      ctx.beginPath();
+      ctx.arc(toX(xs[i]),toYRDI(v),2.2,0,6.283);
+      ctx.fill();
     }
   }
   // Border
@@ -800,6 +818,7 @@ function updateSel(){
     ${rlv.length?stat('Avg Run Loss',f1(arrMean(rlv))+'%','#ff9a3c'):''}
     ${iv.length?stat('Avg Impulse',f1(arrMean(iv)),'var(--b)'):''}
     ${iv.length?stat('Peak Impulse',f1(arrMax(iv)),'var(--b)'):''}
+    ${iv.length?stat('Avg RDI',f1(arrMean(rdiv)),'var(--b)'):''}
   </div>`;
 
   const absIdxs=[];
@@ -880,7 +899,7 @@ function buildStrokeTable(){
   document.getElementById('sth').innerHTML=`<tr>
     <th>#</th><th>Dist m</th><th>Time</th><th>Pace /500</th>
     <th>Rate</th><th>Catch Jerk</th><th>Consist σ</th><th>DPS m</th>
-    <th>Stroke Char%</th><th>Run Loss%</th><th>Impulse</th>
+    <th>Stroke Char%</th><th>Run Loss%</th><th>Impulse</th><th>RDI</th>
   </tr>`;
   const rows=ST.slice(0,1000).map(s=>`<tr data-i="${s.n-1}">
     <td>${s.n}</td>
@@ -894,6 +913,7 @@ function buildStrokeTable(){
     <td>${isNaN(s.schar)?'—':f0(s.schar)+'%'}</td>
     <td style="color:#ff9a3c">${isNaN(s.rloss)||s.rloss<=0?'—':f0(s.rloss)+'%'}</td>
     <td style="color:var(--b)">${isNaN(s.impulse)||s.impulse<=0?'—':s.impulse.toFixed(2)}</td>
+    <td style="color:var(--b)">${isNaN(s.rdi)||s.rdi<=0?'—':s.rdi.toFixed(2)}</td>
   </tr>`).join('');
   document.getElementById('stb').innerHTML=rows;
   document.getElementById('tblcount').textContent=ST.length+' strokes';

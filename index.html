@@ -221,20 +221,13 @@ let isDragMain=false,isDragOv=false;
 let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
 
 // ── Parse ──────────────────────────────────────────────────────────────────
-function num(v){
-  const n=parseFloat(v);
-  return Number.isFinite(n)?n:NaN;
-}
-
 function parseCSV(text){
   const lines=text.split(/\r?\n/);
   const out={sum:{},strokes:[],hr:[],laps:[],glaps:[]};
   let mode='',hdrs=[],t0=0;
-
   for(let i=0;i<lines.length;i++){
     const l=lines[i].trim();
     if(!l)continue;
-
     if(l==='SESSION SUMMARY'){mode='sum';continue;}
     if(l==='STROKE DATA'){mode='stroke';hdrs=[];continue;}
     if(l==='LAPS'){mode='laps';hdrs=[];continue;}
@@ -242,50 +235,45 @@ function parseCSV(text){
     if(l==='HEART RATE'){mode='hr';hdrs=[];continue;}
     if(l==='GARMIN SPEED'||l==='GPS TRACE'){mode='skip';continue;}
     if(mode==='skip')continue;
-
     const c=l.split(',');
-
-    if(mode==='sum'){
-      if(c.length>=2)out.sum[c[0]]=c[1];
-      continue;
-    }
-
+    if(mode==='sum'){if(c.length>=2)out.sum[c[0]]=c[1];continue;}
     if(mode==='stroke'){
       if(!hdrs.length){hdrs=c;continue;}
-
-      const r={};
-      hdrs.forEach((h,j)=>r[h]=c[j]||'');
-
+      const r={};hdrs.forEach((h,j)=>r[h]=c[j]||'');
       const ts=r.timestamp;
-      let t=NaN;
-
-      if(ts){
-        t=new Date(ts.replace(' ','T')).getTime();
-      }
-
+      const t=ts?Date.parse(ts.replace(' ','T')):NaN;
       if(!t0&&!isNaN(t))t0=t;
-
       out.strokes.push({
-        n:num(r.stroke)||0,
+        n:+r.stroke||0,
         ms:!isNaN(t)?t:NaN,
         elapsed:!isNaN(t)?(t-t0)/1000:NaN,
-        jerk:num(r.catch_jerk_ms3),
-        schar:num(r.stroke_char_pct),
-        rate:num(r.stroke_rate_spm),
-        pace:num(r.pace_s_per_500m),
-        dist:num(r.distance_m),
-        dps:num(r.dist_per_stroke_m),
-        rloss:num(r.run_loss_pct),
-        impulse:num(r.drive_impulse),
-        consistency:num(r.catch_consistency_stdev),
-        runeff:num(r.run_efficiency_vmin_vmax),
-        rdi:num(r.recovery_drive_index),
+        jerk:parseFloat(r.catch_jerk_ms3)||NaN,
+        schar:parseFloat(r.stroke_char_pct)||NaN,
+        rate:parseFloat(r.stroke_rate_spm)||NaN,
+        pace:parseFloat(r.pace_s_per_500m)||NaN,
+        dist:parseFloat(r.distance_m)||NaN,
+        dps:parseFloat(r.dist_per_stroke_m)||NaN,
+        rloss:parseFloat(r.run_loss_pct)||NaN,
+        impulse:parseFloat(r.drive_impulse)||NaN,
+        consistency:parseFloat(r.catch_consistency_stdev)||NaN,
+        runeff:parseFloat(r.run_efficiency_vmin_vmax)||NaN,
+        rdi:parseFloat(r.recovery_drive_index)||NaN,
       });
-
+      continue;
+    }
+    if(mode==='laps'||mode==='glaps'){
+      if(!hdrs.length){hdrs=c;continue;}
+      const r={};hdrs.forEach((h,j)=>r[h]=c[j]||'');
+      if(+r.distance_m>0)(mode==='laps'?out.laps:out.glaps).push(r);
+      continue;
+    }
+    if(mode==='hr'){
+      if(!hdrs.length){hdrs=c;continue;}
+      const bpm=parseFloat(c[1]);
+      if(!isNaN(bpm)&&bpm>30&&bpm<220)out.hr.push({ts:c[0],bpm});
       continue;
     }
   }
-
   return out;
 }
 

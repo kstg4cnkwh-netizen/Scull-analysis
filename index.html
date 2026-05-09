@@ -105,6 +105,254 @@
 </style>
 </head>
 <body>
+
+<div id="hdr">
+  <h1>⊳ Scull</h1>
+  <div class="meta" id="hdrmeta"></div>
+  <div class="sp"></div>
+  <button id="resetbtn">↩ New file</button>
+</div>
+
+<div id="dz">
+  <div class="ico">🚣</div>
+  <h2>Drop Scull Metrics CSV</h2>
+  <p>Stroke data · Heart rate · Laps<br>Nothing leaves your device</p>
+  <button class="btn" id="browsebtn">Browse</button>
+  <p style="margin-top:6px;font-size:10px;color:var(--faint)">Scull Metrics session export</p>
+</div>
+<input type="file" id="fin" accept=".csv,.txt">
+
+<div id="app">
+  <div id="cards"></div>
+
+  <div class="sec">
+    <div class="sec-hd">
+      <h2>Stroke Chart</h2>
+      <div class="legend" id="leg"></div>
+      <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+        <span style="font-size:10px;color:var(--muted)">X:</span>
+        <select id="xmode">
+          <option value="stroke">Stroke #</option>
+          <option value="dist">Distance (m)</option>
+          <option value="time">Time (min)</option>
+        </select>
+      </div>
+    </div>
+    <div class="cbox"><canvas id="mainC" height="250"></canvas><div class="hint">Drag to select · releases zoom to selection</div></div>
+  </div>
+
+  <div id="selbar">
+    <div id="selstats"></div>
+    <button id="selclear">✕ Clear</button>
+  </div>
+
+  <div class="sec">
+    <div class="ovbox"><canvas id="ovC" height="48"></canvas></div>
+    <div class="hint" style="margin-top:3px;">Drag shaded window · tap outside to reset zoom</div>
+  </div>
+
+  <div class="sec" id="hrsec" style="display:none;">
+    <div class="sec-hd">
+      <h2>Heart Rate</h2>
+      <span id="hrlbl" style="font-size:10px;color:var(--muted);"></span>
+      <div class="zlegend">
+        <span class="zl" style="color:#4da6ff">Z1 90–106</span>
+        <span class="zl" style="color:#3affb4">Z2 107–124</span>
+        <span class="zl" style="color:#ffc947">Z3 125–142</span>
+        <span class="zl" style="color:#ff9a3c">Z4 143–160</span>
+        <span class="zl" style="color:#ff6b6b">Z5 >160</span>
+      </div>
+    </div>
+    <div class="cbox"><canvas id="hrC" height="130"></canvas></div>
+  </div>
+
+  <div class="sec" id="lapsec" style="display:none;">
+    <div class="sec-hd"><h2>Laps</h2></div>
+    <div class="twrap"><table id="laptbl"><thead></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-hd"><h2>Stroke Data</h2><span id="tblcount" style="font-size:10px;color:var(--muted);"></span></div>
+    <div class="twrap"><table><thead id="sth"></thead><tbody id="stb"></tbody></table></div>
+  </div>
+</div>
+
+<script>
+// ── Utils ──────────────────────────────────────────────────────────────────
+function arrMin(a){let m=Infinity;for(let i=0;i<a.length;i++)if(a[i]<m)m=a[i];return m;}
+function arrMax(a){let m=-Infinity;for(let i=0;i<a.length;i++)if(a[i]>m)m=a[i];return m;}
+function arrSum(a){let s=0;for(let i=0;i<a.length;i++)s+=a[i];return s;}
+function arrMean(a){return a.length?arrSum(a)/a.length:NaN;}
+function clamp(v,a,b){return v<a?a:v>b?b:v;}
+
+function fmtPace(s){
+  if(!s||isNaN(s)||s<50||s>600)return'—';
+  return Math.floor(s/60)+':'+(Math.round(s%60)<10?'0':'')+Math.round(s%60);
+}
+function fmtTime(s){
+  if(!s||isNaN(s))return'0:00';
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.round(s%60);
+  if(h>0)return h+':'+(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec;
+  return m+':'+(sec<10?'0':'')+sec;
+}
+function f1(v){return isNaN(v)?'—':v.toFixed(1);}
+function f2(v){return isNaN(v)?'—':v.toFixed(2);}
+function f0(v){return isNaN(v)?'—':Math.round(v);}
+
+function niceSteps(min,max,n){
+  const r=max-min||1;
+  const raw=r/n;
+  const mag=Math.pow(10,Math.floor(Math.log10(raw)));
+  let step=mag;
+  for(const f of[1,2,2.5,5,10]){if(mag*f>=raw){step=mag*f;break;}}
+  const out=[];
+  const start=Math.ceil(min/step)*step;
+  for(let v=start;v<=max+step*.001;v+=step)out.push(parseFloat(v.toPrecision(8)));
+  return out;
+}
+
+// ── State ──────────────────────────────────────────────────────────────────
+let ST=[],HR=[],LAPS=[];
+let viewS=0,viewE=0;
+let selS=-1,selE=-1;
+let vis={pace:true,rate:true,jerk:true,dps:true,impulse:true,rloss:false,schar:false,rdi:false};
+let rafId=null;
+let isDragMain=false,isDragOv=false;
+let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
+
+// ── Parse ──────────────────────────────────────────────────────────────────
+function parseCSV(text){
+  const lines=text.split(/\r?\n/);
+  const out={sum:{},strokes:[],hr:[],laps:[],glaps:[]};
+  let mode='',hdrs=[],t0=0;
+  for(let i=0;i<lines.length;i++){
+    const l=lines[i].trim();
+    if(!l)continue;
+    if(l==='SESSION SUMMARY'){mode='sum';continue;}
+    if(l==='STROKE DATA'){mode='stroke';hdrs=[];continue;}
+    if(l==='LAPS'){mode='laps';hdrs=[];continue;}
+    if(l==='GARMIN LAPS'){mode='glaps';hdrs=[];continue;}
+    if(l==='HEART RATE'){mode='hr';hdrs=[];continue;}
+    if(l==='GARMIN SPEED'||l==='GPS TRACE'){mode='skip';continue;}
+    if(mode==='skip')continue;
+    const c=l.split(',');
+    if(mode==='sum'){if(c.length>=2)out.sum[c[0]]=c[1];continue;}
+    if(mode==='stroke'){
+      if(!hdrs.length){hdrs=c;continue;}
+      const r={};hdrs.forEach((h,j)=>r[h]=c[j]||'');
+      const ts=r.timestamp;
+      const t=ts?Date.parse(ts.replace(' ','T')):NaN;
+      if(!t0&&!isNaN(t))t0=t;
+      out.strokes.push({
+        n:+r.stroke||0,
+        ms:!isNaN(t)?t:NaN,
+        elapsed:!isNaN(t)?(t-t0)/1000:NaN,
+        jerk:parseFloat(r.catch_jerk_ms3)||NaN,
+        schar:parseFloat(r.stroke_char_pct)||NaN,
+        rate:parseFloat(r.stroke_rate_spm)||NaN,
+        pace:parseFloat(r.pace_s_per_500m)||NaN,
+        dist:parseFloat(r.distance_m)||NaN,
+        dps:parseFloat(r.dist_per_stroke_m)||NaN,
+        rloss:parseFloat(r.run_loss_pct)||NaN,
+        impulse:parseFloat(r.drive_impulse)||NaN,
+        consistency:parseFloat(r.catch_consistency_stdev)||NaN,
+        runeff:parseFloat(r.run_efficiency_vmin_vmax)||NaN,
+        rdi:parseFloat(r.recovery_drive_index)||NaN,
+      });
+      continue;
+    }
+    if(mode==='laps'||mode==='glaps'){
+      if(!hdrs.length){hdrs=c;continue;}
+      const r={};hdrs.forEach((h,j)=>r[h]=c[j]||'');
+      if(+r.distance_m>0)(mode==='laps'?out.laps:out.glaps).push(r);
+      continue;
+    }
+    if(mode==='hr'){
+      if(!hdrs.length){hdrs=c;continue;}
+      const bpm=parseFloat(c[1]);
+      if(!isNaN(bpm)&&bpm>30&&bpm<220)out.hr.push({ts:c[0],bpm});
+      continue;
+    }
+  }
+  return out;
+}
+
+// ── File IO ────────────────────────────────────────────────────────────────
+function loadFile(f){
+  const r=new FileReader();
+  r.onload=e=>{
+    const d=parseCSV(e.target.result);
+    if(!d.strokes.length){alert('No stroke data found.');return;}
+    ST=d.strokes; HR=d.hr;
+    LAPS=[...d.laps,...d.glaps];
+    viewS=0; viewE=ST.length-1; selS=-1; selE=-1;
+    document.getElementById('dz').style.display='none';
+    document.getElementById('app').style.display='block';
+    buildMeta(f.name,d.sum);
+    buildCards(d.sum);
+    buildLaps();
+    buildStrokeTable();
+    if(HR.length>10){document.getElementById('hrsec').style.display='block';drawHR();}
+    schedRender();
+  };
+  r.readAsText(f);
+}
+
+function resetApp(){
+  ST=[];HR=[];LAPS=[];
+  selS=-1;selE=-1;
+  document.getElementById('app').style.display='none';
+  document.getElementById('dz').style.display='flex';
+  document.getElementById('fin').value='';
+  document.getElementById('hrsec').style.display='none';
+  document.getElementById('lapsec').style.display='none';
+  document.getElementById('selbar').classList.remove('on');
+  ['mainC','ovC','hrC'].forEach(id=>{
+    const c=document.getElementById(id);
+    if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);
+  });
+}
+
+document.getElementById('resetbtn').onclick=resetApp;
+document.getElementById('browsebtn').onclick=e=>{e.stopPropagation();document.getElementById('fin').click();};
+document.getElementById('dz').onclick=()=>document.getElementById('fin').click();
+document.getElementById('fin').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);};
+const dz=document.getElementById('dz');
+dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
+dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
+dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+document.getElementById('xmode').onchange=schedRender;
+document.getElementById('selclear').onclick=()=>{selS=-1;selE=-1;document.getElementById('selbar').classList.remove('on');schedRender();};
+
+
+</script>
+</body>
+</html>  #selclear { margin-left: auto; align-self: center; font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border); padding: 4px 10px; border-radius: 5px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; }
+  #selclear:hover { color: var(--g); border-color: var(--g); }
+
+  .ovbox { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px 2px; }
+  .ovbox canvas { display: block; width: 100% !important; touch-action: none; cursor: col-resize; }
+  .zlegend { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+  .zl { font-size: 9px; color: var(--muted); }
+
+  .twrap { overflow: auto; max-height: 200px; background: var(--s1); border: 1px solid var(--border); border-radius: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 10px; white-space: nowrap; }
+  thead th { position: sticky; top: 0; background: var(--s2); color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: right; font-size: 9px; text-transform: uppercase; letter-spacing: .4px; }
+  thead th:first-child { text-align: left; }
+  tbody tr { border-bottom: 1px solid var(--dim); }
+  tbody tr:hover td { background: var(--s2); }
+  tbody tr.hl td { background: rgba(58,255,180,.06) !important; }
+  tbody td { padding: 5px 10px; color: var(--muted); text-align: right; }
+  tbody td:first-child { color: var(--text); text-align: left; }
+
+  @media (max-width:600px) {
+    #cards { padding: 10px 10px; }
+    .sec { padding: 0 10px 10px; }
+    #selbar { margin: 0 10px 10px; }
+  }
+</style>
+</head>
+<body>
 <h1>test</h1>
 </body>
 </html>

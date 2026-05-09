@@ -597,14 +597,14 @@ function drawMain(){
     }
   }
 
-  // Draw RDI dots
-  if(vis.rdi&&rdiv.length){
+    // Draw RDI dots
+  if(vis.rdi && rdiv.length){
     ctx.fillStyle='rgba(102,255,217,.75)';
-    for(let i=0;i<N;i++){
-      const v=view[i].rdi;
-      if(isNaN(v)||v<-1||v>1)continue;
+    for(let i=0;i<rdiv.length;i++){
+      const v = rdiv[i];
+      if(isNaN(v) || v < -1 || v > 1) continue;
       ctx.beginPath();
-      ctx.arc(toX(xs[i]),toYRDI(v),2.2,0,6.283);
+      ctx.arc(toX(xs[i]), toYRDI(v), 2.2, 0, Math.PI * 2);
       ctx.fill();
     }
   }

@@ -277,82 +277,8 @@ function parseCSV(text){
   return out;
 }
 
-// ── File IO ────────────────────────────────────────────────────────────────
-function loadFile(f){
-  const r=new FileReader();
-  r.onload=e=>{
-    const d=parseCSV(e.target.result);
-    if(!d.strokes.length){alert('No stroke data found.');return;}
-    ST=d.strokes; HR=d.hr;
-    LAPS=[...d.laps,...d.glaps];
-    viewS=0; viewE=ST.length-1; selS=-1; selE=-1;
-    document.getElementById('dz').style.display='none';
-    document.getElementById('app').style.display='block';
-    buildMeta(f.name,d.sum);
-    buildCards(d.sum);
-    buildLaps();
-    buildStrokeTable();
-    if(HR.length>10){document.getElementById('hrsec').style.display='block';drawHR();}
-    schedRender();
-  };
-  r.readAsText(f);
-}
-
-function resetApp(){
-  ST=[];HR=[];LAPS=[];
-  selS=-1;selE=-1;
-  document.getElementById('app').style.display='none';
-  document.getElementById('dz').style.display='flex';
-  document.getElementById('fin').value='';
-  document.getElementById('hrsec').style.display='none';
-  document.getElementById('lapsec').style.display='none';
-  document.getElementById('selbar').classList.remove('on');
-  ['mainC','ovC','hrC'].forEach(id=>{
-    const c=document.getElementById(id);
-    if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);
-  });
-}
-
-document.getElementById('resetbtn').onclick=resetApp;
-document.getElementById('browsebtn').onclick=e=>{e.stopPropagation();document.getElementById('fin').click();};
-document.getElementById('dz').onclick=()=>document.getElementById('fin').click();
-document.getElementById('fin').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);};
-const dz=document.getElementById('dz');
-dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
-dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
-dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
-document.getElementById('xmode').onchange=schedRender;
-document.getElementById('selclear').onclick=()=>{selS=-1;selE=-1;document.getElementById('selbar').classList.remove('on');schedRender();};
 
 
 </script>
-</body>
-</html>  #selclear { margin-left: auto; align-self: center; font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border); padding: 4px 10px; border-radius: 5px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; }
-  #selclear:hover { color: var(--g); border-color: var(--g); }
-
-  .ovbox { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px 2px; }
-  .ovbox canvas { display: block; width: 100% !important; touch-action: none; cursor: col-resize; }
-  .zlegend { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
-  .zl { font-size: 9px; color: var(--muted); }
-
-  .twrap { overflow: auto; max-height: 200px; background: var(--s1); border: 1px solid var(--border); border-radius: 10px; }
-  table { width: 100%; border-collapse: collapse; font-size: 10px; white-space: nowrap; }
-  thead th { position: sticky; top: 0; background: var(--s2); color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: right; font-size: 9px; text-transform: uppercase; letter-spacing: .4px; }
-  thead th:first-child { text-align: left; }
-  tbody tr { border-bottom: 1px solid var(--dim); }
-  tbody tr:hover td { background: var(--s2); }
-  tbody tr.hl td { background: rgba(58,255,180,.06) !important; }
-  tbody td { padding: 5px 10px; color: var(--muted); text-align: right; }
-  tbody td:first-child { color: var(--text); text-align: left; }
-
-  @media (max-width:600px) {
-    #cards { padding: 10px 10px; }
-    .sec { padding: 0 10px 10px; }
-    #selbar { margin: 0 10px 10px; }
-  }
-</style>
-</head>
-<body>
-<h1>test</h1>
 </body>
 </html>

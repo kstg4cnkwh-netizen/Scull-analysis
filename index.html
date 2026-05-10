@@ -119,6 +119,15 @@
   <div class="meta" id="hdrmeta"></div>
   <div class="sp"></div>
   <button id="resetbtn">↩ New file</button>
+  <button onclick="
+    document.body.classList.toggle('light');
+    this.textContent =
+      document.body.classList.contains('light')
+        ? 'Dark Mode'
+        : 'Light Mode';
+      ">
+      Light Mode
+  </button>
 </div>
 
 <div id="dz">
@@ -128,14 +137,14 @@
   <button class="btn" id="browsebtn">Browse</button>
   <p style="margin-top:6px;font-size:10px;color:var(--faint)">Scull Metrics session export</p>
   <button onclick="
-  document.body.classList.toggle('light');
-  this.textContent =
-    document.body.classList.contains('light')
-      ? 'Dark Mode'
-      : 'Light Mode';
-">
-  Light Mode
-</button>
+    document.body.classList.toggle('light');
+    this.textContent =
+      document.body.classList.contains('light')
+        ? 'Dark Mode'
+        : 'Light Mode';
+      ">
+      Light Mode
+  </button>
 </div>
 <input type="file" id="fin" accept=".csv,.txt">
 

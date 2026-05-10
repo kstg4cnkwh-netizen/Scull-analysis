@@ -670,7 +670,7 @@ function drawOv(){
     const v=ST[i].pace;if(v<50||v>500){s=false;continue;}
     s?ctx.lineTo(toXov(xs[i]),toYov(v)):ctx.moveTo(toXov(xs[i]),toYov(v));s=true;
   }
-  ctx.strokeStyle='#1e2a3e';ctx.lineWidth=1;ctx.stroke();
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--g');ctx.lineWidth=1;ctx.stroke();
 
   // View-window highlight (x-value based)
   const vx1=toXov(xs[viewS]);
@@ -686,7 +686,7 @@ function drawOv(){
     const v=ST[i].pace;if(v<50||v>500){s=false;continue;}
     s?ctx.lineTo(toXov(xs[i]),toYov(v)):ctx.moveTo(toXov(xs[i]),toYov(v));s=true;
   }
-  ctx.strokeStyle='#3affb4';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--o');ctx.lineWidth=1.5;ctx.stroke();
 
   // Selection highlight
   if(selS>=0&&selE>=0&&selS!==selE){
@@ -697,7 +697,7 @@ function drawOv(){
     const sx2=toXov(xs[viewS+e2]);
     ctx.fillStyle='rgba(58,255,180,.28)';
     ctx.fillRect(sx1,P,sx2-sx1,ph);
-    ctx.strokeStyle='rgba(58,255,180,.7)';ctx.lineWidth=1;
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--g');ctx.lineWidth=1;
     ctx.strokeRect(sx1,P,sx2-sx1,ph);
   }
 

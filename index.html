@@ -192,6 +192,33 @@
   tbody td { padding: 5px 10px; color: var(--muted); text-align: right; }
   tbody td:first-child { color: var(--text); text-align: left; }
 
+  /* ── Hover tooltip ───────────────────────────────────────────────────── */
+  #tooltip {
+    display: none;
+    position: fixed;
+    z-index: 500;
+    background: var(--s1);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 10px 13px;
+    pointer-events: none;
+    min-width: 150px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.35);
+  }
+  #tooltip .tt-hd {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 11px; font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px; padding-bottom: 5px;
+    border-bottom: 1px solid var(--border);
+  }
+  #tooltip .tt-row {
+    display: flex; justify-content: space-between;
+    gap: 18px; padding: 2px 0; font-size: 10px;
+  }
+  #tooltip .tt-lbl { color: var(--muted); }
+  #tooltip .tt-val { font-weight: 500; }
+
   @media (max-width: 600px) {
     #cards { padding: 10px 10px; }
     .sec { padding: 0 10px 10px; }
@@ -277,6 +304,8 @@
   </div>
 </div>
 
+<div id="tooltip"></div>
+
 <script>
 // ══════════════════════════════════════════════════════════════════════════
 // COLOUR SYSTEM
@@ -359,6 +388,7 @@ function niceSteps(min,max,n){
 
 // ── State ─────────────────────────────────────────────────────────────────
 let ST=[],HR=[],LAPS=[];
+let currentView=[];          // strokes currently in the main chart view
 let viewS=0,viewE=0;
 let selS=-1,selE=-1;
 let vis={pace:true,rate:true,jerk:true,dps:true,impulse:true,rloss:false,schar:false,rdi:false};
@@ -588,6 +618,7 @@ function drawMain(){
   ctx.clearRect(0,0,W,H);
 
   const view=ST.slice(viewS,viewE+1);
+  currentView=view;
   const N=view.length;
   if(!N)return;
 
@@ -992,6 +1023,56 @@ function drawHR(){
   ctx.fillStyle=grad;ctx.fill();
 
   ctx.strokeStyle=C.frameLn;ctx.lineWidth=1;ctx.strokeRect(PL,PT,pw,ph);
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// HOVER TOOLTIP
+// ══════════════════════════════════════════════════════════════════════════
+function ttRow(lbl, val, col) {
+  if(!val || val === EM) return '';
+  return `<div class="tt-row">
+    <span class="tt-lbl">${lbl}</span>
+    <span class="tt-val"${col ? ` style="color:${col}"` : ''}>${val}</span>
+  </div>`;
+}
+
+function showTooltip(e) {
+  if(isDragMain || !currentView.length) return;
+  const idx = getMainIdx(e.clientX);
+  if(idx < 0 || idx >= currentView.length) return;
+  const s = currentView[idx];
+  const C = pal();
+
+  const tip = document.getElementById('tooltip');
+  tip.innerHTML = `
+    <div class="tt-hd">Stroke ${s.n}</div>
+    ${ttRow('Time',     fmtTime(s.elapsed))}
+    ${ttRow('Distance', isNaN(s.dist) ? EM : s.dist.toFixed(0)+'m')}
+    ${ttRow('Pace',     fmtPace(s.pace),                                           C.g)}
+    ${ttRow('Rate',     isNaN(s.rate)||s.rate<1   ? EM : f1(s.rate)+' spm',       C.y)}
+    ${ttRow('DPS',      isNaN(s.dps)||s.dps<1     ? EM : f1(s.dps)+'m',           C.p)}
+    ${ttRow('Catch Jerk', isNaN(s.jerk)||s.jerk<=0  ? EM : f1(s.jerk),            C.r)}
+    ${ttRow('Impulse',  isNaN(s.impulse)||s.impulse<=0 ? EM : s.impulse.toFixed(2), C.i)}
+    ${ttRow('Run Loss', isNaN(s.rloss)||s.rloss<=0  ? EM : f0(s.rloss)+'%',       C.b)}
+    ${ttRow('Stroke Char', isNaN(s.schar)            ? EM : f0(s.schar)+'%',      C.o)}
+    ${ttRow('RDI',      isNaN(s.rdi)||Math.abs(s.rdi)>1 ? EM : s.rdi.toFixed(2), C.d)}
+  `;
+
+  // Position beside cursor, flip sides if near screen edge
+  tip.style.display = 'block';
+  const tw = tip.offsetWidth  || 160;
+  const th = tip.offsetHeight || 180;
+  let left = e.clientX + 18;
+  let top  = e.clientY - th / 2;
+  if(left + tw > window.innerWidth  - 12) left = e.clientX - tw - 12;
+  if(top  < 8)                            top  = 8;
+  if(top  + th > window.innerHeight - 8)  top  = window.innerHeight - th - 8;
+  tip.style.left = left + 'px';
+  tip.style.top  = top  + 'px';
+}
+
+function hideTooltip() {
+  document.getElementById('tooltip').style.display = 'none';
 }
 
 // ══════════════════════════════════════════════════════════════════════════

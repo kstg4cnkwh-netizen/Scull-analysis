@@ -554,7 +554,7 @@ function drawMain(){
       const x=toX(xs[i]),y=toYP(v);
       started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true;
     }
-    ctx.strokeStyle='#3affb4';ctx.lineWidth=1.8;ctx.stroke();
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--g');ctx.lineWidth=1.8;ctx.stroke();
   }
 
   if(vis.dps&&dv.length){
@@ -565,11 +565,11 @@ function drawMain(){
       const x=toX(xs[i]),y=toYD(v);
       started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true;
     }
-    ctx.strokeStyle='rgba(192,132,252,.7)';ctx.lineWidth=1.3;ctx.stroke();
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--p');ctx.lineWidth=1.3;ctx.stroke();
   }
 
   if(vis.rate&&rv.length){
-    ctx.fillStyle='rgba(255,201,71,.65)';
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--y');
     for(let i=0;i<N;i++){
       const v=view[i].rate;
       if(isNaN(v)||v<5||v>50)continue;
@@ -583,12 +583,12 @@ function drawMain(){
       if(isNaN(v)||v<=0||v>300)continue;
       const r=clamp(1.5+(v/arrMax(jv))*3.5,1.5,5);
       ctx.beginPath();ctx.arc(toX(xs[i]),toYR(v),r,0,6.283);
-      ctx.fillStyle='rgba(255,107,107,.55)';ctx.fill();
+      ctx.fillStyle= getComputedStyle(document.documentElement).getPropertyValue('--r');ctx.fill();
     }
   }
 
   if(vis.impulse&&iv.length){
-    ctx.fillStyle='rgba(77,166,255,.7)';
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--b');
     for(let i=0;i<N;i++){
       const v=view[i].impulse;
       if(isNaN(v)||v<=0||v>10)continue;
@@ -597,7 +597,7 @@ function drawMain(){
   }
 
   if(vis.rloss&&rlv.length){
-    ctx.fillStyle='rgba(255,154,60,.65)';
+    ctx.fillStyle= getComputedStyle(document.documentElement).getPropertyValue('--b');
     for(let i=0;i<N;i++){
       const v=view[i].rloss;
       if(isNaN(v)||v<=0||v>=100)continue;
@@ -606,7 +606,7 @@ function drawMain(){
   }
 
   if(vis.schar&&scv.length){
-    ctx.fillStyle='rgba(168,216,168,.75)';
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--o');
     for(let i=0;i<N;i++){
       const v=view[i].schar;
       if(isNaN(v)||v<0||v>100)continue;
@@ -615,7 +615,7 @@ function drawMain(){
   }
 
   if(vis.rdi&&rdiv.length){
-    ctx.fillStyle='rgba(102,255,217,.75)';
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--d');
     for(let i=0;i<N;i++){
       const v=view[i].rdi;
       if(isNaN(v)||v<-1||v>1)continue;
@@ -623,7 +623,7 @@ function drawMain(){
     }
   }
 
-  ctx.strokeStyle='#1e2438';ctx.lineWidth=1;
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--g');ctx.lineWidth=1;
   ctx.strokeRect(PL,PT,pw,ph);
 
   canvas._g={PL,PR,PT,PB,pw,ph,xs,N,W,H,xMin,xRng};

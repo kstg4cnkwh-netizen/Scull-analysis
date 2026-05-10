@@ -17,7 +17,7 @@
   body.light {
     --bg: #f5f7fb; --s1: #ffffff; --s2: #eef2f7; --s3: #e4e9f2;
     --border: #cfd7e6; --dim: #dde3ee;
-    --g: #0f7b0f; --b: #4f93d6; --y: #c39939; --r: #cd2020; --p: #7e56a6; --o: #be861d; --i: #d855a4; --d: #1c48b9;
+    --g: #073e07; --b: #4f93d6; --y: #c9bc0a; --r: #cd2020; --p: #7e56a6; --o: #be861d; --i: #d855a4; --d: #1c48b9;
     --text: #111827; --muted: #5b6475; --faint: #7d8ead;
   }
 
@@ -541,7 +541,7 @@ function drawMain(){
     const x1=toX(xs[s2]),x2=toX(xs[e2]);
     ctx.fillStyle='rgba(58,255,180,.07)';
     ctx.fillRect(x1,PT,x2-x1,ph);
-    ctx.strokeStyle='rgba(58,255,180,.3)';ctx.lineWidth=1;
+    ctx.strokeStyle='#1e2438';ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(x1,PT);ctx.lineTo(x1,PT+ph);ctx.stroke();
     ctx.beginPath();ctx.moveTo(x2,PT);ctx.lineTo(x2,PT+ph);ctx.stroke();
   }
@@ -554,7 +554,7 @@ function drawMain(){
       const x=toX(xs[i]),y=toYP(v);
       started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true;
     }
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--g');ctx.lineWidth=1.8;ctx.stroke();
+    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--g');ctx.lineWidth=5.0;ctx.stroke();
   }
 
   if(vis.dps&&dv.length){
@@ -588,7 +588,7 @@ function drawMain(){
   }
 
   if(vis.impulse&&iv.length){
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--b');
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--i');
     for(let i=0;i<N;i++){
       const v=view[i].impulse;
       if(isNaN(v)||v<=0||v>10)continue;
@@ -623,7 +623,7 @@ function drawMain(){
     }
   }
 
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--g');ctx.lineWidth=1;
+  ctx.strokeStyle='#1e2438';ctx.lineWidth=1;
   ctx.strokeRect(PL,PT,pw,ph);
 
   canvas._g={PL,PR,PT,PB,pw,ph,xs,N,W,H,xMin,xRng};

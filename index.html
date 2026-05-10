@@ -6,55 +6,111 @@
 <title>Scull Analyser</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@500;600;700&display=swap');
-  
+
+  /* ── Dark palette (default) ─────────────────────────────────────────── */
   :root {
     --bg: #0b0e13; --s1: #111520; --s2: #181d2a; --s3: #1e2434;
     --border: #242c40; --dim: #1a2030;
-    --g: #3affb4; --b: #4da6ff; --y: #ffc947; --r: #f54040; --p: #c084fc; --o: #e39b16; --i: #f393cd; --d: #2952ba;
+    /* Series colours */
+    --g: #3affb4;   /* pace          – bright teal      */
+    --b: #4da6ff;   /* run-loss / HR – sky blue         */
+    --y: #ffc947;   /* rate          – amber             */
+    --r: #f54040;   /* catch jerk    – red               */
+    --p: #c084fc;   /* DPS           – purple            */
+    --o: #ffb347;   /* stroke char   – orange            */
+    --i: #f393cd;   /* impulse       – pink              */
+    --d: #5b8cff;   /* RDI           – periwinkle        */
+    /* Text */
     --text: #d8e0f0; --muted: #5a6480; --faint: #2d3450;
+    /* Canvas infrastructure – must change with theme */
+    --grid-ln: rgba(30,36,56,1);   /* grid lines          */
+    --grid-lb: #3a4460;            /* axis tick labels    */
+    --frame-ln: #242c40;           /* chart border        */
+    --sel-fill: rgba(58,255,180,.07);
+    --sel-stk:  rgba(58,255,180,.35);
   }
 
+  /* ── Light palette ──────────────────────────────────────────────────── */
   body.light {
     --bg: #f5f7fb; --s1: #ffffff; --s2: #eef2f7; --s3: #e4e9f2;
     --border: #cfd7e6; --dim: #dde3ee;
-    --g: #073e07; --b: #4f93d6; --y: #c9bc0a; --r: #cd2020; --p: #7e56a6; --o: #be861d; --i: #d855a4; --d: #1c48b9;
+    /* Series colours – boosted contrast for white bg */
+    --g: #0a7a3a;   /* pace          – forest green      */
+    --b: #2271d4;   /* run-loss / HR – cobalt            */
+    --y: #9c7c00;   /* rate          – dark amber        */
+    --r: #cd2020;   /* catch jerk    – crimson           */
+    --p: #7e56a6;   /* DPS           – violet            */
+    --o: #c07012;   /* stroke char   – burnt orange      */
+    --i: #c03088;   /* impulse       – magenta           */
+    --d: #1c48b9;   /* RDI           – navy blue         */
+    /* Text */
     --text: #111827; --muted: #5b6475; --faint: #7d8ead;
+    /* Canvas infrastructure */
+    --grid-ln: #dde4ef;
+    --grid-lb: #7080a0;
+    --frame-ln: #b8c4d8;
+    --sel-fill: rgba(10,122,58,.06);
+    --sel-stk:  rgba(10,122,58,.40);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  
-  body { 
-    background: var(--bg); 
-    color: var(--text); 
-    font-family: 'IBM Plex Mono', monospace; 
-    font-size: 13px; 
-    overflow-x: hidden; 
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    overflow-x: hidden;
   }
 
-  #hdr { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: var(--s1); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 200; flex-wrap: wrap; }
+  /* ── Header ─────────────────────────────────────────────────────────── */
+  #hdr {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
+    background: var(--s1); border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 200; flex-wrap: wrap;
+  }
   #hdr h1 { font-family: 'IBM Plex Sans', sans-serif; font-size: 16px; font-weight: 700; color: var(--g); }
   #hdr .meta { color: var(--muted); font-size: 10px; line-height: 1.5; }
   #hdr .sp { flex: 1; }
-  #hdr button { background: var(--s3); border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; }
+  #hdr button {
+    background: var(--s3); border: 1px solid var(--border);
+    color: var(--muted); padding: 6px 14px; border-radius: 6px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer;
+  }
   #hdr button:hover { border-color: var(--g); color: var(--g); }
 
-  #dz { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 57px); gap: 10px; border: 2px dashed var(--border); margin: 16px; border-radius: 10px; background: var(--s1); cursor: pointer; text-align: center; padding: 40px 20px; transition: border-color .2s; }
-  #dz:hover, #dz.over { border-color: var(--g); background: rgba(58,255,180,.03); }
+  /* ── Drop zone ───────────────────────────────────────────────────────── */
+  #dz {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center; min-height: calc(100vh - 57px);
+    gap: 10px; border: 2px dashed var(--border); margin: 16px;
+    border-radius: 10px; background: var(--s1); cursor: pointer;
+    text-align: center; padding: 40px 20px; transition: border-color .2s;
+  }
+  #dz:hover, #dz.over { border-color: var(--g); background: var(--sel-fill); }
   #dz .ico { font-size: 36px; }
   #dz h2 { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 600; }
   #dz p { color: var(--muted); font-size: 11px; line-height: 1.7; }
-  #dz .btn { margin-top: 8px; padding: 8px 22px; background: var(--g); color: #000; border: none; border-radius: 7px; font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; }
-  
+  #dz .btn {
+    margin-top: 8px; padding: 8px 22px; background: var(--g); color: #000;
+    border: none; border-radius: 7px;
+    font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer;
+  }
+
   #fin { display: none; }
   #app { display: none; padding-bottom: 40px; }
 
+  /* ── Summary cards ───────────────────────────────────────────────────── */
   #cards { display: flex; gap: 8px; padding: 12px 14px; overflow-x: auto; scrollbar-width: none; }
   #cards::-webkit-scrollbar { display: none; }
-  .card { flex-shrink: 0; min-width: 90px; background: var(--s1); border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px; }
+  .card {
+    flex-shrink: 0; min-width: 90px; background: var(--s1);
+    border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px;
+  }
   .card .lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; }
   .card .val { font-size: 17px; font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; margin-top: 2px; }
   .card .sub { font-size: 9px; color: var(--muted); margin-top: 1px; }
-  
+
   .cg { border-top: 2px solid var(--g); } .cg .val { color: var(--g); }
   .cb { border-top: 2px solid var(--b); } .cb .val { color: var(--b); }
   .cy { border-top: 2px solid var(--y); } .cy .val { color: var(--y); }
@@ -65,39 +121,70 @@
   .cd { border-top: 2px solid var(--d); } .cd .val { color: var(--d); }
   .cw .val { color: var(--text); }
 
+  /* ── Sections ────────────────────────────────────────────────────────── */
   .sec { padding: 0 14px 12px; }
-  .sec-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; flex-wrap: wrap; }
-  .sec-hd h2 { font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
+  .sec-hd {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 7px; flex-wrap: wrap;
+  }
+  .sec-hd h2 {
+    font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 600;
+    color: var(--muted); text-transform: uppercase; letter-spacing: .8px;
+  }
 
   .legend { display: flex; gap: 10px; flex-wrap: wrap; }
-  .leg { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 4px; border: 1px solid transparent; }
+  .leg {
+    display: flex; align-items: center; gap: 5px; font-size: 10px;
+    color: var(--muted); cursor: pointer; padding: 2px 6px;
+    border-radius: 4px; border: 1px solid transparent;
+  }
   .leg:hover { border-color: var(--border); }
   .leg.off { opacity: .3; }
   .dot { width: 8px; height: 8px; border-radius: 50%; }
 
-  select { background: var(--s2); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; outline: none; }
+  select {
+    background: var(--s2); border: 1px solid var(--border);
+    color: var(--text); padding: 5px 8px; border-radius: 6px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    cursor: pointer; outline: none;
+  }
   select:focus { border-color: var(--g); }
 
   .cbox { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 12px 10px 4px; position: relative; }
   .cbox canvas { display: block; width: 100% !important; touch-action: none; cursor: crosshair; }
   .hint { text-align: center; font-size: 9px; color: var(--faint); margin-top: 3px; }
 
-  #selbar { display: none; margin: 0 14px 10px; padding: 10px 14px; background: var(--s2); border: 1px solid var(--border); border-radius: 8px; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
+  /* ── Selection stats bar ─────────────────────────────────────────────── */
+  #selbar {
+    display: none; margin: 0 14px 10px; padding: 10px 14px;
+    background: var(--s2); border: 1px solid var(--border);
+    border-radius: 8px; flex-wrap: wrap; gap: 12px; align-items: flex-start;
+  }
   #selbar.on { display: flex; }
   .ss { display: flex; flex-direction: column; gap: 1px; }
   .ss .l { font-size: 9px; color: var(--muted); text-transform: uppercase; }
   .ss .v { font-size: 12px; font-weight: 500; }
-  #selclear { margin-left: auto; align-self: center; font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border); padding: 4px 10px; border-radius: 5px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; }
+  #selclear {
+    margin-left: auto; align-self: center; font-size: 10px; color: var(--muted);
+    background: none; border: 1px solid var(--border); padding: 4px 10px;
+    border-radius: 5px; cursor: pointer; font-family: 'IBM Plex Mono', monospace;
+  }
   #selclear:hover { color: var(--g); border-color: var(--g); }
 
+  /* ── Overview ────────────────────────────────────────────────────────── */
   .ovbox { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px 2px; }
   .ovbox canvas { display: block; width: 100% !important; touch-action: none; cursor: col-resize; }
   .zlegend { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
   .zl { font-size: 9px; color: var(--muted); }
 
+  /* ── Tables ──────────────────────────────────────────────────────────── */
   .twrap { overflow: auto; max-height: 200px; background: var(--s1); border: 1px solid var(--border); border-radius: 10px; }
   table { width: 100%; border-collapse: collapse; font-size: 10px; white-space: nowrap; }
-  thead th { position: sticky; top: 0; background: var(--s2); color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: right; font-size: 9px; text-transform: uppercase; letter-spacing: .4px; }
+  thead th {
+    position: sticky; top: 0; background: var(--s2); color: var(--muted);
+    padding: 7px 10px; border-bottom: 1px solid var(--border);
+    text-align: right; font-size: 9px; text-transform: uppercase; letter-spacing: .4px;
+  }
   thead th:first-child { text-align: left; }
   tbody tr { border-bottom: 1px solid var(--dim); }
   tbody tr:hover td { background: var(--s2); }
@@ -105,7 +192,7 @@
   tbody td { padding: 5px 10px; color: var(--muted); text-align: right; }
   tbody td:first-child { color: var(--text); text-align: left; }
 
-  @media (max-width:600px) {
+  @media (max-width: 600px) {
     #cards { padding: 10px 10px; }
     .sec { padding: 0 10px 10px; }
     #selbar { margin: 0 10px 10px; }
@@ -114,40 +201,27 @@
 </head>
 <body>
 
+<!-- ── Header ──────────────────────────────────────────────────────────── -->
 <div id="hdr">
   <h1>⊳ Scull</h1>
   <div class="meta" id="hdrmeta"></div>
   <div class="sp"></div>
   <button id="resetbtn">↩ New file</button>
-  <button onclick="
-    document.body.classList.toggle('light');
-    this.textContent =
-      document.body.classList.contains('light')
-        ? 'Dark Mode'
-        : 'Light Mode';
-      ">
-      Light Mode
-  </button>
+  <button class="themeBtn" id="hdrThemeBtn">Light Mode</button>
 </div>
 
+<!-- ── Drop zone ───────────────────────────────────────────────────────── -->
 <div id="dz">
   <div class="ico">🚣</div>
   <h2>Drop Scull Metrics CSV</h2>
   <p>Stroke data · Heart rate · Laps<br>Nothing leaves your device</p>
   <button class="btn" id="browsebtn">Browse</button>
   <p style="margin-top:6px;font-size:10px;color:var(--faint)">Scull Metrics session export</p>
-  <button onclick="
-    document.body.classList.toggle('light');
-    this.textContent =
-      document.body.classList.contains('light')
-        ? 'Dark Mode'
-        : 'Light Mode';
-      ">
-      Light Mode
-  </button>
+  <button class="themeBtn" id="dzThemeBtn" style="margin-top:4px;background:var(--s3);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;">Light Mode</button>
 </div>
 <input type="file" id="fin" accept=".csv,.txt">
 
+<!-- ── Main app ─────────────────────────────────────────────────────────── -->
 <div id="app">
   <div id="cards"></div>
 
@@ -164,7 +238,7 @@
         </select>
       </div>
     </div>
-    <div class="cbox"><canvas id="mainC" height="250"></canvas><div class="hint">Drag to select · releases zoom to selection</div></div>
+    <div class="cbox"><canvas id="mainC" height="250"></canvas><div class="hint">Drag to select · double-click to reset zoom</div></div>
   </div>
 
   <div id="selbar">
@@ -174,7 +248,7 @@
 
   <div class="sec">
     <div class="ovbox"><canvas id="ovC" height="48"></canvas></div>
-    <div class="hint" style="margin-top:3px;">Drag shaded window · double click to reset zoom</div>
+    <div class="hint" style="margin-top:3px;">Drag shaded window · double-click to reset zoom</div>
   </div>
 
   <div class="sec" id="hrsec" style="display:none;">
@@ -186,7 +260,7 @@
         <span class="zl" style="color:#3affb4">Z2 107–124</span>
         <span class="zl" style="color:#ffc947">Z3 125–142</span>
         <span class="zl" style="color:#ff9a3c">Z4 143–160</span>
-        <span class="zl" style="color:#ff6b6b">Z5 >160</span>
+        <span class="zl" style="color:#ff6b6b">Z5 &gt;160</span>
       </div>
     </div>
     <div class="cbox"><canvas id="hrC" height="130"></canvas></div>
@@ -204,15 +278,61 @@
 </div>
 
 <script>
-// ── Utils ──────────────────────────────────────────────────────────────────
-function arrMin(a){let m=Infinity;for(let i=0;i<a.length;i++)if(a[i]<m)m=a[i];return m;}
-function arrMax(a){let m=-Infinity;for(let i=0;i<a.length;i++)if(a[i]>m)m=a[i];return m;}
-function arrSum(a){let s=0;for(let i=0;i<a.length;i++)s+=a[i];return s;}
+// ══════════════════════════════════════════════════════════════════════════
+// COLOUR SYSTEM
+// All canvas colours are resolved at draw time from document.body so that
+// the .light toggle is always reflected without needing a page reload.
+// ══════════════════════════════════════════════════════════════════════════
+function pal() {
+  const cs = getComputedStyle(document.body);
+  const v  = n => cs.getPropertyValue(n).trim();
+  return {
+    // Series
+    g:       v('--g'),
+    b:       v('--b'),
+    y:       v('--y'),
+    r:       v('--r'),
+    p:       v('--p'),
+    o:       v('--o'),
+    i:       v('--i'),
+    d:       v('--d'),
+    // Infrastructure
+    gridLn:  v('--grid-ln'),
+    gridLb:  v('--grid-lb'),
+    frameLn: v('--frame-ln'),
+    selFill: v('--sel-fill'),
+    selStk:  v('--sel-stk'),
+    text:    v('--text'),
+    muted:   v('--muted'),
+    // HR zone fills (semi-transparent, readable on both themes)
+    zoneBlue:   'rgba(77,166,255,.10)',
+    zoneGreen:  'rgba(58,255,180,.10)',
+    zoneYellow: 'rgba(255,201,71,.10)',
+    zoneOrange: 'rgba(255,154,60,.10)',
+    zoneRed:    'rgba(255,107,107,.10)',
+  };
+}
+
+// ── Theme toggle ──────────────────────────────────────────────────────────
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  const label = document.body.classList.contains('light') ? 'Dark Mode' : 'Light Mode';
+  document.querySelectorAll('.themeBtn').forEach(b => b.textContent = label);
+  if (ST.length) schedRender();
+}
+document.querySelectorAll('.themeBtn').forEach(b => b.addEventListener('click', toggleTheme));
+
+// ── Utils ─────────────────────────────────────────────────────────────────
+function arrMin(a){let m=Infinity;  for(let i=0;i<a.length;i++)if(a[i]<m)m=a[i];return m;}
+function arrMax(a){let m=-Infinity; for(let i=0;i<a.length;i++)if(a[i]>m)m=a[i];return m;}
+function arrSum(a){let s=0;         for(let i=0;i<a.length;i++)s+=a[i];return s;}
 function arrMean(a){return a.length?arrSum(a)/a.length:NaN;}
 function clamp(v,a,b){return v<a?a:v>b?b:v;}
 
+const EM = '&mdash;'; // em dash as HTML entity — pure ASCII, copy-paste safe
+
 function fmtPace(s){
-  if(!s||isNaN(s)||s<50||s>600)return'—';
+  if(!s||isNaN(s)||s<50||s>600)return EM;
   return Math.floor(s/60)+':'+(Math.round(s%60)<10?'0':'')+Math.round(s%60);
 }
 function fmtTime(s){
@@ -221,9 +341,9 @@ function fmtTime(s){
   if(h>0)return h+':'+(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec;
   return m+':'+(sec<10?'0':'')+sec;
 }
-function f1(v){return isNaN(v)?'—':v.toFixed(1);}
-function f2(v){return isNaN(v)?'—':v.toFixed(2);}
-function f0(v){return isNaN(v)?'—':Math.round(v);}
+function f1(v){return isNaN(v)?EM:v.toFixed(1);}
+function f2(v){return isNaN(v)?EM:v.toFixed(2);}
+function f0(v){return isNaN(v)?EM:String(Math.round(v));}
 
 function niceSteps(min,max,n){
   const r=max-min||1;
@@ -237,7 +357,7 @@ function niceSteps(min,max,n){
   return out;
 }
 
-// ── State ──────────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────
 let ST=[],HR=[],LAPS=[];
 let viewS=0,viewE=0;
 let selS=-1,selE=-1;
@@ -246,7 +366,7 @@ let rafId=null;
 let isDragMain=false,isDragOv=false;
 let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
 
-// ── Parse ──────────────────────────────────────────────────────────────────
+// ── Parse ─────────────────────────────────────────────────────────────────
 function parseCSV(text){
   const lines=text.split(/\r?\n/);
   const out={sum:{},strokes:[],hr:[],laps:[],glaps:[]};
@@ -303,7 +423,7 @@ function parseCSV(text){
   return out;
 }
 
-// ── File IO ────────────────────────────────────────────────────────────────
+// ── File IO ───────────────────────────────────────────────────────────────
 function loadFile(f){
   const r=new FileReader();
   r.onload=e=>{
@@ -318,7 +438,7 @@ function loadFile(f){
     buildCards(d.sum);
     buildLaps();
     buildStrokeTable();
-    if(HR.length>10){document.getElementById('hrsec').style.display='block';drawHR();}
+    if(HR.length>10){document.getElementById('hrsec').style.display='block';}
     schedRender();
   };
   r.readAsText(f);
@@ -350,7 +470,7 @@ dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if
 document.getElementById('xmode').onchange=schedRender;
 document.getElementById('selclear').onclick=()=>{selS=-1;selE=-1;document.getElementById('selbar').classList.remove('on');schedRender();};
 
-// ── Meta / Cards ───────────────────────────────────────────────────────────
+// ── Meta / Cards ──────────────────────────────────────────────────────────
 function buildMeta(fname,sum){
   const date=(sum.start_time||'').substring(0,10);
   const dur=fmtTime(+sum.duration_s);
@@ -393,18 +513,20 @@ function buildCards(sum){
 
 // ── Legend ────────────────────────────────────────────────────────────────
 const SERIES=[
-  {k:'pace',l:'Pace',c:'var(--g)'},
-  {k:'rate',l:'Rate',c:'var(--y)'},
-  {k:'jerk',l:'Catch Jerk',c:'var(--r)'},
-  {k:'dps',l:'DPS',c:'var(--p)'},
-  {k:'impulse',l:'Impulse',c:'var(--i)'},
-  {k:'rloss',l:'Run Loss',c:'var(--b)'},
-  {k:'schar',l:'Stroke Char',c:'var(--o)'},
-  {k:'rdi',l:'RDI',c:'var(--d)'},
+  {k:'pace',    l:'Pace',        c:'var(--g)'},
+  {k:'rate',    l:'Rate',        c:'var(--y)'},
+  {k:'jerk',    l:'Catch Jerk',  c:'var(--r)'},
+  {k:'dps',     l:'DPS',         c:'var(--p)'},
+  {k:'impulse', l:'Impulse',     c:'var(--i)'},
+  {k:'rloss',   l:'Run Loss',    c:'var(--b)'},
+  {k:'schar',   l:'Stroke Char', c:'var(--o)'},
+  {k:'rdi',     l:'RDI',         c:'var(--d)'},
 ];
 function buildLegend(){
   document.getElementById('leg').innerHTML=SERIES.map(s=>
-    `<div class="leg${vis[s.k]?'':' off'}" onclick="toggleVis('${s.k}')"><div class="dot" style="background:${s.c}"></div>${s.l}</div>`
+    `<div class="leg${vis[s.k]?'':' off'}" onclick="toggleVis('${s.k}')">
+      <div class="dot" style="background:${s.c}"></div>${s.l}
+    </div>`
   ).join('');
 }
 window.toggleVis=function(k){vis[k]=!vis[k];buildLegend();schedRender();};
@@ -420,10 +542,16 @@ function getX(s){
 // ── Render scheduler ──────────────────────────────────────────────────────
 function schedRender(){
   if(rafId)cancelAnimationFrame(rafId);
-  rafId=requestAnimationFrame(()=>{rafId=null;buildLegend();drawMain();drawOv();drawHR();});
+  rafId=requestAnimationFrame(()=>{
+    rafId=null;
+    buildLegend();
+    drawMain();
+    drawOv();
+    if(HR.length>10)drawHR();
+  });
 }
 
-// ── Zoom to selection ─────────────────────────────────────────────────────
+// ── Zoom / selection ──────────────────────────────────────────────────────
 function zoomToSel(){
   if(selS>=0&&selE>=0&&selS!==selE){
     updateSel();
@@ -439,15 +567,17 @@ function zoomToSel(){
 }
 
 function resetZoom(){
-  viewS = 0;
-  viewE = ST.length - 1;
-  selS = -1; selE = -1;
+  viewS=0; viewE=ST.length-1;
+  selS=-1; selE=-1;
   schedRender();
 }
 
-// ── Main chart ────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// MAIN CHART
+// ══════════════════════════════════════════════════════════════════════════
 function drawMain(){
   const canvas=document.getElementById('mainC');
+  const C=pal();                          // ← resolve colours from body
   const dpr=window.devicePixelRatio||1;
   const W=Math.floor(canvas.parentElement.clientWidth-22);
   const H=250;
@@ -464,6 +594,7 @@ function drawMain(){
   const PL=48,PR=38,PT=10,PB=30;
   const pw=W-PL-PR, ph=H-PT-PB;
 
+  // X values
   const xs=new Float32Array(N);
   let xMin=Infinity,xMax=-Infinity;
   for(let i=0;i<N;i++){
@@ -474,6 +605,7 @@ function drawMain(){
   const xRng=xMax-xMin||1;
   const toX=v=>PL+(v-xMin)/xRng*pw;
 
+  // Collect valid series values for Y-range calculation
   const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[],rdiv=[];
   for(let i=0;i<N;i++){
     const s=view[i];
@@ -487,6 +619,7 @@ function drawMain(){
     if(vis.rdi&&!isNaN(s.rdi)&&Math.abs(s.rdi)<1)rdiv.push(s.rdi);
   }
 
+  // Y scales – pace uses left axis, everything else shares right axis
   let yPMin=80,yPMax=210;
   if(pv.length){yPMin=arrMin(pv)*.95;yPMax=210;}
   const toYP=v=>PT+ph-(1-(v-yPMin)/(yPMax-yPMin))*ph;
@@ -504,48 +637,56 @@ function drawMain(){
   if(iv.length){yImpMin=arrMin(iv)*.9;yImpMax=arrMax(iv)*1.1;}
   const toYImp=v=>PT+ph-(v-yImpMin)/(yImpMax-yImpMin||1)*ph;
 
-  let yRLMax=10;
-  if(rlv.length)yRLMax=Math.max(arrMax(rlv)*1.2,10);
+  const yRLMax=rlv.length?Math.max(arrMax(rlv)*1.2,10):10;
   const toYRL=v=>PT+ph-(v/yRLMax)*ph;
   const toYSC=v=>PT+ph-(v/100)*ph;
   const toYRDI=v=>PT+ph-((v+1)/2)*ph;
 
-  ctx.lineWidth=1;
-  ctx.strokeStyle='#1a2030';
-  const gy=niceSteps(yPMin,yPMax,5);
+  // ── Grid ────────────────────────────────────────────────────────────────
   ctx.font='9px IBM Plex Mono,monospace';
+
+  // Horizontal grid (pace axis)
+  const gy=niceSteps(yPMin,yPMax,5);
   gy.forEach(g=>{
     const y=toYP(g);
-    ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+pw,y);ctx.stroke();
-    ctx.fillStyle='#3a4460';ctx.textAlign='right';
+    ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+pw,y);
+    ctx.strokeStyle=C.gridLn;ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle=C.gridLb;ctx.textAlign='right';
     ctx.fillText(fmtPace(g),PL-4,y+3);
   });
+
+  // Vertical grid (x-axis)
   const gx=niceSteps(xMin,xMax,6);
   gx.forEach(g=>{
     const x=toX(g);
-    ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+ph);ctx.stroke();
-    ctx.fillStyle='#3a4460';ctx.textAlign='center';
+    ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+ph);
+    ctx.strokeStyle=C.gridLn;ctx.lineWidth=1;ctx.stroke();
+    ctx.fillStyle=C.gridLb;ctx.textAlign='center';
     ctx.fillText(g.toFixed(0),x,PT+ph+14);
   });
+
+  // Right-axis labels (rate / jerk scale)
   if(vis.rate||vis.jerk){
     const gr=niceSteps(yRMin,yRMax,5);
     gr.forEach(g=>{
-      ctx.fillStyle='#2d3850';ctx.textAlign='left';
+      ctx.fillStyle=C.gridLb;ctx.textAlign='left';
       ctx.fillText(g.toFixed(0),PL+pw+4,toYR(g)+3);
     });
   }
 
+  // ── Selection highlight ─────────────────────────────────────────────────
   if(selS>=0&&selE>=0&&selS!==selE){
     const s2=clamp(Math.min(selS,selE),0,N-1);
     const e2=clamp(Math.max(selS,selE),0,N-1);
     const x1=toX(xs[s2]),x2=toX(xs[e2]);
-    ctx.fillStyle='rgba(58,255,180,.07)';
+    ctx.fillStyle=C.selFill;
     ctx.fillRect(x1,PT,x2-x1,ph);
-    ctx.strokeStyle='#1e2438';ctx.lineWidth=1;
+    ctx.strokeStyle=C.selStk;ctx.lineWidth=1;
     ctx.beginPath();ctx.moveTo(x1,PT);ctx.lineTo(x1,PT+ph);ctx.stroke();
     ctx.beginPath();ctx.moveTo(x2,PT);ctx.lineTo(x2,PT+ph);ctx.stroke();
   }
 
+  // ── Series: Pace (line) ─────────────────────────────────────────────────
   if(vis.pace&&pv.length){
     ctx.beginPath();let started=false;
     for(let i=0;i<N;i++){
@@ -554,9 +695,10 @@ function drawMain(){
       const x=toX(xs[i]),y=toYP(v);
       started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true;
     }
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--g');ctx.lineWidth=5.0;ctx.stroke();
+    ctx.strokeStyle=C.g;ctx.lineWidth=2.0;ctx.stroke();
   }
 
+  // ── Series: DPS (line) ─────────────────────────────────────────────────
   if(vis.dps&&dv.length){
     ctx.beginPath();let started=false;
     for(let i=0;i<N;i++){
@@ -565,11 +707,12 @@ function drawMain(){
       const x=toX(xs[i]),y=toYD(v);
       started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true;
     }
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--p');ctx.lineWidth=1.3;ctx.stroke();
+    ctx.strokeStyle=C.p;ctx.lineWidth=1.5;ctx.stroke();
   }
 
+  // ── Series: Rate (dots) ────────────────────────────────────────────────
   if(vis.rate&&rv.length){
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--y');
+    ctx.fillStyle=C.y;
     for(let i=0;i<N;i++){
       const v=view[i].rate;
       if(isNaN(v)||v<5||v>50)continue;
@@ -577,18 +720,21 @@ function drawMain(){
     }
   }
 
+  // ── Series: Catch Jerk (scaled dots) ──────────────────────────────────
   if(vis.jerk&&jv.length){
+    const jMax=arrMax(jv);
     for(let i=0;i<N;i++){
       const v=view[i].jerk;
       if(isNaN(v)||v<=0||v>300)continue;
-      const r=clamp(1.5+(v/arrMax(jv))*3.5,1.5,5);
-      ctx.beginPath();ctx.arc(toX(xs[i]),toYR(v),r,0,6.283);
-      ctx.fillStyle= getComputedStyle(document.documentElement).getPropertyValue('--r');ctx.fill();
+      const rad=clamp(1.5+(v/jMax)*3.5,1.5,5);
+      ctx.beginPath();ctx.arc(toX(xs[i]),toYR(v),rad,0,6.283);
+      ctx.fillStyle=C.r;ctx.fill();
     }
   }
 
+  // ── Series: Impulse (dots) ────────────────────────────────────────────
   if(vis.impulse&&iv.length){
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--i');
+    ctx.fillStyle=C.i;
     for(let i=0;i<N;i++){
       const v=view[i].impulse;
       if(isNaN(v)||v<=0||v>10)continue;
@@ -596,8 +742,9 @@ function drawMain(){
     }
   }
 
+  // ── Series: Run Loss (dots) ───────────────────────────────────────────
   if(vis.rloss&&rlv.length){
-    ctx.fillStyle= getComputedStyle(document.documentElement).getPropertyValue('--b');
+    ctx.fillStyle=C.b;
     for(let i=0;i<N;i++){
       const v=view[i].rloss;
       if(isNaN(v)||v<=0||v>=100)continue;
@@ -605,8 +752,9 @@ function drawMain(){
     }
   }
 
+  // ── Series: Stroke Char (dots) ────────────────────────────────────────
   if(vis.schar&&scv.length){
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--o');
+    ctx.fillStyle=C.o;
     for(let i=0;i<N;i++){
       const v=view[i].schar;
       if(isNaN(v)||v<0||v>100)continue;
@@ -614,8 +762,9 @@ function drawMain(){
     }
   }
 
+  // ── Series: RDI (dots) ───────────────────────────────────────────────
   if(vis.rdi&&rdiv.length){
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--d');
+    ctx.fillStyle=C.d;
     for(let i=0;i<N;i++){
       const v=view[i].rdi;
       if(isNaN(v)||v<-1||v>1)continue;
@@ -623,16 +772,20 @@ function drawMain(){
     }
   }
 
-  ctx.strokeStyle='#1e2438';ctx.lineWidth=1;
+  // ── Chart border ─────────────────────────────────────────────────────
+  ctx.strokeStyle=C.frameLn;ctx.lineWidth=1;
   ctx.strokeRect(PL,PT,pw,ph);
 
   canvas._g={PL,PR,PT,PB,pw,ph,xs,N,W,H,xMin,xRng};
   setupMainEvents(canvas);
 }
 
-// ── Overview chart ────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// OVERVIEW CHART
+// ══════════════════════════════════════════════════════════════════════════
 function drawOv(){
   const canvas=document.getElementById('ovC');
+  const C=pal();
   const dpr=window.devicePixelRatio||1;
   const W=Math.floor(canvas.parentElement.clientWidth-18);
   const H=48;
@@ -647,7 +800,6 @@ function drawOv(){
   const P=4;
   const pw=W-P*2, ph=H-P*2;
 
-  // X coords — same metric as main chart
   const xs=new Float32Array(N);
   let xMin=Infinity,xMax=-Infinity;
   for(let i=0;i<N;i++){
@@ -664,31 +816,31 @@ function drawOv(){
   const pRng=pMax-pMin||1;
   const toYov=v=>P+ph-(1-(v-pMin)/pRng)*ph;
 
-  // Dim full-session pace line
+  // Full-session dim pace line
   ctx.beginPath();let s=false;
   for(let i=0;i<N;i++){
     const v=ST[i].pace;if(v<50||v>500){s=false;continue;}
     s?ctx.lineTo(toXov(xs[i]),toYov(v)):ctx.moveTo(toXov(xs[i]),toYov(v));s=true;
   }
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--g');ctx.lineWidth=1;ctx.stroke();
+  ctx.strokeStyle=C.g;ctx.lineWidth=1;ctx.globalAlpha=0.35;ctx.stroke();ctx.globalAlpha=1;
 
-  // View-window highlight (x-value based)
+  // View-window shaded region
   const vx1=toXov(xs[viewS]);
   const vx2=toXov(xs[viewE]);
-  ctx.fillStyle='rgba(58,255,180,.10)';
+  ctx.fillStyle=C.selFill;
   ctx.fillRect(vx1,P,vx2-vx1,ph);
-  ctx.strokeStyle='rgba(58,255,180,.5)';ctx.lineWidth=1.5;
+  ctx.strokeStyle=C.selStk;ctx.lineWidth=1.5;
   ctx.strokeRect(vx1,P,vx2-vx1,ph);
 
-  // Bright in-view pace line
+  // In-view bright pace line
   ctx.beginPath();s=false;
   for(let i=viewS;i<=viewE;i++){
     const v=ST[i].pace;if(v<50||v>500){s=false;continue;}
     s?ctx.lineTo(toXov(xs[i]),toYov(v)):ctx.moveTo(toXov(xs[i]),toYov(v));s=true;
   }
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--o');ctx.lineWidth=1.5;ctx.stroke();
+  ctx.strokeStyle=C.o;ctx.lineWidth=1.5;ctx.stroke();
 
-  // Selection highlight
+  // Selection highlight in overview
   if(selS>=0&&selE>=0&&selS!==selE){
     const vlen=viewE-viewS+1;
     const s2=clamp(Math.min(selS,selE),0,vlen-1);
@@ -697,7 +849,7 @@ function drawOv(){
     const sx2=toXov(xs[viewS+e2]);
     ctx.fillStyle='rgba(58,255,180,.28)';
     ctx.fillRect(sx1,P,sx2-sx1,ph);
-    ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue('--g');ctx.lineWidth=1;
+    ctx.strokeStyle=C.g;ctx.lineWidth=1;
     ctx.strokeRect(sx1,P,sx2-sx1,ph);
   }
 
@@ -705,7 +857,7 @@ function drawOv(){
   setupOvEvents(canvas);
 }
 
-// ── Overview hit-test: nearest stroke by x-value ──────────────────────────
+// ── Overview hit-test ─────────────────────────────────────────────────────
 function getOvIdx(cx){
   if(!ovCanvas||!ovCanvas._g)return 0;
   const rect=ovCanvas.getBoundingClientRect();
@@ -719,9 +871,12 @@ function getOvIdx(cx){
   return clamp(best,0,N-1);
 }
 
-// ── HR chart ──────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// HEART RATE CHART
+// ══════════════════════════════════════════════════════════════════════════
 function drawHR(){
   const canvas=document.getElementById('hrC');
+  const C=pal();
   const dpr=window.devicePixelRatio||1;
   const W=Math.floor(canvas.parentElement.clientWidth-22);
   const H=130;
@@ -754,27 +909,36 @@ function drawHR(){
   const toX=v=>PL+(v/xMax)*pw;
   const toY=v=>PT+ph-(v-yMin)/(yMax-yMin)*ph;
 
-  // Zone bands
-  const zones=[[90,106,'rgba(77,166,255,.07)'],[107,124,'rgba(58,255,180,.07)'],[125,142,'rgba(255,201,71,.07)'],[143,160,'rgba(255,154,60,.07)'],[161,300,'rgba(255,107,107,.07)']];
-  zones.forEach(([a,b,c])=>{
+  // HR zone bands
+  const zones=[
+    [90, 106, C.zoneBlue],
+    [107,124, C.zoneGreen],
+    [125,142, C.zoneYellow],
+    [143,160, C.zoneOrange],
+    [161,300, C.zoneRed],
+  ];
+  zones.forEach(([a,b,fill])=>{
     const y1=toY(Math.min(b,yMax)),y2=toY(Math.max(a,yMin));
-    if(y1<PT+ph&&y2>PT){ctx.fillStyle=c;ctx.fillRect(PL,Math.max(PT,y1),pw,Math.min(PT+ph,y2)-Math.max(PT,y1));}
+    if(y1<PT+ph&&y2>PT){
+      ctx.fillStyle=fill;
+      ctx.fillRect(PL,Math.max(PT,y1),pw,Math.min(PT+ph,y2)-Math.max(PT,y1));
+    }
   });
 
-  // View-window band — aligned via absolute timestamps
+  // View-window band (aligned via absolute timestamps)
   if(ST.length&&!isNaN(ST[viewS].ms)&&!isNaN(ST[viewE].ms)){
     const vt1=clamp((ST[viewS].ms-hrt0)/60000,0,xMax);
     const vt2=clamp((ST[viewE].ms-hrt0)/60000,0,xMax);
     const hx1=toX(vt1),hx2=toX(vt2);
     if(hx2>hx1){
-      ctx.fillStyle='rgba(58,255,180,.07)';
+      ctx.fillStyle=C.selFill;
       ctx.fillRect(hx1,PT,hx2-hx1,ph);
-      ctx.strokeStyle='rgba(58,255,180,.3)';ctx.lineWidth=1;
+      ctx.strokeStyle=C.selStk;ctx.lineWidth=1;
       ctx.strokeRect(hx1,PT,hx2-hx1,ph);
     }
   }
 
-  // Selection band — aligned via absolute timestamps
+  // Selection band (aligned via absolute timestamps)
   if(ST.length&&selS>=0&&selE>=0&&selS!==selE){
     const vlen=viewE-viewS+1;
     const s2=clamp(Math.min(selS,selE),0,vlen-1);
@@ -786,7 +950,7 @@ function drawHR(){
       if(hx2>hx1){
         ctx.fillStyle='rgba(58,255,180,.18)';
         ctx.fillRect(hx1,PT,hx2-hx1,ph);
-        ctx.strokeStyle='rgba(58,255,180,.6)';ctx.lineWidth=1;
+        ctx.strokeStyle=C.selStk;ctx.lineWidth=1;
         ctx.beginPath();ctx.moveTo(hx1,PT);ctx.lineTo(hx1,PT+ph);ctx.stroke();
         ctx.beginPath();ctx.moveTo(hx2,PT);ctx.lineTo(hx2,PT+ph);ctx.stroke();
       }
@@ -794,24 +958,29 @@ function drawHR(){
   }
 
   // Grid
-  ctx.font='9px IBM Plex Mono,monospace';ctx.lineWidth=1;ctx.strokeStyle='#1a2030';
+  ctx.font='9px IBM Plex Mono,monospace';ctx.lineWidth=1;
   niceSteps(yMin,yMax,5).forEach(g=>{
     const y=toY(g);
-    ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+pw,y);ctx.stroke();
-    ctx.fillStyle='#3a4460';ctx.textAlign='right';ctx.fillText(Math.round(g),PL-4,y+3);
+    ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+pw,y);
+    ctx.strokeStyle=C.gridLn;ctx.stroke();
+    ctx.fillStyle=C.gridLb;ctx.textAlign='right';ctx.fillText(Math.round(g),PL-4,y+3);
   });
   niceSteps(0,xMax,6).forEach(g=>{
     const x=toX(g);
-    ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+ph);ctx.stroke();
-    ctx.fillStyle='#3a4460';ctx.textAlign='center';ctx.fillText(Math.round(g)+'m',x,PT+ph+14);
+    ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+ph);
+    ctx.strokeStyle=C.gridLn;ctx.stroke();
+    ctx.fillStyle=C.gridLb;ctx.textAlign='center';ctx.fillText(Math.round(g)+'m',x,PT+ph+14);
   });
 
-  ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(77,166,255,.3)';ctx.lineWidth=1;
+  // Average HR dashed line
+  ctx.setLineDash([4,4]);
+  ctx.strokeStyle='rgba(77,166,255,.4)';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(PL,toY(avg));ctx.lineTo(PL+pw,toY(avg));ctx.stroke();
   ctx.setLineDash([]);
 
+  // HR gradient fill + line
   const grad=ctx.createLinearGradient(0,PT,0,PT+ph);
-  grad.addColorStop(0,'rgba(77,166,255,.18)');grad.addColorStop(1,'rgba(77,166,255,0)');
+  grad.addColorStop(0,'rgba(77,166,255,.20)');grad.addColorStop(1,'rgba(77,166,255,0)');
   ctx.beginPath();
   const x0=toX(0);
   ctx.moveTo(x0,toY(HR[0].bpm));
@@ -822,10 +991,12 @@ function drawHR(){
   ctx.lineTo(toX(xMax),PT+ph);ctx.lineTo(x0,PT+ph);ctx.closePath();
   ctx.fillStyle=grad;ctx.fill();
 
-  ctx.strokeStyle='#1e2438';ctx.lineWidth=1;ctx.strokeRect(PL,PT,pw,ph);
+  ctx.strokeStyle=C.frameLn;ctx.lineWidth=1;ctx.strokeRect(PL,PT,pw,ph);
 }
 
-// ── Main interaction ──────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// MAIN CHART INTERACTION
+// ══════════════════════════════════════════════════════════════════════════
 let mainCanvas=null;
 function getMainIdx(cx){
   if(!mainCanvas||!mainCanvas._g)return 0;
@@ -848,16 +1019,18 @@ function setupMainEvents(canvas){
   canvas.addEventListener('touchstart',e=>{isDragMain=true;selS=selE=getMainIdx(e.touches[0].clientX);schedRender();},{passive:true});
   canvas.addEventListener('touchmove',e=>{if(isDragMain){selE=getMainIdx(e.touches[0].clientX);schedRender();}},{passive:true});
   canvas.addEventListener('touchend',()=>{isDragMain=false;zoomToSel();});
-  canvas.addEventListener('dblclick', () => resetZoom());
+  canvas.addEventListener('dblclick',()=>resetZoom());
 }
 document.addEventListener('mouseup',()=>{if(isDragMain){isDragMain=false;zoomToSel();}});
 
+// ── Selection stats ───────────────────────────────────────────────────────
 function updateSel(){
   const bar=document.getElementById('selbar');
   if(selS<0||selE<0||selS===selE){bar.classList.remove('on');hlRows([]);return;}
 
-  const s2=clamp(Math.min(selS,selE),0,ST.slice(viewS,viewE+1).length-1);
-  const e2=clamp(Math.max(selS,selE),0,ST.slice(viewS,viewE+1).length-1);
+  const vlen=viewE-viewS+1;
+  const s2=clamp(Math.min(selS,selE),0,vlen-1);
+  const e2=clamp(Math.max(selS,selE),0,vlen-1);
   const view=ST.slice(viewS,viewE+1);
   const sel=view.slice(s2,e2+1);
   if(!sel.length){bar.classList.remove('on');return;}
@@ -888,9 +1061,9 @@ function updateSel(){
 
   bar.classList.add('on');
   document.getElementById('selstats').innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:12px;">
-    ${stat('Strokes',sel.length,'var(--text)')}
-    ${stat('Distance',(distCovered>0?distCovered.toFixed(0):'—')+'m','var(--text)')}
-    ${stat('Time',fmtTime(elapsed>0?elapsed:0),'var(--text)')}
+    ${stat('Strokes',sel.length)}
+    ${stat('Distance',(distCovered>0?distCovered.toFixed(0):EM)+'m')}
+    ${stat('Time',fmtTime(elapsed>0?elapsed:0))}
     ${pv.length?stat('Avg Pace',fmtPace(arrMean(pv)),'var(--g)'):''}
     ${pv.length?stat('Best Pace',fmtPace(arrMin(pv)),'var(--g)'):''}
     ${rv.length?stat('Avg Rate',f1(arrMean(rv))+' spm','var(--y)'):''}
@@ -910,7 +1083,9 @@ function updateSel(){
   hlRows(absIdxs);
 }
 
-// ── Overview events ────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// OVERVIEW INTERACTION
+// ══════════════════════════════════════════════════════════════════════════
 let ovCanvas=null;
 
 function setupOvEvents(canvas){
@@ -943,15 +1118,14 @@ function setupOvEvents(canvas){
   canvas.addEventListener('touchstart',e=>start(e.touches[0].clientX),{passive:true});
   canvas.addEventListener('touchmove',e=>{if(isDragOv)move(e.touches[0].clientX);},{passive:true});
   canvas.addEventListener('touchend',end);
-  canvas.addEventListener('click',e=>{
-    const idx=getOvIdx(e.clientX);
-    if(idx<viewS||idx>viewE){viewS=0;viewE=ST.length-1;selS=-1;selE=-1;schedRender();}
-  });
+  canvas.addEventListener('dblclick',()=>resetZoom());
   document.addEventListener('mousemove',e=>{if(isDragOv)move(e.clientX);});
   document.addEventListener('mouseup',end);
 }
 
-// ── Laps ──────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// LAPS TABLE
+// ══════════════════════════════════════════════════════════════════════════
 function buildLaps(){
   if(!LAPS.length)return;
   document.getElementById('lapsec').style.display='block';
@@ -966,13 +1140,15 @@ function buildLaps(){
     <td>${(+l.distance_m||0).toFixed(0)}m</td>
     <td>${fmtTime(+l.time_s)}</td>
     <td style="color:var(--g)">${fmtPace(+l.pace_s_per_500m)}</td>
-    <td style="color:var(--y)">${l.avg_spm||l.stroke_rate_spm||'—'}</td>
-    ${hasHR?`<td style="color:var(--b)">${l.avg_hr_bpm||'—'}</td><td style="color:var(--b)">${l.max_hr_bpm||'—'}</td>`:''}
-    ${hasCal?`<td>${l.calories||'—'}</td>`:''}
+    <td style="color:var(--y)">${l.avg_spm||l.stroke_rate_spm||EM}</td>
+    ${hasHR?`<td style="color:var(--b)">${l.avg_hr_bpm||EM}</td><td style="color:var(--b)">${l.max_hr_bpm||EM}</td>`:''}
+    ${hasCal?`<td>${l.calories||EM}</td>`:''}
   </tr>`).join('');
 }
 
-// ── Stroke table ───────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════════════════
+// STROKE TABLE
+// ══════════════════════════════════════════════════════════════════════════
 function buildStrokeTable(){
   document.getElementById('sth').innerHTML=`<tr>
     <th>#</th><th>Dist m</th><th>Time</th><th>Pace /500</th>
@@ -981,17 +1157,17 @@ function buildStrokeTable(){
   </tr>`;
   const rows=ST.slice(0,1000).map(s=>`<tr data-i="${s.n-1}">
     <td>${s.n}</td>
-    <td>${isNaN(s.dist)?'—':s.dist.toFixed(0)}</td>
+    <td>${isNaN(s.dist)?EM:s.dist.toFixed(0)}</td>
     <td>${fmtTime(s.elapsed)}</td>
     <td style="color:var(--g)">${fmtPace(s.pace)}</td>
-    <td style="color:var(--y)">${isNaN(s.rate)||s.rate<1?'—':f0(s.rate)}</td>
-    <td style="color:var(--r)">${isNaN(s.jerk)||s.jerk<=0?'—':f1(s.jerk)}</td>
-    <td>${isNaN(s.consistency)||s.consistency<=0?'—':f1(s.consistency)}</td>
-    <td style="color:var(--p)">${isNaN(s.dps)||s.dps<1?'—':f1(s.dps)}</td>
-    <td>${isNaN(s.schar)?'—':f0(s.schar)+'%'}</td>
-    <td style="color:var(--b)">${isNaN(s.rloss)||s.rloss<=0?'—':f0(s.rloss)+'%'}</td>
-    <td style="color:var(--i)">${isNaN(s.impulse)||s.impulse<=0?'—':s.impulse.toFixed(2)}</td>
-    <td style="color:var(--d)">${isNaN(s.rdi)||s.rdi<-1||s.rdi>1?'—':s.rdi.toFixed(2)}</td>
+    <td style="color:var(--y)">${isNaN(s.rate)||s.rate<1?EM:f0(s.rate)}</td>
+    <td style="color:var(--r)">${isNaN(s.jerk)||s.jerk<=0?EM:f1(s.jerk)}</td>
+    <td>${isNaN(s.consistency)||s.consistency<=0?EM:f1(s.consistency)}</td>
+    <td style="color:var(--p)">${isNaN(s.dps)||s.dps<1?EM:f1(s.dps)}</td>
+    <td style="color:var(--o)">${isNaN(s.schar)?EM:f0(s.schar)+'%'}</td>
+    <td style="color:var(--b)">${isNaN(s.rloss)||s.rloss<=0?EM:f0(s.rloss)+'%'}</td>
+    <td style="color:var(--i)">${isNaN(s.impulse)||s.impulse<=0?EM:s.impulse.toFixed(2)}</td>
+    <td style="color:var(--d)">${isNaN(s.rdi)||s.rdi<-1||s.rdi>1?EM:s.rdi.toFixed(2)}</td>
   </tr>`).join('');
   document.getElementById('stb').innerHTML=rows;
   document.getElementById('tblcount').textContent=ST.length+' strokes';

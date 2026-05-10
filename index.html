@@ -1055,7 +1055,7 @@ function showTooltip(e) {
     ${ttRow('DPS',      isNaN(s.dps)||s.dps<1     ? EM : f1(s.dps)+'m',           C.p)}
     ${ttRow('Catch Jerk', isNaN(s.jerk)||s.jerk<=0  ? EM : f1(s.jerk),            C.r)}
     ${ttRow('Impulse',  isNaN(s.impulse)||s.impulse<=0 ? EM : s.impulse.toFixed(2), C.i)}
-    ${ttRow('Run Loss', isNaN(s.rloss)||s.rloss<=0  ? EM : f0(s.rloss)+'%',       C.b)}
+    ${ttRow('Run Loss', isNaN(s.rloss)||s.rloss<=0  ? EM : f1(s.rloss)+'%',       C.b)}
     ${ttRow('Stroke Char', isNaN(s.schar)            ? EM : f0(s.schar)+'%',      C.o)}
     ${ttRow('RDI',      isNaN(s.rdi)||Math.abs(s.rdi)>1 ? EM : s.rdi.toFixed(2), C.d)}
   `;
@@ -1256,7 +1256,7 @@ function buildStrokeTable(){
     <td>${isNaN(s.consistency)||s.consistency<=0?EM:f1(s.consistency)}</td>
     <td style="color:var(--p)">${isNaN(s.dps)||s.dps<1?EM:f1(s.dps)}</td>
     <td style="color:var(--o)">${isNaN(s.schar)?EM:f0(s.schar)+'%'}</td>
-    <td style="color:var(--b)">${isNaN(s.rloss)||s.rloss<=0?EM:f0(s.rloss)+'%'}</td>
+    <td style="color:var(--b)">${isNaN(s.rloss)||s.rloss<=0?EM:f1(s.rloss)+'%'}</td>
     <td style="color:var(--i)">${isNaN(s.impulse)||s.impulse<=0?EM:s.impulse.toFixed(2)}</td>
     <td style="color:var(--d)">${isNaN(s.rdi)||s.rdi<-1||s.rdi>1?EM:s.rdi.toFixed(2)}</td>
   </tr>`).join('');

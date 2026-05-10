@@ -391,7 +391,7 @@ let ST=[],HR=[],LAPS=[];
 let currentView=[];          // strokes currently in the main chart view
 let viewS=0,viewE=0;
 let selS=-1,selE=-1;
-let vis={pace:true,rate:true,jerk:true,dps:true,impulse:true,rloss:false,schar:false,rdi:false};
+let vis={pace:true,rate:true,jerk:false,dps:true,impulse:false,rloss:false,schar:false,rdi:true};
 let rafId=null;
 let isDragMain=false,isDragOv=false;
 let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
@@ -534,7 +534,7 @@ function buildCards(sum){
     <div class="card cy"><div class="lbl">Avg Rate</div><div class="val">${f1(arrMean(rv))}</div><div class="sub">spm · max ${f0(arrMax(rv))}</div></div>
     <div class="card cr"><div class="lbl">Avg Jerk</div><div class="val">${f1(arrMean(jv))}</div><div class="sub">peak ${f1(arrMax(jv))} ms³</div></div>
     <div class="card cp"><div class="lbl">Avg DPS</div><div class="val">${f1(arrMean(dv))}</div><div class="sub">m/stroke</div></div>
-    <div class="card cd"><div class="lbl">Avg RDI</div><div class="val">${f1(arrMean(rdv))}</div><div class="sub">ratio</div></div>
+    <div class="card cd"><div class="lbl">Avg RDI</div><div class="val">${f1(arrMean(rdv))}</div><div class="sub">higher=longer recovery</div></div>
     ${iv.length?`<div class="card ci"><div class="lbl">Avg Impulse</div><div class="val">${f1(arrMean(iv))}</div><div class="sub">peak ${f1(arrMax(iv))}</div></div>`:''}
   `;
   if(hv.length)html+=`<div class="card cb"><div class="lbl">Avg HR</div><div class="val">${f0(arrMean(hv))}</div><div class="sub">max ${f0(arrMax(hv))} bpm</div></div>`;

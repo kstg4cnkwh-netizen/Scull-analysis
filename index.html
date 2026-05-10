@@ -1038,7 +1038,9 @@ function ttRow(lbl, val, col) {
 
 function showTooltip(e) {
   if(isDragMain || !currentView.length) return;
-  const idx = getMainIdx(e.clientX);
+  const canvas = document.getElementById('mainC');
+  const rect = canvas.getBoundingClientRect();
+  const idx = getMainIdx(e.clientX - rect.left);
   if(idx < 0 || idx >= currentView.length) return;
   const s = currentView[idx];
   const C = pal();
@@ -1096,11 +1098,19 @@ function setupMainEvents(canvas){
   if(mainCanvas===canvas)return;
   mainCanvas=canvas;
   canvas.addEventListener('mousedown',e=>{isDragMain=true;selS=selE=getMainIdx(e.clientX);schedRender();});
-  canvas.addEventListener('mousemove',e=>{if(isDragMain){selE=getMainIdx(e.clientX);schedRender();}});
+  canvas.addEventListener('mousemove',e=>{
+    if(isDragMain){
+      selE=getMainIdx(e.clientX);
+      schedRender();
+    } else {
+      showTooltip(e);
+    }
+  });
   canvas.addEventListener('touchstart',e=>{isDragMain=true;selS=selE=getMainIdx(e.touches[0].clientX);schedRender();},{passive:true});
   canvas.addEventListener('touchmove',e=>{if(isDragMain){selE=getMainIdx(e.touches[0].clientX);schedRender();}},{passive:true});
   canvas.addEventListener('touchend',()=>{isDragMain=false;zoomToSel();});
   canvas.addEventListener('dblclick',()=>resetZoom());
+  canvas.addEventListener('mouseleave', hideTooltip);
 }
 document.addEventListener('mouseup',()=>{if(isDragMain){isDragMain=false;zoomToSel();}});
 

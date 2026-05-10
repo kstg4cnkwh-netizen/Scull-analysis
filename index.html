@@ -14,6 +14,13 @@
     --text: #d8e0f0; --muted: #5a6480; --faint: #2d3450;
   }
 
+  body.light {
+    --bg: #f5f7fb; --s1: #ffffff; --s2: #eef2f7; --s3: #e4e9f2;
+    --border: #cfd7e6; --dim: #dde3ee;
+    --g: #3affb4; --b: #4da6ff; --y: #ffc947; --r: #f54040; --p: #c084fc; --o: #e39b16; --i: #f393cd; --d: #2952ba;
+    --text: #111827; --muted: #5b6475; --faint: #9aa3b2;
+  }
+
   * { box-sizing: border-box; margin: 0; padding: 0; }
   
   body { 
@@ -120,6 +127,7 @@
   <p>Stroke data · Heart rate · Laps<br>Nothing leaves your device</p>
   <button class="btn" id="browsebtn">Browse</button>
   <p style="margin-top:6px;font-size:10px;color:var(--faint)">Scull Metrics session export</p>
+  <button onclick="document.body.classList.toggle('light')"></button>
 </div>
 <input type="file" id="fin" accept=".csv,.txt">
 

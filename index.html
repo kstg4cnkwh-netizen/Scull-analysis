@@ -10,7 +10,7 @@
   :root {
     --bg: #0b0e13; --s1: #111520; --s2: #181d2a; --s3: #1e2434;
     --border: #242c40; --dim: #1a2030;
-    --g: #3affb4; --b: #4da6ff; --y: #ffc947; --r: #ff6b6b; --p: #c084fc;
+    --g: #3affb4; --b: #4da6ff; --y: #ffc947; --r: #f54040; --p: #c084fc; --o: #e39b16; --i: #f393cd; --d: #2952ba;
     --text: #d8e0f0; --muted: #5a6480; --faint: #2d3450;
   }
 
@@ -53,8 +53,9 @@
   .cy { border-top: 2px solid var(--y); } .cy .val { color: var(--y); }
   .cr { border-top: 2px solid var(--r); } .cr .val { color: var(--r); }
   .cp { border-top: 2px solid var(--p); } .cp .val { color: var(--p); }
-  .co { border-top: 2px solid #ff9a3c; } .co .val { color: #ff9a3c; }
-  .crd { border-top: 2px solid #a1ff3c; } .crd .val { color: #a1ff3c; }
+  .co { border-top: 2px solid var(--o); } .co .val { color: var(--o); }
+  .ci { border-top: 2px solid var(--i); } .ci .val { color: var(--i); }
+  .cd { border-top: 2px solid var(--d); } .cd .val { color: var(--d); }
   .cw .val { color: var(--text); }
 
   .sec { padding: 0 14px 12px; }
@@ -358,8 +359,8 @@ function buildCards(sum){
     <div class="card cy"><div class="lbl">Avg Rate</div><div class="val">${f1(arrMean(rv))}</div><div class="sub">spm · max ${f0(arrMax(rv))}</div></div>
     <div class="card cr"><div class="lbl">Avg Jerk</div><div class="val">${f1(arrMean(jv))}</div><div class="sub">peak ${f1(arrMax(jv))} ms³</div></div>
     <div class="card cp"><div class="lbl">Avg DPS</div><div class="val">${f1(arrMean(dv))}</div><div class="sub">m/stroke</div></div>
-    <div class="card crd"><div class="lbl">Avg RDI</div><div class="val">${f1(arrMean(rdv))}</div><div class="sub">ratio</div></div>
-    ${iv.length?`<div class="card cb"><div class="lbl">Avg Impulse</div><div class="val">${f1(arrMean(iv))}</div><div class="sub">peak ${f1(arrMax(iv))}</div></div>`:''}
+    <div class="card cd"><div class="lbl">Avg RDI</div><div class="val">${f1(arrMean(rdv))}</div><div class="sub">ratio</div></div>
+    ${iv.length?`<div class="card ci"><div class="lbl">Avg Impulse</div><div class="val">${f1(arrMean(iv))}</div><div class="sub">peak ${f1(arrMax(iv))}</div></div>`:''}
   `;
   if(hv.length)html+=`<div class="card cb"><div class="lbl">Avg HR</div><div class="val">${f0(arrMean(hv))}</div><div class="sub">max ${f0(arrMax(hv))} bpm</div></div>`;
   document.getElementById('cards').innerHTML=html;
@@ -371,10 +372,10 @@ const SERIES=[
   {k:'rate',l:'Rate',c:'var(--y)'},
   {k:'jerk',l:'Catch Jerk',c:'var(--r)'},
   {k:'dps',l:'DPS',c:'var(--p)'},
-  {k:'impulse',l:'Impulse',c:'var(--b)'},
-  {k:'rloss',l:'Run Loss',c:'#ff9a3c'},
-  {k:'schar',l:'Stroke Char',c:'#a8d8a8'},
-  {k:'rdi',l:'RDI',c:'#a1ff3c'},
+  {k:'impulse',l:'Impulse',c:'var(--i)'},
+  {k:'rloss',l:'Run Loss',c:'var(--b)'},
+  {k:'schar',l:'Stroke Char',c:'var(--o)'},
+  {k:'rdi',l:'RDI',c:'var(--d)'},
 ];
 function buildLegend(){
   document.getElementById('leg').innerHTML=SERIES.map(s=>
@@ -872,11 +873,11 @@ function updateSel(){
     ${jv.length?stat('Avg Jerk',f1(arrMean(jv)),'var(--r)'):''}
     ${jv.length?stat('Peak Jerk',f1(arrMax(jv)),'var(--r)'):''}
     ${dv.length?stat('Avg DPS',f1(arrMean(dv))+'m','var(--p)'):''}
-    ${scv.length?stat('Avg Stroke Char',f1(arrMean(scv))+'%','var(--muted)'):''}
-    ${rlv.length?stat('Avg Run Loss',f1(arrMean(rlv))+'%','#ff9a3c'):''}
-    ${iv.length?stat('Avg Impulse',f1(arrMean(iv)),'var(--b)'):''}
-    ${iv.length?stat('Peak Impulse',f1(arrMax(iv)),'var(--b)'):''}
-    ${rdv.length?stat('Avg RDI',f1(arrMean(rdv)),'#a1ff3c'):''}
+    ${scv.length?stat('Avg Stroke Char',f1(arrMean(scv))+'%','var(--o)'):''}
+    ${rlv.length?stat('Avg Run Loss',f1(arrMean(rlv))+'%','var(--b)'):''}
+    ${iv.length?stat('Avg Impulse',f1(arrMean(iv)),'var(--i)'):''}
+    ${iv.length?stat('Peak Impulse',f1(arrMax(iv)),'var(--i)'):''}
+    ${rdv.length?stat('Avg RDI',f1(arrMean(rdv)),'var(--d)'):''}
   </div>`;
 
   const absIdxs=[];
@@ -963,9 +964,9 @@ function buildStrokeTable(){
     <td>${isNaN(s.consistency)||s.consistency<=0?'—':f1(s.consistency)}</td>
     <td style="color:var(--p)">${isNaN(s.dps)||s.dps<1?'—':f1(s.dps)}</td>
     <td>${isNaN(s.schar)?'—':f0(s.schar)+'%'}</td>
-    <td style="color:#ff9a3c">${isNaN(s.rloss)||s.rloss<=0?'—':f0(s.rloss)+'%'}</td>
-    <td style="color:var(--b)">${isNaN(s.impulse)||s.impulse<=0?'—':s.impulse.toFixed(2)}</td>
-    <td style="color:var(--b)">${isNaN(s.rdi)||s.rdi<-1||s.rdi>1?'—':s.rdi.toFixed(2)}</td>
+    <td style="color:var(--b)">${isNaN(s.rloss)||s.rloss<=0?'—':f0(s.rloss)+'%'}</td>
+    <td style="color:var(--i)">${isNaN(s.impulse)||s.impulse<=0?'—':s.impulse.toFixed(2)}</td>
+    <td style="color:var(--d)">${isNaN(s.rdi)||s.rdi<-1||s.rdi>1?'—':s.rdi.toFixed(2)}</td>
   </tr>`).join('');
   document.getElementById('stb').innerHTML=rows;
   document.getElementById('tblcount').textContent=ST.length+' strokes';

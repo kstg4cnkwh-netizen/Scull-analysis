@@ -610,7 +610,9 @@ function resetApp(){
 }
 
 document.getElementById('resetbtn').onclick=resetApp;
-document.getElementById('browsebtn').onclick=e=>{e.stopPropagation();document.getElementById('fin').click();};
+document.getElementById('dzThemeBtn').onclick=e=>{e.stopPropagation();toggleTheme();};
+const bb=document.getElementById('browsebtn');
+if(bb)bb.onclick=e=>{e.stopPropagation();document.getElementById('fin').click();};
 document.getElementById('dz').onclick=()=>document.getElementById('fin').click();
 document.getElementById('fin').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);};
 const dz=document.getElementById('dz');

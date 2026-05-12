@@ -396,61 +396,166 @@ let rafId=null;
 let isDragMain=false,isDragOv=false;
 let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
 
-// ── Parse ─────────────────────────────────────────────────────────────────
-function parseCSV(text){
-  const lines=text.split(/\r?\n/);
-  const out={sum:{},strokes:[],hr:[],laps:[],glaps:[]};
-  let mode='',hdrs=[],t0=0;
-  for(let i=0;i<lines.length;i++){
-    const l=lines[i].trim();
-    if(!l)continue;
-    if(l==='SESSION SUMMARY'){mode='sum';continue;}
-    if(l==='STROKE DATA'){mode='stroke';hdrs=[];continue;}
-    if(l==='LAPS'){mode='laps';hdrs=[];continue;}
-    if(l==='GARMIN LAPS'){mode='glaps';hdrs=[];continue;}
-    if(l==='HEART RATE'){mode='hr';hdrs=[];continue;}
-    if(l==='GARMIN SPEED'||l==='GPS TRACE'){mode='skip';continue;}
-    if(mode==='skip')continue;
-    const c=l.split(',');
-    if(mode==='sum'){if(c.length>=2)out.sum[c[0]]=c[1];continue;}
-    if(mode==='stroke'){
-      if(!hdrs.length){hdrs=c;continue;}
-      const r={};hdrs.forEach((h,j)=>r[h]=c[j]||'');
-      const ts=r.timestamp;
-      const t=ts?Date.parse(ts.replace(' ','T')):NaN;
-      if(!t0&&!isNaN(t))t0=t;
-      out.strokes.push({
-        n:+r.stroke||0,
-        ms:!isNaN(t)?t:NaN,
-        elapsed:!isNaN(t)?(t-t0)/1000:NaN,
-        jerk:parseFloat(r.catch_jerk_ms3)||NaN,
-        schar:parseFloat(r.stroke_char_pct)||NaN,
-        rate:parseFloat(r.stroke_rate_spm)||NaN,
-        pace:parseFloat(r.pace_s_per_500m)||NaN,
-        dist:parseFloat(r.distance_m)||NaN,
-        dps:parseFloat(r.dist_per_stroke_m)||NaN,
-        rloss:parseFloat(r.run_loss_pct)||NaN,
-        impulse:parseFloat(r.drive_impulse)||NaN,
-        consistency:parseFloat(r.catch_consistency_stdev)||NaN,
-        runeff:parseFloat(r.run_efficiency_vmin_vmax)||NaN,
-        rdi:parseFloat(r.recovery_drive_index)||NaN,
-      });
-      continue;
+/* ════════════════════════════════════════
+   ANALYSER — LOAD FROM DRIVE
+   Converts raw session JSON → analyser format,
+   bypassing CSV export entirely.
+════════════════════════════════════════ */
+
+// Converts a saved session object to the same shape parseCSV() returns.
+function sessionToAnalyserFmt(s) {
+  const sum = {
+    start_time:             new Date(s.startTime).toISOString(),
+    end_time:               new Date(s.endTime || s.startTime + (s.duration||0)*1000).toISOString(),
+    duration_s:             s.duration,
+    distance_m:             s.distance,
+    stroke_count:           s.strokeCount,
+    avg_pace_s_per_500m:    s.avgPace,
+    avg_rate_spm:           s.avgRate,
+    max_rate_spm:           s.maxRate,
+    catch_peak_sess_ms3:    s.catchPeakSess,
+    avg_catch_ms3:          s.avgCatch,
+    avg_dps_m:              s.avgDPS,
+    avg_run_loss_pct:       s.avgRunLoss,
+    avg_efficiency_vmin_vmax: s.avgEfficiency,
+    avg_impulse:            s.avgImpulse,
+    avg_stroke_char_pct:    s.avgChar,
+    avg_catch_consistency_stdev: s.avgConsistency,
+    detected_axis:          s.detectedAxis,
+    cal_noise_floor_ms2:    s.calNoiseFloor,
+    cal_jerk_thresh_ms3:    s.calThresh,
+  };
+
+  const t0 = s.startTime;
+  const strokes = (s.strokes || []).map((r, i) => ({
+    n:           i + 1,
+    ms:          r.t,
+    elapsed:     (r.t - t0) / 1000,
+    jerk:        r.catchPeak,
+    schar:       r.char,
+    rate:        r.rate,
+    pace:        r.pace,
+    dist:        r.dist,
+    dps:         r.dps,
+    rloss:       r.runLossPct,
+    impulse:     r.driveImpulse,
+    consistency: r.catchConsistency,
+    runeff:      r.runEfficiency,
+    rdi:         r.rdi,
+  }));
+
+  const hr = (s.hrTrace || []).map(h => ({
+    ts: new Date(h.t).toISOString(),
+    bpm: h.hr
+  }));
+
+  const laps = (s.laps || []).map(l => ({
+    lap:              l.n,
+    distance_m:       l.dist,
+    time_s:           l.time,
+    pace_s_per_500m:  l.pace,
+    stroke_rate_spm:  l.rate,
+  }));
+
+  const glaps = (s.garminLaps || []).map(l => ({
+    lap:              l.n,
+    distance_m:       l.dist,
+    time_s:           l.time,
+    pace_s_per_500m:  l.pace,
+    avg_hr_bpm:       l.avgHr,
+    max_hr_bpm:       l.maxHr,
+    calories:         l.cal,
+    strokes:          l.garminStrokes,
+    avg_spm:          l.garminAvgSpm,
+    avg_stroke_dist_m: l.avgStrokeDist,
+  }));
+
+  return { sum, strokes, hr, laps, glaps };
+}
+
+// Call from analyser "Load from Drive" button.
+// Renders a session picker, then loads the selected session.
+async function loadFromDrive() {
+  try {
+    if (!DriveSync.isSignedIn()) {
+      toast('Signing in to Drive…');
+      await DriveSync.signIn();
     }
-    if(mode==='laps'||mode==='glaps'){
-      if(!hdrs.length){hdrs=c;continue;}
-      const r={};hdrs.forEach((h,j)=>r[h]=c[j]||'');
-      if(+r.distance_m>0)(mode==='laps'?out.laps:out.glaps).push(r);
-      continue;
-    }
-    if(mode==='hr'){
-      if(!hdrs.length){hdrs=c;continue;}
-      const bpm=parseFloat(c[1]);
-      if(!isNaN(bpm)&&bpm>30&&bpm<220)out.hr.push({ts:c[0],bpm});
-      continue;
-    }
+    toast('Loading session list…');
+    const files = await DriveSync.list();
+    if (!files.length) { toast('No sessions found on Drive'); return; }
+
+    // Build a simple modal picker
+    _showDrivePicker(files, async (fileId, fileName) => {
+      toast('Loading ' + fileName + '…');
+      try {
+        const session = await DriveSync.fetchSession(fileId);
+        const data    = sessionToAnalyserFmt(session);
+        // Hand off to whatever the analyser uses after parseCSV()
+        // Replace renderAnalysis with your actual analyser render function
+        renderAnalysis(data, fileName);
+      } catch(err) {
+        toast('Load failed: ' + err.message);
+      }
+    });
+  } catch(err) {
+    if (err.message !== 'popup_closed') toast('Drive error: ' + err.message);
   }
-  return out;
+}
+
+function _showDrivePicker(files, onSelect) {
+  // Remove any existing picker
+  document.getElementById('_drive_picker')?.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = '_drive_picker';
+  overlay.style.cssText = `
+    position:fixed;inset:0;background:rgba(0,0,0,.72);
+    display:flex;align-items:center;justify-content:center;z-index:9999;
+  `;
+
+  const panel = document.createElement('div');
+  panel.style.cssText = `
+    background:#1a1a2e;border:1px solid #334;border-radius:10px;
+    padding:18px;max-width:420px;width:92%;max-height:80vh;
+    overflow-y:auto;color:#e0e0e0;font-family:monospace;
+  `;
+
+  const title = document.createElement('div');
+  title.textContent = 'Drive Sessions';
+  title.style.cssText = 'font-size:1rem;font-weight:700;margin-bottom:12px;color:#7ec8e3;';
+  panel.appendChild(title);
+
+  files.forEach(f => {
+    // Parse display name from filename: RowSess_2026-04-30_0630.json
+    const label = f.name.replace('RowSess_','').replace('.json','').replace('_',' ');
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    btn.style.cssText = `
+      display:block;width:100%;text-align:left;padding:9px 12px;
+      margin-bottom:6px;background:#252540;border:1px solid #334;
+      border-radius:6px;color:#e0e0e0;font-family:monospace;
+      font-size:.85rem;cursor:pointer;
+    `;
+    btn.onmouseenter = () => btn.style.background = '#2e2e58';
+    btn.onmouseleave = () => btn.style.background = '#252540';
+    btn.onclick = () => { overlay.remove(); onSelect(f.id, label); };
+    panel.appendChild(btn);
+  });
+
+  const cancel = document.createElement('button');
+  cancel.textContent = 'Cancel';
+  cancel.style.cssText = `
+    display:block;width:100%;padding:8px;margin-top:8px;
+    background:transparent;border:1px solid #556;border-radius:6px;
+    color:#888;cursor:pointer;font-family:monospace;
+  `;
+  cancel.onclick = () => overlay.remove();
+  panel.appendChild(cancel);
+
+  overlay.appendChild(panel);
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  document.body.appendChild(overlay);
 }
 
 // ── File IO ───────────────────────────────────────────────────────────────
@@ -472,6 +577,20 @@ function loadFile(f){
     schedRender();
   };
   r.readAsText(f);
+}
+function renderAnalysis(d, label) {
+  if (!d.strokes.length) { alert('No stroke data found.'); return; }
+  ST = d.strokes; HR = d.hr;
+  LAPS = [...d.laps, ...d.glaps];
+  viewS = 0; viewE = ST.length - 1; selS = -1; selE = -1;
+  document.getElementById('dz').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  buildMeta(label, d.sum);
+  buildCards(d.sum);
+  buildLaps();
+  buildStrokeTable();
+  if (HR.length > 10) { document.getElementById('hrsec').style.display = 'block'; }
+  schedRender();
 }
 
 function resetApp(){

@@ -245,6 +245,7 @@
   <button class="btn" id="browsebtn">Browse</button>
   <p style="margin-top:6px;font-size:10px;color:var(--faint)">Scull Metrics session export</p>
   <button class="themeBtn" id="dzThemeBtn" style="margin-top:4px;background:var(--s3);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;">Light Mode</button>
+  <button onclick="loadFromDrive()">⊞ Load from Drive</button>
 </div>
 <input type="file" id="fin" accept=".csv,.txt">
 
@@ -1277,5 +1278,6 @@ function hlRows(idxs){
 
 window.addEventListener('resize',()=>{if(ST.length)schedRender();});
 </script>
+<script src="drive-sync.js"></script>
 </body>
 </html>

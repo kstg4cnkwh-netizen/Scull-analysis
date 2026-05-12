@@ -238,6 +238,9 @@
 </div>
 
 <!-- ── Drop zone ───────────────────────────────────────────────────────── -->
+<button class="themeBtn" id="dzThemeBtn" style="...">Light Mode</button>
+
+
 <div id="dz">
   <div class="ico">🚣</div>
   <h2>Drop Scull Metrics CSV</h2>
@@ -245,8 +248,8 @@
   <button class="btn" id="browsebtn">Browse</button>
   <button onclick="event.stopPropagation(); loadFromDrive()" style="margin-top:4px;background:var(--s3);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;">⊞ Drive</button>
   <p style="margin-top:6px;font-size:10px;color:var(--faint)">Scull Metrics session export</p>
-  <button class="themeBtn" id="dzThemeBtn" style="margin-top:4px;background:var(--s3);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;">Light Mode</button>
-  </div>
+  <button class="themeBtn" id="dzThemeBtn" style="...">Light Mode</button>
+</div>
 <input type="file" id="fin" accept=".csv,.txt">
 
 <!-- ── Main app ─────────────────────────────────────────────────────────── -->
@@ -350,7 +353,8 @@ function toggleTheme() {
   document.querySelectorAll('.themeBtn').forEach(b => b.textContent = label);
   if (ST.length) schedRender();
 }
-document.querySelectorAll('.themeBtn').forEach(b => b.addEventListener('click', toggleTheme));
+document.getElementById('hdrThemeBtn').addEventListener('click', toggleTheme);
+document.getElementById('dzThemeBtn').addEventListener('click', e => { e.stopPropagation(); toggleTheme(); });
 
 // ── Utils ─────────────────────────────────────────────────────────────────
 function arrMin(a){let m=Infinity;  for(let i=0;i<a.length;i++)if(a[i]<m)m=a[i];return m;}
@@ -1399,6 +1403,101 @@ function hlRows(idxs){
 
 window.addEventListener('resize',()=>{if(ST.length)schedRender();});
 </script>
-<script src="drive-sync.js"></script>
+<script>
+// ── Toast ──────────────────────────────────────────────────────────────
+function toast(msg, ms=2500) {
+  let el = document.getElementById('_toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_toast';
+    el.style.cssText = `
+      position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
+      background:var(--s1);border:1px solid var(--border);color:var(--text);
+      padding:9px 18px;border-radius:8px;font-size:11px;font-family:'IBM Plex Mono',monospace;
+      opacity:0;transition:opacity .2s,transform .2s;z-index:9000;pointer-events:none;
+      box-shadow:0 4px 16px rgba(0,0,0,.4);
+    `;
+    document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.style.opacity = '1';
+  el.style.transform = 'translateX(-50%) translateY(0)';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateX(-50%) translateY(10px)';
+  }, ms);
+}
+
+// ── DriveSync ──────────────────────────────────────────────────────────
+// Set your Google OAuth Client ID here (must have Drive API scope enabled).
+// In Google Cloud Console: APIs & Services → Credentials → OAuth 2.0 Client ID
+// Authorised JS origins: http://localhost or wherever this file is served.
+const DRIVE_CLIENT_ID = 'YOUR_CLIENT_ID.apps.googleusercontent.com';
+
+const DriveSync = (() => {
+  let tokenClient = null, accessToken = null;
+
+  function loadGIS() {
+    return new Promise((res, rej) => {
+      if (window.google?.accounts) { res(); return; }
+      const s = document.createElement('script');
+      s.src = 'https://accounts.google.com/gsi/client';
+      s.onload = res;
+      s.onerror = () => rej(new Error('Failed to load Google Identity Services'));
+      document.head.appendChild(s);
+    });
+  }
+
+  function isSignedIn() { return !!accessToken; }
+
+  async function signIn() {
+    await loadGIS();
+    return new Promise((res, rej) => {
+      if (!tokenClient) {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: DRIVE_CLIENT_ID,
+          scope: 'https://www.googleapis.com/auth/drive.readonly',
+          callback: () => {},
+          error_callback: e => rej(new Error(e.type))
+        });
+      }
+      tokenClient.callback = resp => {
+        if (resp.error) rej(new Error(resp.error));
+        else { accessToken = resp.access_token; res(); }
+      };
+      tokenClient.requestAccessToken({ prompt: isSignedIn() ? '' : 'select_account' });
+    });
+  }
+
+  async function apiFetch(url) {
+    const r = await fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } });
+    if (r.status === 401) { accessToken = null; throw new Error('Session expired — please reconnect'); }
+    const data = await r.json();
+    if (data.error) throw new Error(data.error.message);
+    return data;
+  }
+
+  async function list() {
+    // Finds JSON files whose names contain 'RowSess'
+    const q = encodeURIComponent("name contains 'RowSess' and mimeType='application/json' and trashed=false");
+    const data = await apiFetch(
+      `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&orderBy=name%20desc&pageSize=50`
+    );
+    return data.files || [];
+  }
+
+  async function fetchSession(fileId) {
+    const r = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      { headers: { Authorization: 'Bearer ' + accessToken } }
+    );
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }
+
+  return { isSignedIn, signIn, list, fetchSession };
+})();
+</script>
 </body>
 </html>

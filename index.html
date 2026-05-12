@@ -242,7 +242,8 @@
   <div class="ico">🚣</div>
   <h2>Drop Scull Metrics CSV</h2>
   <p>Stroke data · Heart rate · Laps<br>Nothing leaves your device</p>
-  <button class="btn" id="browsebtn">Browse</button><button onclick="loadFromDrive()" style="margin-top:4px;background:var(--s3);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;">⊞ Drive</button>
+  <button class="btn" id="browsebtn">Browse</button>
+  <button onclick="event.stopPropagation(); loadFromDrive()" style="margin-top:4px;background:var(--s3);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;">⊞ Drive</button>
   <p style="margin-top:6px;font-size:10px;color:var(--faint)">Scull Metrics session export</p>
   <button class="themeBtn" id="dzThemeBtn" style="margin-top:4px;background:var(--s3);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;">Light Mode</button>
   </div>

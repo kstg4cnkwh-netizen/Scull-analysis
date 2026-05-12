@@ -482,6 +482,7 @@ function sessionToAnalyserFmt(s) {
 // Renders a session picker, then loads the selected session.
 async function loadFromDrive() {
   try {
+    await DriveSync.init();          // ← ensure GIS script is ready first
     if (!DriveSync.isSignedIn()) {
       toast('Signing in to Drive…');
       await DriveSync.signIn();
@@ -490,14 +491,11 @@ async function loadFromDrive() {
     const files = await DriveSync.list();
     if (!files.length) { toast('No sessions found on Drive'); return; }
 
-    // Build a simple modal picker
     _showDrivePicker(files, async (fileId, fileName) => {
       toast('Loading ' + fileName + '…');
       try {
         const session = await DriveSync.fetchSession(fileId);
         const data    = sessionToAnalyserFmt(session);
-        // Hand off to whatever the analyser uses after parseCSV()
-        // Replace renderAnalysis with your actual analyser render function
         renderAnalysis(data, fileName);
       } catch(err) {
         toast('Load failed: ' + err.message);
@@ -1402,10 +1400,6 @@ function hlRows(idxs){
 }
 
 window.addEventListener('resize', () => { if (ST.length) schedRender(); });
-
-// Initialise Drive on load (loads GIS script silently, no sign-in prompt)
-DriveSync.init().catch(() => {});
-
 
 </script>
 <script>

@@ -60,14 +60,17 @@ const DriveSync = (() => {
   }
 
   // ── Auth ────────────────────────────────────────────────────────────────
-  function signIn() {
-    return new Promise((resolve, reject) => {
-      if (isSignedIn()) { resolve(accessToken); return; }
-      pendingResolve = resolve;
-      pendingReject  = reject;
-      tokenClient.requestAccessToken({ prompt: '' });
-    });
-  }
+  // REPLACE the existing signIn() with:
+async function signIn() {
+  if (!tokenClient) await init();
+  return new Promise((resolve, reject) => {
+    if (isSignedIn()) { resolve(accessToken); return; }
+    pendingResolve = resolve;
+    pendingReject  = reject;
+    tokenClient.requestAccessToken({ prompt: 'select_account' });
+  });
+}
+
 
   function signOut() {
     if (accessToken) {
@@ -86,10 +89,13 @@ const DriveSync = (() => {
   }
 
   // ── Drive REST helpers ──────────────────────────────────────────────────
-  async function _ensureToken() {
-    if (!isSignedIn()) await signIn();
-    if (!accessToken) throw new Error('Not authenticated');
-  }
+  // REPLACE the existing _ensureToken() with:
+async function _ensureToken() {
+  if (!tokenClient) await init();
+  if (!isSignedIn()) await signIn();
+  if (!accessToken) throw new Error('Not authenticated');
+}
+
 
   async function _req(method, path, { params, jsonBody } = {}) {
     await _ensureToken();
@@ -458,3 +464,51 @@ function _showDrivePicker(files, onSelect) {
   overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
   document.body.appendChild(overlay);
 }
+
+
+/* ════════════════════════════════════════
+   INSERTION GUIDE
+════════════════════════════════════════ */
+/*
+
+1. SCRIPT TAG — add before </body> in scull.html AND analyser.html:
+
+   <script src="drive-sync.js"></script>
+
+   OR inline the entire file contents into each HTML file.
+
+
+2. INIT — in your DOMContentLoaded / app init block:
+
+   DriveSync.init().catch(console.warn);
+
+
+3. DRIVE BUTTON HTML — add wherever suits (settings panel, header):
+
+   <button id="drive-btn" onclick="toggleDrive()">⊞ Drive</button>
+   <span id="drive-dot" style="display:none;width:7px;height:7px;
+     border-radius:50%;background:#27ae60;display:inline-block;margin-left:4px;"></span>
+
+   The button label auto-toggles between "⊞ Drive" and "⊟ Drive".
+   The dot goes green when linked.
+
+
+4. addSess() — replace the existing function with the one above.
+   No other changes to saveSess() / loadSess() needed.
+
+
+5. ANALYSER — add a "Load from Drive" button alongside the CSV import:
+
+   <button onclick="loadFromDrive()">⊞ Load from Drive</button>
+
+   Then ensure renderAnalysis(data, label) is whatever your analyser calls
+   after parseCSV() returns — just swap parseCSV(text) for sessionToAnalyserFmt(session).
+
+
+6. GOOGLE CLOUD CONSOLE — confirm these are set:
+   Authorised JavaScript origins:
+     https://kstg4cnkwh-netizen.github.io
+   Authorised redirect URIs:
+     (none needed for implicit/token flow)
+
+*/

@@ -491,22 +491,26 @@ function sessionToAnalyserFmt(s) {
     cal_jerk_thresh_ms3: s.calThresh,
   };
 
+  // Coerce any null/undefined field to NaN so downstream isNaN() guards work correctly.
+  // null fools isNaN() (isNaN(null) === false), which causes null.toFixed() to throw.
+  const num = v => (v != null && !isNaN(+v)) ? +v : NaN;
+
   const t0 = s.startTime;
   const strokes = (s.strokes || []).map((r, i) => ({
     n:           i + 1,
     ms:          r.t,
     elapsed:     (r.t - t0) / 1000,
-    jerk:        r.catchPeak,
-    schar:       r.char,
-    consistency: r.catchConsistency,
-    rate:        r.rate,
-    pace:        r.pace,
-    dist:        r.dist,
-    dps:         r.dps,
-    rloss:       r.runLossPct,
-    runeff:      r.runEfficiency,
-    impulse:     r.driveImpulse,
-    rdi:         r.rdi,
+    jerk:        num(r.catchPeak),
+    schar:       num(r.char),
+    consistency: num(r.catchConsistency),
+    rate:        num(r.rate),
+    pace:        num(r.pace),
+    dist:        num(r.dist),
+    dps:         num(r.dps),
+    rloss:       num(r.runLossPct),
+    runeff:      num(r.runEfficiency),
+    impulse:     num(r.driveImpulse),
+    rdi:         num(r.rdi),
   }));
 
   const hr = (s.hrTrace || []).map(h => ({ ts: new Date(h.t).toISOString(), bpm: h.hr }));
@@ -634,6 +638,16 @@ function mountData(d, label) {
   HR = d.hr;
   LAPS = [...d.laps, ...d.glaps];
   viewS = 0; viewE = ST.length - 1; selS = -1; selE = -1;
+
+  // Garmin laps may exist even when stroke data is absent (e.g. FIT-only import).
+  // Warn early so the user knows what they're looking at.
+  if (!ST.length && LAPS.length) {
+    toast('No stroke data in this session — showing laps only', 4000);
+  } else if (!ST.length) {
+    toast('No stroke data found in this file', 4000);
+    return;
+  }
+
   document.getElementById('dz').style.display = 'none';
   document.getElementById('app').style.display = 'block';
   buildMeta(label, d.sum);
@@ -695,7 +709,7 @@ function sessionStats() {
     if(s.jerk>0&&s.jerk<300)jv.push(s.jerk);
     if(s.dps>1&&s.dps<25)dv.push(s.dps);
     if(s.impulse>0&&s.impulse<10)iv.push(s.impulse);
-    if(Math.abs(s.rdi)<1)rdv.push(s.rdi);
+    if(!isNaN(s.rdi)&&Math.abs(s.rdi)<=1)rdv.push(s.rdi);
   }
   for (let i=0; i<HR.length; i++) { const b=HR[i].bpm; if(b>40&&b<220)hv.push(b); }
   return {pv,rv,jv,dv,iv,hv,rdv};
@@ -1083,7 +1097,7 @@ function showTooltip(e) {
     ${ttRow('Impulse',   isNaN(s.impulse)||s.impulse<=0 ? EM : s.impulse.toFixed(2), C.i)}
     ${ttRow('Run Loss',  isNaN(s.rloss)||s.rloss<=0   ? EM : f1(s.rloss)+'%',       C.b)}
     ${ttRow('Stroke Char', isNaN(s.schar)              ? EM : f0(s.schar)+'%',      C.o)}
-    ${ttRow('RDI',       isNaN(s.rdi)||Math.abs(s.rdi)>1 ? EM : s.rdi.toFixed(2),   C.d)}
+    ${ttRow('RDI',       (s.rdi == null || isNaN(s.rdi) || Math.abs(s.rdi)>1) ? EM : s.rdi.toFixed(2),   C.d)}
   `;
 
   const tip = document.getElementById('tooltip');
@@ -1144,7 +1158,7 @@ function updateSel() {
     if(!isNaN(s.schar)&&s.schar>=0)scv.push(s.schar);
     if(!isNaN(s.rloss)&&s.rloss>=0)rlv.push(s.rloss);
     if(s.impulse>0&&s.impulse<10)iv.push(s.impulse);
-    if(Math.abs(s.rdi)<1)rdv.push(s.rdi);
+    if(!isNaN(s.rdi)&&Math.abs(s.rdi)<=1)rdv.push(s.rdi);
   }
   const distStart=sel[0].dist||0, distEnd=sel[sel.length-1].dist||0;
   const distCovered=distEnd-distStart;
@@ -1239,7 +1253,7 @@ function buildStrokeTable() {
     <td style="color:var(--o)">${isNaN(s.schar)?EM:f0(s.schar)+'%'}</td>
     <td style="color:var(--b)">${isNaN(s.rloss)||s.rloss<=0?EM:f1(s.rloss)+'%'}</td>
     <td style="color:var(--i)">${isNaN(s.impulse)||s.impulse<=0?EM:s.impulse.toFixed(2)}</td>
-    <td style="color:var(--d)">${isNaN(s.rdi)||s.rdi<-1||s.rdi>1?EM:s.rdi.toFixed(2)}</td>
+    <td style="color:var(--d)">${(s.rdi == null || isNaN(s.rdi) || s.rdi<-1||s.rdi>1)?EM:s.rdi.toFixed(2)}</td>
   </tr>`).join('');
   document.getElementById('tblcount').textContent = ST.length + ' strokes';
 }

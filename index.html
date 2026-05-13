@@ -7,184 +7,123 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@500;600;700&display=swap');
 
-  /* ── Dark palette (default) ─────────────────────────────────────────── */
   :root {
     --bg: #0b0e13; --s1: #111520; --s2: #181d2a; --s3: #1e2434;
     --border: #242c40; --dim: #1a2030;
-    /* Series colours */
-    --g: #3affb4;   /* pace          – bright teal      */
-    --b: #4da6ff;   /* run-loss / HR – sky blue         */
-    --y: #ffc947;   /* rate          – amber             */
-    --r: #f54040;   /* catch jerk    – red               */
-    --p: #c084fc;   /* DPS           – purple            */
-    --o: #ffb347;   /* stroke char   – orange            */
-    --i: #f393cd;   /* impulse       – pink              */
-    --d: #5b8cff;   /* RDI           – periwinkle        */
-    /* Text */
+    --g: #3affb4; --b: #4da6ff; --y: #ffc947; --r: #f54040;
+    --p: #c084fc; --o: #ffb347; --i: #f393cd; --d: #5b8cff;
     --text: #d8e0f0; --muted: #5a6480; --faint: #2d3450;
-    /* Canvas infrastructure – must change with theme */
-    --grid-ln: rgba(30,36,56,1);   /* grid lines          */
-    --grid-lb: #3a4460;            /* axis tick labels    */
-    --frame-ln: #242c40;           /* chart border        */
-    --sel-fill: rgba(58,255,180,.07);
-    --sel-stk:  rgba(58,255,180,.35);
+    --grid-ln: rgba(30,36,56,1); --grid-lb: #3a4460; --frame-ln: #242c40;
+    --sel-fill: rgba(58,255,180,.07); --sel-stk: rgba(58,255,180,.35);
   }
 
-  /* ── Light palette ──────────────────────────────────────────────────── */
   body.light {
     --bg: #f5f7fb; --s1: #ffffff; --s2: #eef2f7; --s3: #e4e9f2;
     --border: #cfd7e6; --dim: #dde3ee;
-    /* Series colours – boosted contrast for white bg */
-    --g: #0a7a3a;   /* pace          – forest green      */
-    --b: #2271d4;   /* run-loss / HR – cobalt            */
-    --y: #9c7c00;   /* rate          – dark amber        */
-    --r: #cd2020;   /* catch jerk    – crimson           */
-    --p: #7e56a6;   /* DPS           – violet            */
-    --o: #c07012;   /* stroke char   – burnt orange      */
-    --i: #c03088;   /* impulse       – magenta           */
-    --d: #1c48b9;   /* RDI           – navy blue         */
-    /* Text */
+    --g: #0a7a3a; --b: #2271d4; --y: #9c7c00; --r: #cd2020;
+    --p: #7e56a6; --o: #c07012; --i: #c03088; --d: #1c48b9;
     --text: #111827; --muted: #5b6475; --faint: #7d8ead;
-    /* Canvas infrastructure */
-    --grid-ln: #dde4ef;
-    --grid-lb: #7080a0;
-    --frame-ln: #b8c4d8;
-    --sel-fill: rgba(10,122,58,.06);
-    --sel-stk:  rgba(10,122,58,.40);
+    --grid-ln: #dde4ef; --grid-lb: #7080a0; --frame-ln: #b8c4d8;
+    --sel-fill: rgba(10,122,58,.06); --sel-stk: rgba(10,122,58,.40);
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 13px;
-    overflow-x: hidden;
-  }
+  body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Mono', monospace; font-size: 13px; overflow-x: hidden; }
 
-  /* ── Header ─────────────────────────────────────────────────────────── */
+  /* ── Header ── */
   #hdr {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 16px;
-    background: var(--s1); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; background: var(--s1); border-bottom: 1px solid var(--border);
     position: sticky; top: 0; z-index: 200; flex-wrap: wrap;
   }
   #hdr h1 { font-family: 'IBM Plex Sans', sans-serif; font-size: 16px; font-weight: 700; color: var(--g); }
   #hdr .meta { color: var(--muted); font-size: 10px; line-height: 1.5; }
   #hdr .sp { flex: 1; }
-  #hdr button {
+  .hbtn {
     background: var(--s3); border: 1px solid var(--border);
-    color: var(--muted); padding: 6px 14px; border-radius: 6px;
+    color: var(--muted); padding: 6px 12px; border-radius: 6px;
     font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer;
+    white-space: nowrap;
   }
-  #hdr button:hover { border-color: var(--g); color: var(--g); }
+  .hbtn:hover { border-color: var(--g); color: var(--g); }
+  .hbtn.linked { border-color: rgba(58,255,180,.4); color: var(--g); }
 
-  /* ── Drop zone ───────────────────────────────────────────────────────── */
+  /* ── Drop zone ── */
   #dz {
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; min-height: calc(100vh - 57px);
-    gap: 10px; border: 2px dashed var(--border); margin: 16px;
-    border-radius: 10px; background: var(--s1); cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: calc(100vh - 57px); gap: 10px; border: 2px dashed var(--border);
+    margin: 16px; border-radius: 10px; background: var(--s1); cursor: pointer;
     text-align: center; padding: 40px 20px; transition: border-color .2s;
   }
   #dz:hover, #dz.over { border-color: var(--g); background: var(--sel-fill); }
   #dz .ico { font-size: 36px; }
   #dz h2 { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 600; }
   #dz p { color: var(--muted); font-size: 11px; line-height: 1.7; }
-  #dz .btn {
-    margin-top: 8px; padding: 8px 22px; background: var(--g); color: #000;
-    border: none; border-radius: 7px;
-    font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer;
+  .dzbtn {
+    margin-top: 6px; padding: 8px 22px;
+    font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; font-size: 12px;
+    cursor: pointer; border-radius: 7px; border: none;
   }
+  .dzbtn-pri { background: var(--g); color: #000; }
+  .dzbtn-sec {
+    background: var(--s3); border: 1px solid var(--border);
+    color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  }
+  .dzbtn-sec:hover { border-color: var(--g); color: var(--g); }
 
-  #fin { display: none; }
   #app { display: none; padding-bottom: 40px; }
 
-  /* ── Summary cards ───────────────────────────────────────────────────── */
+  /* ── Cards ── */
   #cards { display: flex; gap: 8px; padding: 12px 14px; overflow-x: auto; scrollbar-width: none; }
   #cards::-webkit-scrollbar { display: none; }
-  .card {
-    flex-shrink: 0; min-width: 90px; background: var(--s1);
-    border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px;
-  }
+  .card { flex-shrink: 0; min-width: 90px; background: var(--s1); border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px; }
   .card .lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; }
   .card .val { font-size: 17px; font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; margin-top: 2px; }
   .card .sub { font-size: 9px; color: var(--muted); margin-top: 1px; }
+  .cg{border-top:2px solid var(--g)}.cg .val{color:var(--g)}
+  .cb{border-top:2px solid var(--b)}.cb .val{color:var(--b)}
+  .cy{border-top:2px solid var(--y)}.cy .val{color:var(--y)}
+  .cr{border-top:2px solid var(--r)}.cr .val{color:var(--r)}
+  .cp{border-top:2px solid var(--p)}.cp .val{color:var(--p)}
+  .co{border-top:2px solid var(--o)}.co .val{color:var(--o)}
+  .ci{border-top:2px solid var(--i)}.ci .val{color:var(--i)}
+  .cd{border-top:2px solid var(--d)}.cd .val{color:var(--d)}
+  .cw .val{color:var(--text)}
 
-  .cg { border-top: 2px solid var(--g); } .cg .val { color: var(--g); }
-  .cb { border-top: 2px solid var(--b); } .cb .val { color: var(--b); }
-  .cy { border-top: 2px solid var(--y); } .cy .val { color: var(--y); }
-  .cr { border-top: 2px solid var(--r); } .cr .val { color: var(--r); }
-  .cp { border-top: 2px solid var(--p); } .cp .val { color: var(--p); }
-  .co { border-top: 2px solid var(--o); } .co .val { color: var(--o); }
-  .ci { border-top: 2px solid var(--i); } .ci .val { color: var(--i); }
-  .cd { border-top: 2px solid var(--d); } .cd .val { color: var(--d); }
-  .cw .val { color: var(--text); }
-
-  /* ── Sections ────────────────────────────────────────────────────────── */
+  /* ── Sections ── */
   .sec { padding: 0 14px 12px; }
-  .sec-hd {
-    display: flex; align-items: center; gap: 10px;
-    margin-bottom: 7px; flex-wrap: wrap;
-  }
-  .sec-hd h2 {
-    font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 600;
-    color: var(--muted); text-transform: uppercase; letter-spacing: .8px;
-  }
-
+  .sec-hd { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; flex-wrap: wrap; }
+  .sec-hd h2 { font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; }
   .legend { display: flex; gap: 10px; flex-wrap: wrap; }
-  .leg {
-    display: flex; align-items: center; gap: 5px; font-size: 10px;
-    color: var(--muted); cursor: pointer; padding: 2px 6px;
-    border-radius: 4px; border: 1px solid transparent;
-  }
+  .leg { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(--muted); cursor: pointer; padding: 2px 6px; border-radius: 4px; border: 1px solid transparent; }
   .leg:hover { border-color: var(--border); }
   .leg.off { opacity: .3; }
   .dot { width: 8px; height: 8px; border-radius: 50%; }
-
-  select {
-    background: var(--s2); border: 1px solid var(--border);
-    color: var(--text); padding: 5px 8px; border-radius: 6px;
-    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
-    cursor: pointer; outline: none;
-  }
+  select { background: var(--s2); border: 1px solid var(--border); color: var(--text); padding: 5px 8px; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; outline: none; }
   select:focus { border-color: var(--g); }
-
   .cbox { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 12px 10px 4px; position: relative; }
   .cbox canvas { display: block; width: 100% !important; touch-action: none; cursor: crosshair; }
   .hint { text-align: center; font-size: 9px; color: var(--faint); margin-top: 3px; }
 
-  /* ── Selection stats bar ─────────────────────────────────────────────── */
-  #selbar {
-    display: none; margin: 0 14px 10px; padding: 10px 14px;
-    background: var(--s2); border: 1px solid var(--border);
-    border-radius: 8px; flex-wrap: wrap; gap: 12px; align-items: flex-start;
-  }
+  /* ── Selection bar ── */
+  #selbar { display: none; margin: 0 14px 10px; padding: 10px 14px; background: var(--s2); border: 1px solid var(--border); border-radius: 8px; flex-wrap: wrap; gap: 12px; align-items: flex-start; }
   #selbar.on { display: flex; }
   .ss { display: flex; flex-direction: column; gap: 1px; }
   .ss .l { font-size: 9px; color: var(--muted); text-transform: uppercase; }
   .ss .v { font-size: 12px; font-weight: 500; }
-  #selclear {
-    margin-left: auto; align-self: center; font-size: 10px; color: var(--muted);
-    background: none; border: 1px solid var(--border); padding: 4px 10px;
-    border-radius: 5px; cursor: pointer; font-family: 'IBM Plex Mono', monospace;
-  }
+  #selclear { margin-left: auto; align-self: center; font-size: 10px; color: var(--muted); background: none; border: 1px solid var(--border); padding: 4px 10px; border-radius: 5px; cursor: pointer; font-family: 'IBM Plex Mono', monospace; }
   #selclear:hover { color: var(--g); border-color: var(--g); }
 
-  /* ── Overview ────────────────────────────────────────────────────────── */
+  /* ── Overview ── */
   .ovbox { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 6px 8px 2px; }
   .ovbox canvas { display: block; width: 100% !important; touch-action: none; cursor: col-resize; }
   .zlegend { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
   .zl { font-size: 9px; color: var(--muted); }
 
-  /* ── Tables ──────────────────────────────────────────────────────────── */
+  /* ── Tables ── */
   .twrap { overflow: auto; max-height: 200px; background: var(--s1); border: 1px solid var(--border); border-radius: 10px; }
   table { width: 100%; border-collapse: collapse; font-size: 10px; white-space: nowrap; }
-  thead th {
-    position: sticky; top: 0; background: var(--s2); color: var(--muted);
-    padding: 7px 10px; border-bottom: 1px solid var(--border);
-    text-align: right; font-size: 9px; text-transform: uppercase; letter-spacing: .4px;
-  }
+  thead th { position: sticky; top: 0; background: var(--s2); color: var(--muted); padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: right; font-size: 9px; text-transform: uppercase; letter-spacing: .4px; }
   thead th:first-child { text-align: left; }
   tbody tr { border-bottom: 1px solid var(--dim); }
   tbody tr:hover td { background: var(--s2); }
@@ -192,30 +131,10 @@
   tbody td { padding: 5px 10px; color: var(--muted); text-align: right; }
   tbody td:first-child { color: var(--text); text-align: left; }
 
-  /* ── Hover tooltip ───────────────────────────────────────────────────── */
-  #tooltip {
-    display: none;
-    position: fixed;
-    z-index: 500;
-    background: var(--s1);
-    border: 1px solid var(--border);
-    border-radius: 9px;
-    padding: 10px 13px;
-    pointer-events: none;
-    min-width: 150px;
-    box-shadow: 0 6px 24px rgba(0,0,0,.35);
-  }
-  #tooltip .tt-hd {
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 11px; font-weight: 700;
-    color: var(--text);
-    margin-bottom: 6px; padding-bottom: 5px;
-    border-bottom: 1px solid var(--border);
-  }
-  #tooltip .tt-row {
-    display: flex; justify-content: space-between;
-    gap: 18px; padding: 2px 0; font-size: 10px;
-  }
+  /* ── Tooltip ── */
+  #tooltip { display: none; position: fixed; z-index: 500; background: var(--s1); border: 1px solid var(--border); border-radius: 9px; padding: 10px 13px; pointer-events: none; min-width: 150px; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
+  #tooltip .tt-hd { font-family: 'IBM Plex Sans', sans-serif; font-size: 11px; font-weight: 700; color: var(--text); margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid var(--border); }
+  #tooltip .tt-row { display: flex; justify-content: space-between; gap: 18px; padding: 2px 0; font-size: 10px; }
   #tooltip .tt-lbl { color: var(--muted); }
   #tooltip .tt-val { font-weight: 500; }
 
@@ -228,31 +147,24 @@
 </head>
 <body>
 
-<!-- ── Header ──────────────────────────────────────────────────────────── -->
 <div id="hdr">
   <h1>⊳ Scull</h1>
   <div class="meta" id="hdrmeta"></div>
   <div class="sp"></div>
-  <button id="resetbtn">↩ New file</button>
-  <button class="themeBtn" id="hdrThemeBtn">Light Mode</button>
+  <button class="hbtn" id="resetbtn">↩ New file</button>
+  <button class="hbtn" id="hdrThemeBtn">Light Mode</button>
 </div>
-
-<!-- ── Drop zone ───────────────────────────────────────────────────────── -->
-<button class="themeBtn" id="dzThemeBtn" style="...">Light Mode</button>
-
 
 <div id="dz">
   <div class="ico">🚣</div>
-  <h2>Drop Scull Metrics CSV</h2>
-  <p>Stroke data · Heart rate · Laps<br>Nothing leaves your device</p>
-  <button class="btn" id="browsebtn">Browse</button>
-  <button onclick="event.stopPropagation(); loadFromDrive()" style="margin-top:4px;background:var(--s3);border:1px solid var(--border);color:var(--muted);padding:6px 14px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;">⊞ Drive</button>
-  <p style="margin-top:6px;font-size:10px;color:var(--faint)">Scull Metrics session export</p>
-  <button class="themeBtn" id="dzThemeBtn" style="...">Light Mode</button>
+  <h2>Drop Scull Metrics export</h2>
+  <p>CSV export · JSON session file · Heart rate · Laps<br>Nothing leaves your device</p>
+  <button class="dzbtn dzbtn-pri" id="browsebtn">Browse file</button>
+  <button class="dzbtn dzbtn-sec" id="drivebtn">☁ Load from Drive</button>
+  <p style="margin-top:4px;font-size:10px;color:var(--faint)">CSV from Scull Metrics · or JSON from Drive sync</p>
 </div>
-<input type="file" id="fin" accept=".csv,.txt">
+<input type="file" id="fin" accept=".csv,.txt,.json" style="display:none">
 
-<!-- ── Main app ─────────────────────────────────────────────────────────── -->
 <div id="app">
   <div id="cards"></div>
 
@@ -311,33 +223,106 @@
 <div id="tooltip"></div>
 
 <script>
+'use strict';
+
 // ══════════════════════════════════════════════════════════════════════════
-// COLOUR SYSTEM
-// All canvas colours are resolved at draw time from document.body so that
-// the .light toggle is always reflected without needing a page reload.
+// DRIVE (inline — works without drive-sync.js)
+// ══════════════════════════════════════════════════════════════════════════
+const AnalyserDrive = {
+  CLIENT_ID: '729480414852-kko8e7bi3r38tcg2rf6iiupptagoegpc.apps.googleusercontent.com',
+  SCOPE: 'https://www.googleapis.com/auth/drive.file',
+  _token: null,
+
+  // Call once on page load — handles OAuth redirect return
+  init() {
+    const hash = new URLSearchParams(location.hash.slice(1));
+    const token = hash.get('access_token');
+    if (token) {
+      history.replaceState({}, '', location.pathname);
+      this._token = token;
+      sessionStorage.setItem('_ad_token', token);
+      // If we were mid-load-flow, auto-continue
+      if (sessionStorage.getItem('_ad_pending') === '1') {
+        sessionStorage.removeItem('_ad_pending');
+        setTimeout(() => loadFromDrive(), 300);
+      }
+    } else {
+      const saved = sessionStorage.getItem('_ad_token');
+      if (saved) this._token = saved;
+    }
+    this._updateBtn();
+  },
+
+  isSignedIn() { return !!this._token; },
+
+  signIn() {
+    sessionStorage.setItem('_ad_pending', '1');
+    const p = new URLSearchParams({
+      client_id: this.CLIENT_ID,
+      redirect_uri: location.origin + location.pathname,
+      response_type: 'token',
+      scope: this.SCOPE,
+    });
+    window.location.href = 'https://accounts.google.com/o/oauth2/v2/auth?' + p;
+  },
+
+  signOut() {
+    this._token = null;
+    sessionStorage.removeItem('_ad_token');
+    this._updateBtn();
+  },
+
+  async list() {
+    this._check();
+    const q = encodeURIComponent("name contains 'RowSess_' and name contains '.json' and trashed=false");
+    const resp = await fetch(
+      `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,createdTime,size)&orderBy=createdTime+desc&pageSize=200`,
+      { headers: { Authorization: 'Bearer ' + this._token } }
+    );
+    if (resp.status === 401) { this._expire(); throw new Error('Session expired — please sign in again'); }
+    if (!resp.ok) throw new Error('Drive list failed: HTTP ' + resp.status);
+    const d = await resp.json();
+    return d.files || [];
+  },
+
+  async fetchSession(fileId) {
+    this._check();
+    const resp = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+      { headers: { Authorization: 'Bearer ' + this._token } }
+    );
+    if (resp.status === 401) { this._expire(); throw new Error('Session expired — please sign in again'); }
+    if (!resp.ok) throw new Error('Drive fetch failed: HTTP ' + resp.status);
+    return resp.json();
+  },
+
+  _check() { if (!this._token) throw new Error('Not signed in to Drive'); },
+  _expire() { this._token = null; sessionStorage.removeItem('_ad_token'); this._updateBtn(); },
+  _updateBtn() {
+    const btn = document.getElementById('drivebtn');
+    if (!btn) return;
+    if (this._token) {
+      btn.textContent = '☁ Drive (linked)';
+      btn.classList.add('linked');
+    } else {
+      btn.textContent = '☁ Load from Drive';
+      btn.classList.remove('linked');
+    }
+  },
+};
+
+// ══════════════════════════════════════════════════════════════════════════
+// PALETTE
 // ══════════════════════════════════════════════════════════════════════════
 function pal() {
   const cs = getComputedStyle(document.body);
   const v  = n => cs.getPropertyValue(n).trim();
   return {
-    // Series
-    g:       v('--g'),
-    b:       v('--b'),
-    y:       v('--y'),
-    r:       v('--r'),
-    p:       v('--p'),
-    o:       v('--o'),
-    i:       v('--i'),
-    d:       v('--d'),
-    // Infrastructure
-    gridLn:  v('--grid-ln'),
-    gridLb:  v('--grid-lb'),
-    frameLn: v('--frame-ln'),
-    selFill: v('--sel-fill'),
-    selStk:  v('--sel-stk'),
-    text:    v('--text'),
-    muted:   v('--muted'),
-    // HR zone fills (semi-transparent, readable on both themes)
+    g: v('--g'), b: v('--b'), y: v('--y'), r: v('--r'),
+    p: v('--p'), o: v('--o'), i: v('--i'), d: v('--d'),
+    gridLn: v('--grid-ln'), gridLb: v('--grid-lb'), frameLn: v('--frame-ln'),
+    selFill: v('--sel-fill'), selStk: v('--sel-stk'),
+    text: v('--text'), muted: v('--muted'),
     zoneBlue:   'rgba(77,166,255,.10)',
     zoneGreen:  'rgba(58,255,180,.10)',
     zoneYellow: 'rgba(255,201,71,.10)',
@@ -346,54 +331,33 @@ function pal() {
   };
 }
 
-// ── Theme toggle ──────────────────────────────────────────────────────────
+// ── Theme ──────────────────────────────────────────────────────────────────
 function toggleTheme() {
   document.body.classList.toggle('light');
-  const label = document.body.classList.contains('light') ? 'Dark Mode' : 'Light Mode';
-  document.querySelectorAll('.themeBtn').forEach(b => b.textContent = label);
+  const lbl = document.body.classList.contains('light') ? 'Dark Mode' : 'Light Mode';
+  document.getElementById('hdrThemeBtn').textContent = lbl;
   if (ST.length) schedRender();
 }
 document.getElementById('hdrThemeBtn').addEventListener('click', toggleTheme);
-document.getElementById('dzThemeBtn').addEventListener('click', e => { e.stopPropagation(); toggleTheme(); });
 
-// ── Utils ─────────────────────────────────────────────────────────────────
+// ── Utilities ──────────────────────────────────────────────────────────────
 function arrMin(a){let m=Infinity;  for(let i=0;i<a.length;i++)if(a[i]<m)m=a[i];return m;}
 function arrMax(a){let m=-Infinity; for(let i=0;i<a.length;i++)if(a[i]>m)m=a[i];return m;}
 function arrSum(a){let s=0;         for(let i=0;i<a.length;i++)s+=a[i];return s;}
 function arrMean(a){return a.length?arrSum(a)/a.length:NaN;}
 function clamp(v,a,b){return v<a?a:v>b?b:v;}
 
-const EM = '&mdash;'; // em dash as HTML entity — pure ASCII, copy-paste safe
-
-function fmtPace(s){
-  if(!s||isNaN(s)||s<50||s>600)return EM;
-  return Math.floor(s/60)+':'+(Math.round(s%60)<10?'0':'')+Math.round(s%60);
-}
-function fmtTime(s){
-  if(!s||isNaN(s))return'0:00';
-  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.round(s%60);
-  if(h>0)return h+':'+(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec;
-  return m+':'+(sec<10?'0':'')+sec;
-}
+const EM = '—';
+function fmtPace(s){if(!s||isNaN(s)||s<50||s>600)return EM;return Math.floor(s/60)+':'+(Math.round(s%60)<10?'0':'')+Math.round(s%60);}
+function fmtTime(s){if(!s||isNaN(s))return'0:00';const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.round(s%60);if(h>0)return h+':'+(m<10?'0':'')+m+':'+(sec<10?'0':'')+sec;return m+':'+(sec<10?'0':'')+sec;}
 function f1(v){return isNaN(v)?EM:v.toFixed(1);}
 function f2(v){return isNaN(v)?EM:v.toFixed(2);}
 function f0(v){return isNaN(v)?EM:String(Math.round(v));}
+function niceSteps(min,max,n){const r=max-min||1,raw=r/n,mag=Math.pow(10,Math.floor(Math.log10(raw)));let step=mag;for(const f of[1,2,2.5,5,10]){if(mag*f>=raw){step=mag*f;break;}}const out=[],start=Math.ceil(min/step)*step;for(let v=start;v<=max+step*.001;v+=step)out.push(parseFloat(v.toPrecision(8)));return out;}
 
-function niceSteps(min,max,n){
-  const r=max-min||1;
-  const raw=r/n;
-  const mag=Math.pow(10,Math.floor(Math.log10(raw)));
-  let step=mag;
-  for(const f of[1,2,2.5,5,10]){if(mag*f>=raw){step=mag*f;break;}}
-  const out=[];
-  const start=Math.ceil(min/step)*step;
-  for(let v=start;v<=max+step*.001;v+=step)out.push(parseFloat(v.toPrecision(8)));
-  return out;
-}
-
-// ── State ─────────────────────────────────────────────────────────────────
+// ── State ──────────────────────────────────────────────────────────────────
 let ST=[],HR=[],LAPS=[];
-let currentView=[];          // strokes currently in the main chart view
+let currentView=[];
 let viewS=0,viewE=0;
 let selS=-1,selE=-1;
 let vis={pace:true,rate:true,jerk:false,dps:true,impulse:false,rloss:false,schar:false,rdi:true};
@@ -401,34 +365,130 @@ let rafId=null;
 let isDragMain=false,isDragOv=false;
 let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
 
-/* ════════════════════════════════════════
-   ANALYSER — LOAD FROM DRIVE
-   Converts raw session JSON → analyser format,
-   bypassing CSV export entirely.
-════════════════════════════════════════ */
+// ══════════════════════════════════════════════════════════════════════════
+// PARSE CSV  (Scull Metrics exportCSV format)
+// ══════════════════════════════════════════════════════════════════════════
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/);
+  const sum = {};
+  let strokes = [], hr = [], laps = [], glaps = [];
+  let section = null, headers = [];
+  let t0 = NaN;
 
-// Converts a saved session object to the same shape parseCSV() returns.
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) continue;
+    const cells = line.split(',');
+    const key = cells[0];
+
+    // Section markers
+    if (key === 'SESSION SUMMARY') { section = 'sum';     headers = []; continue; }
+    if (key === 'STROKE DATA')     { section = 'strokes'; headers = []; continue; }
+    if (key === 'LAPS')            { section = 'laps';    headers = []; continue; }
+    if (key === 'GARMIN LAPS')     { section = 'glaps';   headers = []; continue; }
+    if (key === 'HEART RATE')      { section = 'hr';      headers = []; continue; }
+    if (key === 'GARMIN SPEED' || key === 'GPS TRACE') { section = 'skip'; continue; }
+
+    switch (section) {
+      case 'sum': {
+        const val = cells.slice(1).join(',').trim();
+        sum[key] = val;
+        if (key === 'start_time') { t0 = new Date(val).getTime(); }
+        break;
+      }
+      case 'strokes': {
+        if (!headers.length) { headers = cells; break; }
+        const row = {};
+        cells.forEach((v, i) => { if (headers[i]) row[headers[i].trim()] = v.trim(); });
+        const ms = new Date(row.timestamp).getTime();
+        const elapsed = (!isNaN(ms) && !isNaN(t0)) ? (ms - t0) / 1000 : strokes.length * 2;
+        strokes.push({
+          n:           parseInt(row.stroke) || strokes.length + 1,
+          ms,
+          elapsed,
+          jerk:        parseFloat(row.catch_jerk_ms3),
+          schar:       parseFloat(row.stroke_char_pct),
+          consistency: parseFloat(row.catch_consistency_stdev),
+          rate:        parseFloat(row.stroke_rate_spm),
+          pace:        parseFloat(row.pace_s_per_500m),
+          dist:        parseFloat(row.distance_m),
+          dps:         parseFloat(row.dist_per_stroke_m),
+          rloss:       parseFloat(row.run_loss_pct),
+          runeff:      parseFloat(row.run_efficiency_vmin_vmax),
+          impulse:     parseFloat(row.drive_impulse),
+          rdi:         parseFloat(row.recovery_drive_index),
+        });
+        break;
+      }
+      case 'laps': {
+        if (!headers.length) { headers = cells; break; }
+        const row = {};
+        cells.forEach((v, i) => { if (headers[i]) row[headers[i].trim()] = v.trim(); });
+        laps.push({
+          lap: parseInt(row.lap),
+          distance_m: parseFloat(row.distance_m),
+          time_s: parseFloat(row.time_s),
+          pace_s_per_500m: parseFloat(row.pace_s_per_500m),
+          stroke_rate_spm: parseFloat(row.stroke_rate_spm),
+        });
+        break;
+      }
+      case 'glaps': {
+        if (!headers.length) { headers = cells; break; }
+        const row = {};
+        cells.forEach((v, i) => { if (headers[i]) row[headers[i].trim()] = v.trim(); });
+        glaps.push({
+          lap: parseInt(row.lap),
+          distance_m: parseFloat(row.distance_m),
+          time_s: parseFloat(row.time_s),
+          pace_s_per_500m: parseFloat(row.pace_s_per_500m),
+          avg_hr_bpm: row.avg_hr_bpm || null,
+          max_hr_bpm: row.max_hr_bpm || null,
+          calories: row.calories || null,
+          strokes: row.strokes || null,
+          avg_spm: row.avg_spm || null,
+          avg_stroke_dist_m: row.avg_stroke_dist_m || null,
+        });
+        break;
+      }
+      case 'hr': {
+        if (!headers.length) { headers = cells; break; }
+        const row = {};
+        cells.forEach((v, i) => { if (headers[i]) row[headers[i].trim()] = v.trim(); });
+        const bpm = parseInt(row.heart_rate_bpm);
+        if (bpm > 0 && bpm < 250) hr.push({ ts: row.timestamp, bpm });
+        break;
+      }
+    }
+  }
+
+  return { sum, strokes, hr, laps, glaps };
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// CONVERT JSON SESSION  (Drive-sync format → analyser format)
+// ══════════════════════════════════════════════════════════════════════════
 function sessionToAnalyserFmt(s) {
   const sum = {
-    start_time:             new Date(s.startTime).toISOString(),
-    end_time:               new Date(s.endTime || s.startTime + (s.duration||0)*1000).toISOString(),
-    duration_s:             s.duration,
-    distance_m:             s.distance,
-    stroke_count:           s.strokeCount,
-    avg_pace_s_per_500m:    s.avgPace,
-    avg_rate_spm:           s.avgRate,
-    max_rate_spm:           s.maxRate,
-    catch_peak_sess_ms3:    s.catchPeakSess,
-    avg_catch_ms3:          s.avgCatch,
-    avg_dps_m:              s.avgDPS,
-    avg_run_loss_pct:       s.avgRunLoss,
+    start_time:  new Date(s.startTime).toISOString(),
+    end_time:    new Date(s.endTime || s.startTime + (s.duration||0)*1000).toISOString(),
+    duration_s:  s.duration,
+    distance_m:  s.distance,
+    stroke_count: s.strokeCount,
+    avg_pace_s_per_500m: s.avgPace,
+    avg_rate_spm: s.avgRate,
+    max_rate_spm: s.maxRate,
+    catch_peak_sess_ms3: s.catchPeakSess,
+    avg_catch_ms3: s.avgCatch,
+    avg_dps_m: s.avgDPS,
+    avg_run_loss_pct: s.avgRunLoss,
     avg_efficiency_vmin_vmax: s.avgEfficiency,
-    avg_impulse:            s.avgImpulse,
-    avg_stroke_char_pct:    s.avgChar,
+    avg_impulse: s.avgImpulse,
+    avg_stroke_char_pct: s.avgChar,
     avg_catch_consistency_stdev: s.avgConsistency,
-    detected_axis:          s.detectedAxis,
-    cal_noise_floor_ms2:    s.calNoiseFloor,
-    cal_jerk_thresh_ms3:    s.calThresh,
+    detected_axis: s.detectedAxis,
+    cal_noise_floor_ms2: s.calNoiseFloor,
+    cal_jerk_thresh_ms3: s.calThresh,
   };
 
   const t0 = s.startTime;
@@ -438,152 +498,140 @@ function sessionToAnalyserFmt(s) {
     elapsed:     (r.t - t0) / 1000,
     jerk:        r.catchPeak,
     schar:       r.char,
+    consistency: r.catchConsistency,
     rate:        r.rate,
     pace:        r.pace,
     dist:        r.dist,
     dps:         r.dps,
     rloss:       r.runLossPct,
-    impulse:     r.driveImpulse,
-    consistency: r.catchConsistency,
     runeff:      r.runEfficiency,
+    impulse:     r.driveImpulse,
     rdi:         r.rdi,
   }));
 
-  const hr = (s.hrTrace || []).map(h => ({
-    ts: new Date(h.t).toISOString(),
-    bpm: h.hr
-  }));
+  const hr = (s.hrTrace || []).map(h => ({ ts: new Date(h.t).toISOString(), bpm: h.hr }));
 
   const laps = (s.laps || []).map(l => ({
-    lap:              l.n,
-    distance_m:       l.dist,
-    time_s:           l.time,
-    pace_s_per_500m:  l.pace,
-    stroke_rate_spm:  l.rate,
+    lap: l.n,
+    distance_m: l.dist,
+    time_s: l.time,
+    pace_s_per_500m: l.pace,
+    stroke_rate_spm: l.rate,
   }));
 
   const glaps = (s.garminLaps || []).map(l => ({
-    lap:              l.n,
-    distance_m:       l.dist,
-    time_s:           l.time,
-    pace_s_per_500m:  l.pace,
-    avg_hr_bpm:       l.avgHr,
-    max_hr_bpm:       l.maxHr,
-    calories:         l.cal,
-    strokes:          l.garminStrokes,
-    avg_spm:          l.garminAvgSpm,
+    lap: l.n,
+    distance_m: l.dist,
+    time_s: l.time,
+    pace_s_per_500m: l.pace,
+    avg_hr_bpm: l.avgHr,
+    max_hr_bpm: l.maxHr,
+    calories: l.cal,
+    strokes: l.garminStrokes,
+    avg_spm: l.garminAvgSpm,
     avg_stroke_dist_m: l.avgStrokeDist,
   }));
 
   return { sum, strokes, hr, laps, glaps };
 }
 
-// Call from analyser "Load from Drive" button.
-// Renders a session picker, then loads the selected session.
+// ══════════════════════════════════════════════════════════════════════════
+// FILE IO
+// ══════════════════════════════════════════════════════════════════════════
+function loadFile(f) {
+  const name = f.name.toLowerCase();
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      let d;
+      if (name.endsWith('.json')) {
+        // Drive-sync JSON session file
+        const session = JSON.parse(e.target.result);
+        // Accept both a single session or an array (take first)
+        const s = Array.isArray(session) ? session[0] : session;
+        d = sessionToAnalyserFmt(s);
+      } else {
+        // CSV (exportCSV or exportDebugCSV format)
+        d = parseCSV(e.target.result);
+      }
+      if (!d.strokes.length) { alert('No stroke data found in this file.'); return; }
+      mountData(d, f.name);
+    } catch(err) {
+      alert('Parse error: ' + err.message);
+      console.error(err);
+    }
+  };
+  reader.readAsText(f);
+}
+
+// ── Drive loading ──────────────────────────────────────────────────────────
 async function loadFromDrive() {
   try {
-    await DriveSync.init();          // ← ensure GIS script is ready first
-    if (!DriveSync.isSignedIn()) {
-      toast('Signing in to Drive…');
-      await DriveSync.signIn();
+    if (!AnalyserDrive.isSignedIn()) {
+      toast('Redirecting to Google sign-in…');
+      setTimeout(() => AnalyserDrive.signIn(), 400);
+      return;
     }
-    toast('Loading session list…');
-    const files = await DriveSync.list();
+    toast('Fetching session list…');
+    const files = await AnalyserDrive.list();
     if (!files.length) { toast('No sessions found on Drive'); return; }
-
-    _showDrivePicker(files, async (fileId, fileName) => {
-      toast('Loading ' + fileName + '…');
+    showDrivePicker(files, async (fileId, label) => {
+      toast('Loading ' + label + '…');
       try {
-        const session = await DriveSync.fetchSession(fileId);
-        const data    = sessionToAnalyserFmt(session);
-        renderAnalysis(data, fileName);
+        const session = await AnalyserDrive.fetchSession(fileId);
+        const d = sessionToAnalyserFmt(session);
+        mountData(d, label);
       } catch(err) {
         toast('Load failed: ' + err.message);
       }
     });
   } catch(err) {
-    if (err.message !== 'popup_closed') toast('Drive error: ' + err.message);
+    toast('Drive error: ' + err.message);
   }
 }
 
-function _showDrivePicker(files, onSelect) {
-  // Remove any existing picker
+function showDrivePicker(files, onSelect) {
   document.getElementById('_drive_picker')?.remove();
 
   const overlay = document.createElement('div');
   overlay.id = '_drive_picker';
-  overlay.style.cssText = `
-    position:fixed;inset:0;background:rgba(0,0,0,.72);
-    display:flex;align-items:center;justify-content:center;z-index:9999;
-  `;
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:9999;';
 
   const panel = document.createElement('div');
-  panel.style.cssText = `
-    background:#1a1a2e;border:1px solid #334;border-radius:10px;
-    padding:18px;max-width:420px;width:92%;max-height:80vh;
-    overflow-y:auto;color:#e0e0e0;font-family:monospace;
-  `;
+  panel.style.cssText = 'background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:18px;max-width:440px;width:92%;max-height:80vh;overflow-y:auto;color:var(--text);font-family:monospace;';
 
   const title = document.createElement('div');
   title.textContent = 'Drive Sessions';
-  title.style.cssText = 'font-size:1rem;font-weight:700;margin-bottom:12px;color:#7ec8e3;';
+  title.style.cssText = 'font-size:1rem;font-weight:700;margin-bottom:12px;color:var(--g);font-family:IBM Plex Sans,sans-serif;';
   panel.appendChild(title);
 
   files.forEach(f => {
-    // Parse display name from filename: RowSess_2026-04-30_0630.json
+    // RowSess_2026-05-13_0630.json → 2026-05-13 0630
     const label = f.name.replace('RowSess_','').replace('.json','').replace('_',' ');
     const btn = document.createElement('button');
     btn.textContent = label;
-    btn.style.cssText = `
-      display:block;width:100%;text-align:left;padding:9px 12px;
-      margin-bottom:6px;background:#252540;border:1px solid #334;
-      border-radius:6px;color:#e0e0e0;font-family:monospace;
-      font-size:.85rem;cursor:pointer;
-    `;
-    btn.onmouseenter = () => btn.style.background = '#2e2e58';
-    btn.onmouseleave = () => btn.style.background = '#252540';
+    btn.style.cssText = 'display:block;width:100%;text-align:left;padding:9px 12px;margin-bottom:6px;background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:.85rem;cursor:pointer;';
+    btn.onmouseenter = () => btn.style.borderColor = 'var(--g)';
+    btn.onmouseleave = () => btn.style.borderColor = 'var(--border)';
     btn.onclick = () => { overlay.remove(); onSelect(f.id, label); };
     panel.appendChild(btn);
   });
 
   const cancel = document.createElement('button');
   cancel.textContent = 'Cancel';
-  cancel.style.cssText = `
-    display:block;width:100%;padding:8px;margin-top:8px;
-    background:transparent;border:1px solid #556;border-radius:6px;
-    color:#888;cursor:pointer;font-family:monospace;
-  `;
+  cancel.style.cssText = 'display:block;width:100%;padding:8px;margin-top:6px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-family:monospace;';
   cancel.onclick = () => overlay.remove();
   panel.appendChild(cancel);
 
   overlay.appendChild(panel);
-  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
   document.body.appendChild(overlay);
 }
 
-// ── File IO ───────────────────────────────────────────────────────────────
-function loadFile(f){
-  const r=new FileReader();
-  r.onload=e=>{
-    const d=parseCSV(e.target.result);
-    if(!d.strokes.length){alert('No stroke data found.');return;}
-    ST=d.strokes; HR=d.hr;
-    LAPS=[...d.laps,...d.glaps];
-    viewS=0; viewE=ST.length-1; selS=-1; selE=-1;
-    document.getElementById('dz').style.display='none';
-    document.getElementById('app').style.display='block';
-    buildMeta(f.name,d.sum);
-    buildCards(d.sum);
-    buildLaps();
-    buildStrokeTable();
-    if(HR.length>10){document.getElementById('hrsec').style.display='block';}
-    schedRender();
-  };
-  r.readAsText(f);
-}
-function renderAnalysis(d, label) {
-  if (!d.strokes.length) { alert('No stroke data found.'); return; }
-  ST = d.strokes; HR = d.hr;
+// ── Mount parsed data ──────────────────────────────────────────────────────
+function mountData(d, label) {
+  ST = d.strokes;
+  HR = d.hr;
   LAPS = [...d.laps, ...d.glaps];
   viewS = 0; viewE = ST.length - 1; selS = -1; selE = -1;
   document.getElementById('dz').style.display = 'none';
@@ -592,49 +640,55 @@ function renderAnalysis(d, label) {
   buildCards(d.sum);
   buildLaps();
   buildStrokeTable();
-  if (HR.length > 10) { document.getElementById('hrsec').style.display = 'block'; }
+  document.getElementById('hrsec').style.display = HR.length > 10 ? 'block' : 'none';
   schedRender();
 }
 
-function resetApp(){
-  ST=[];HR=[];LAPS=[];
-  selS=-1;selE=-1;
-  document.getElementById('app').style.display='none';
-  document.getElementById('dz').style.display='flex';
-  document.getElementById('fin').value='';
-  document.getElementById('hrsec').style.display='none';
-  document.getElementById('lapsec').style.display='none';
+function resetApp() {
+  ST=[]; HR=[]; LAPS=[];
+  selS=-1; selE=-1;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('dz').style.display = 'flex';
+  document.getElementById('fin').value = '';
+  document.getElementById('hrsec').style.display = 'none';
+  document.getElementById('lapsec').style.display = 'none';
   document.getElementById('selbar').classList.remove('on');
-  ['mainC','ovC','hrC'].forEach(id=>{
-    const c=document.getElementById(id);
-    if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);
+  ['mainC','ovC','hrC'].forEach(id => {
+    const c = document.getElementById(id);
+    if (c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
   });
 }
 
-document.getElementById('resetbtn').onclick=resetApp;
-document.getElementById('dzThemeBtn').onclick=e=>{e.stopPropagation();toggleTheme();};
-const bb=document.getElementById('browsebtn');
-if(bb)bb.onclick=e=>{e.stopPropagation();document.getElementById('fin').click();};
-document.getElementById('dz').onclick=()=>document.getElementById('fin').click();
-document.getElementById('fin').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);};
-const dz=document.getElementById('dz');
-dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
-dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
-dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
-document.getElementById('xmode').onchange=schedRender;
-document.getElementById('selclear').onclick=()=>{selS=-1;selE=-1;document.getElementById('selbar').classList.remove('on');schedRender();};
+// ── Wiring ─────────────────────────────────────────────────────────────────
+document.getElementById('resetbtn').onclick = resetApp;
+document.getElementById('browsebtn').onclick = e => { e.stopPropagation(); document.getElementById('fin').click(); };
+document.getElementById('drivebtn').onclick = e => { e.stopPropagation(); loadFromDrive(); };
+document.getElementById('dz').onclick = () => document.getElementById('fin').click();
+document.getElementById('fin').onchange = e => { if (e.target.files[0]) loadFile(e.target.files[0]); };
 
-// ── Meta / Cards ──────────────────────────────────────────────────────────
-function buildMeta(fname,sum){
-  const date=(sum.start_time||'').substring(0,10);
-  const dur=fmtTime(+sum.duration_s);
-  const km=((+sum.distance_m||0)/1000).toFixed(2);
-  document.getElementById('hdrmeta').innerHTML=fname+'<br>'+date+' · '+km+'km · '+dur;
+const dz = document.getElementById('dz');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('over');
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+document.getElementById('xmode').onchange = schedRender;
+document.getElementById('selclear').onclick = () => { selS=-1; selE=-1; document.getElementById('selbar').classList.remove('on'); schedRender(); };
+
+// ══════════════════════════════════════════════════════════════════════════
+// META / CARDS
+// ══════════════════════════════════════════════════════════════════════════
+function buildMeta(fname, sum) {
+  const date = (sum.start_time||'').substring(0,10);
+  const dur  = fmtTime(+sum.duration_s);
+  const km   = ((+sum.distance_m||0)/1000).toFixed(2);
+  document.getElementById('hdrmeta').innerHTML = fname + '<br>' + date + ' · ' + km + 'km · ' + dur;
 }
 
-function sessionStats(){
+function sessionStats() {
   const pv=[],rv=[],jv=[],dv=[],iv=[],hv=[],rdv=[];
-  for(let i=0;i<ST.length;i++){
+  for (let i=0; i<ST.length; i++) {
     const s=ST[i];
     if(s.pace>50&&s.pace<500)pv.push(s.pace);
     if(s.rate>5&&s.rate<50)rv.push(s.rate);
@@ -643,15 +697,15 @@ function sessionStats(){
     if(s.impulse>0&&s.impulse<10)iv.push(s.impulse);
     if(Math.abs(s.rdi)<1)rdv.push(s.rdi);
   }
-  for(let i=0;i<HR.length;i++){const b=HR[i].bpm;if(b>40&&b<220)hv.push(b);}
-  return{pv,rv,jv,dv,iv,hv,rdv};
+  for (let i=0; i<HR.length; i++) { const b=HR[i].bpm; if(b>40&&b<220)hv.push(b); }
+  return {pv,rv,jv,dv,iv,hv,rdv};
 }
 
-function buildCards(sum){
-  const{pv,rv,jv,dv,iv,hv,rdv}=sessionStats();
-  const km=((+sum.distance_m||0)/1000).toFixed(2);
-  const dur=fmtTime(+sum.duration_s);
-  let html=`
+function buildCards(sum) {
+  const {pv,rv,jv,dv,iv,hv,rdv} = sessionStats();
+  const km  = ((+sum.distance_m||0)/1000).toFixed(2);
+  const dur = fmtTime(+sum.duration_s);
+  let html = `
     <div class="card cw"><div class="lbl">Distance</div><div class="val">${km}</div><div class="sub">km</div></div>
     <div class="card cw"><div class="lbl">Duration</div><div class="val">${dur}</div><div class="sub">${ST.length} strokes</div></div>
     <div class="card cg"><div class="lbl">Avg Pace</div><div class="val">${fmtPace(arrMean(pv))}</div><div class="sub">/500m</div></div>
@@ -661,11 +715,11 @@ function buildCards(sum){
     <div class="card cd"><div class="lbl">Avg RDI</div><div class="val">${f1(arrMean(rdv))}</div><div class="sub">higher=longer recovery</div></div>
     ${iv.length?`<div class="card ci"><div class="lbl">Avg Impulse</div><div class="val">${f1(arrMean(iv))}</div><div class="sub">peak ${f1(arrMax(iv))}</div></div>`:''}
   `;
-  if(hv.length)html+=`<div class="card cb"><div class="lbl">Avg HR</div><div class="val">${f0(arrMean(hv))}</div><div class="sub">max ${f0(arrMax(hv))} bpm</div></div>`;
-  document.getElementById('cards').innerHTML=html;
+  if (hv.length) html += `<div class="card cb"><div class="lbl">Avg HR</div><div class="val">${f0(arrMean(hv))}</div><div class="sub">max ${f0(arrMax(hv))} bpm</div></div>`;
+  document.getElementById('cards').innerHTML = html;
 }
 
-// ── Legend ────────────────────────────────────────────────────────────────
+// ── Legend ─────────────────────────────────────────────────────────────────
 const SERIES=[
   {k:'pace',    l:'Pace',        c:'var(--g)'},
   {k:'rate',    l:'Rate',        c:'var(--y)'},
@@ -676,93 +730,86 @@ const SERIES=[
   {k:'schar',   l:'Stroke Char', c:'var(--o)'},
   {k:'rdi',     l:'RDI',         c:'var(--d)'},
 ];
-function buildLegend(){
-  document.getElementById('leg').innerHTML=SERIES.map(s=>
+function buildLegend() {
+  document.getElementById('leg').innerHTML = SERIES.map(s =>
     `<div class="leg${vis[s.k]?'':' off'}" onclick="toggleVis('${s.k}')">
       <div class="dot" style="background:${s.c}"></div>${s.l}
     </div>`
   ).join('');
 }
-window.toggleVis=function(k){vis[k]=!vis[k];buildLegend();schedRender();};
+window.toggleVis = function(k) { vis[k]=!vis[k]; buildLegend(); schedRender(); };
 
-// ── X helper ──────────────────────────────────────────────────────────────
-function getX(s){
-  const m=document.getElementById('xmode').value;
-  if(m==='dist')return s.dist||0;
-  if(m==='time')return (s.elapsed||0)/60;
+// ── X helper ───────────────────────────────────────────────────────────────
+function getX(s) {
+  const m = document.getElementById('xmode').value;
+  if (m === 'dist') return s.dist || 0;
+  if (m === 'time') return (s.elapsed || 0) / 60;
   return s.n;
 }
 
-// ── Render scheduler ──────────────────────────────────────────────────────
-function schedRender(){
-  if(rafId)cancelAnimationFrame(rafId);
-  rafId=requestAnimationFrame(()=>{
-    rafId=null;
+// ── Render scheduler ───────────────────────────────────────────────────────
+function schedRender() {
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(() => {
+    rafId = null;
     buildLegend();
     drawMain();
     drawOv();
-    if(HR.length>10)drawHR();
+    if (HR.length > 10) drawHR();
   });
 }
 
-// ── Zoom / selection ──────────────────────────────────────────────────────
-function zoomToSel(){
-  if(selS>=0&&selE>=0&&selS!==selE){
+// ── Zoom/selection ─────────────────────────────────────────────────────────
+function zoomToSel() {
+  if (selS>=0 && selE>=0 && selS!==selE) {
     updateSel();
-    const view=ST.slice(viewS,viewE+1);
-    const s2=clamp(Math.min(selS,selE),0,view.length-1);
-    const e2=clamp(Math.max(selS,selE),0,view.length-1);
-    viewS=viewS+s2; viewE=viewS+(e2-s2);
+    const view = ST.slice(viewS, viewE+1);
+    const s2 = clamp(Math.min(selS,selE), 0, view.length-1);
+    const e2 = clamp(Math.max(selS,selE), 0, view.length-1);
+    viewS = viewS+s2; viewE = viewS+(e2-s2);
     selS=-1; selE=-1;
   } else {
     updateSel();
   }
   schedRender();
 }
-
-function resetZoom(){
-  viewS=0; viewE=ST.length-1;
-  selS=-1; selE=-1;
-  schedRender();
-}
+function resetZoom() { viewS=0; viewE=ST.length-1; selS=-1; selE=-1; schedRender(); }
 
 // ══════════════════════════════════════════════════════════════════════════
 // MAIN CHART
 // ══════════════════════════════════════════════════════════════════════════
-function drawMain(){
-  const canvas=document.getElementById('mainC');
-  const C=pal();                          // ← resolve colours from body
-  const dpr=window.devicePixelRatio||1;
-  const W=Math.floor(canvas.parentElement.clientWidth-22);
-  const H=250;
+function drawMain() {
+  const canvas = document.getElementById('mainC');
+  const C = pal();
+  const dpr = window.devicePixelRatio||1;
+  const W = Math.floor(canvas.parentElement.clientWidth-22);
+  const H = 250;
   canvas.width=W*dpr; canvas.height=H*dpr;
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
-  const ctx=canvas.getContext('2d');
+  const ctx = canvas.getContext('2d');
   ctx.scale(dpr,dpr);
   ctx.clearRect(0,0,W,H);
 
-  const view=ST.slice(viewS,viewE+1);
-  currentView=view;
-  const N=view.length;
-  if(!N)return;
+  const view = ST.slice(viewS, viewE+1);
+  currentView = view;
+  const N = view.length;
+  if (!N) return;
 
   const PL=48,PR=38,PT=10,PB=30;
   const pw=W-PL-PR, ph=H-PT-PB;
 
-  // X values
-  const xs=new Float32Array(N);
-  let xMin=Infinity,xMax=-Infinity;
-  for(let i=0;i<N;i++){
-    xs[i]=getX(view[i]);
-    if(xs[i]<xMin)xMin=xs[i];
-    if(xs[i]>xMax)xMax=xs[i];
+  const xs = new Float32Array(N);
+  let xMin=Infinity, xMax=-Infinity;
+  for (let i=0; i<N; i++) {
+    xs[i] = getX(view[i]);
+    if (xs[i]<xMin) xMin=xs[i];
+    if (xs[i]>xMax) xMax=xs[i];
   }
-  const xRng=xMax-xMin||1;
-  const toX=v=>PL+(v-xMin)/xRng*pw;
+  const xRng = xMax-xMin||1;
+  const toX = v => PL+(v-xMin)/xRng*pw;
 
-  // Collect valid series values for Y-range calculation
   const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[],rdiv=[];
-  for(let i=0;i<N;i++){
+  for (let i=0; i<N; i++) {
     const s=view[i];
     if(vis.pace&&s.pace>50&&s.pace<500)pv.push(s.pace);
     if(vis.rate&&s.rate>5&&s.rate<50)rv.push(s.rate);
@@ -774,484 +821,321 @@ function drawMain(){
     if(vis.rdi&&!isNaN(s.rdi)&&Math.abs(s.rdi)<1)rdiv.push(s.rdi);
   }
 
-  // Y scales – pace uses left axis, everything else shares right axis
-  let yPMin=80,yPMax=210;
-  if(pv.length){yPMin=arrMin(pv)*.95;yPMax=210;}
-  const toYP=v=>PT+ph-(1-(v-yPMin)/(yPMax-yPMin))*ph;
+  let yPMin=80, yPMax=210;
+  if (pv.length) { yPMin=arrMin(pv)*.95; yPMax=210; }
+  const toYP = v => PT+ph-(1-(v-yPMin)/(yPMax-yPMin))*ph;
 
-  let yRMin=0,yRMax=40;
-  if(rv.length){yRMin=arrMin(rv)*.9;yRMax=arrMax(rv)*1.1;}
-  if(jv.length){const jmax=arrMax(jv)*1.1;if(jmax>yRMax)yRMax=100;}
-  const toYR=v=>PT+ph-(v-yRMin)/(yRMax-yRMin||1)*ph;
+  let yRMin=0, yRMax=40;
+  if (rv.length) { yRMin=arrMin(rv)*.9; yRMax=arrMax(rv)*1.1; }
+  if (jv.length) { const jmax=arrMax(jv)*1.1; if(jmax>yRMax)yRMax=100; }
+  const toYR = v => PT+ph-(v-yRMin)/(yRMax-yRMin||1)*ph;
 
-  let yDMin=4,yDMax=14;
-  if(dv.length){yDMin=arrMin(dv)*.95;yDMax=arrMax(dv)*1.05;}
-  const toYD=v=>PT+ph-(v-yDMin)/(yDMax-yDMin||1)*ph;
+  let yDMin=4, yDMax=14;
+  if (dv.length) { yDMin=arrMin(dv)*.95; yDMax=arrMax(dv)*1.05; }
+  const toYD = v => PT+ph-(v-yDMin)/(yDMax-yDMin||1)*ph;
 
-  let yImpMin=0.2,yImpMax=2.0;
-  if(iv.length){yImpMin=arrMin(iv)*.9;yImpMax=arrMax(iv)*1.1;}
-  const toYImp=v=>PT+ph-(v-yImpMin)/(yImpMax-yImpMin||1)*ph;
+  let yImpMin=0.2, yImpMax=2.0;
+  if (iv.length) { yImpMin=arrMin(iv)*.9; yImpMax=arrMax(iv)*1.1; }
+  const toYImp = v => PT+ph-(v-yImpMin)/(yImpMax-yImpMin||1)*ph;
 
-  const yRLMax=rlv.length?Math.max(arrMax(rlv)*1.2,10):10;
-  const toYRL=v=>PT+ph-(v/yRLMax)*ph;
-  const toYSC=v=>PT+ph-(v/100)*ph;
-  const toYRDI=v=>PT+ph-((v+1)/2)*ph;
+  const yRLMax = rlv.length ? Math.max(arrMax(rlv)*1.2,10) : 10;
+  const toYRL  = v => PT+ph-(v/yRLMax)*ph;
+  const toYSC  = v => PT+ph-(v/100)*ph;
+  const toYRDI = v => PT+ph-((v+1)/2)*ph;
 
-  // ── Grid ────────────────────────────────────────────────────────────────
-  ctx.font='9px IBM Plex Mono,monospace';
+  ctx.font = '9px IBM Plex Mono,monospace';
 
-  // Horizontal grid (pace axis)
-  const gy=niceSteps(yPMin,yPMax,5);
-  gy.forEach(g=>{
+  niceSteps(yPMin,yPMax,5).forEach(g => {
     const y=toYP(g);
-    ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+pw,y);
-    ctx.strokeStyle=C.gridLn;ctx.lineWidth=1;ctx.stroke();
-    ctx.fillStyle=C.gridLb;ctx.textAlign='right';
-    ctx.fillText(fmtPace(g),PL-4,y+3);
+    ctx.beginPath(); ctx.moveTo(PL,y); ctx.lineTo(PL+pw,y);
+    ctx.strokeStyle=C.gridLn; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle=C.gridLb; ctx.textAlign='right';
+    ctx.fillText(fmtPace(g), PL-4, y+3);
   });
-
-  // Vertical grid (x-axis)
-  const gx=niceSteps(xMin,xMax,6);
-  gx.forEach(g=>{
+  niceSteps(xMin,xMax,6).forEach(g => {
     const x=toX(g);
-    ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+ph);
-    ctx.strokeStyle=C.gridLn;ctx.lineWidth=1;ctx.stroke();
-    ctx.fillStyle=C.gridLb;ctx.textAlign='center';
-    ctx.fillText(g.toFixed(0),x,PT+ph+14);
+    ctx.beginPath(); ctx.moveTo(x,PT); ctx.lineTo(x,PT+ph);
+    ctx.strokeStyle=C.gridLn; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle=C.gridLb; ctx.textAlign='center';
+    ctx.fillText(g.toFixed(0), x, PT+ph+14);
   });
-
-  // Right-axis labels (rate / jerk scale)
-  if(vis.rate||vis.jerk){
-    const gr=niceSteps(yRMin,yRMax,5);
-    gr.forEach(g=>{
-      ctx.fillStyle=C.gridLb;ctx.textAlign='left';
-      ctx.fillText(g.toFixed(0),PL+pw+4,toYR(g)+3);
+  if (vis.rate||vis.jerk) {
+    niceSteps(yRMin,yRMax,5).forEach(g => {
+      ctx.fillStyle=C.gridLb; ctx.textAlign='left';
+      ctx.fillText(g.toFixed(0), PL+pw+4, toYR(g)+3);
     });
   }
 
-  // ── Selection highlight ─────────────────────────────────────────────────
-  if(selS>=0&&selE>=0&&selS!==selE){
-    const s2=clamp(Math.min(selS,selE),0,N-1);
-    const e2=clamp(Math.max(selS,selE),0,N-1);
-    const x1=toX(xs[s2]),x2=toX(xs[e2]);
-    ctx.fillStyle=C.selFill;
-    ctx.fillRect(x1,PT,x2-x1,ph);
-    ctx.strokeStyle=C.selStk;ctx.lineWidth=1;
-    ctx.beginPath();ctx.moveTo(x1,PT);ctx.lineTo(x1,PT+ph);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(x2,PT);ctx.lineTo(x2,PT+ph);ctx.stroke();
+  if (selS>=0 && selE>=0 && selS!==selE) {
+    const s2=clamp(Math.min(selS,selE),0,N-1), e2=clamp(Math.max(selS,selE),0,N-1);
+    const x1=toX(xs[s2]), x2=toX(xs[e2]);
+    ctx.fillStyle=C.selFill; ctx.fillRect(x1,PT,x2-x1,ph);
+    ctx.strokeStyle=C.selStk; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(x1,PT); ctx.lineTo(x1,PT+ph); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x2,PT); ctx.lineTo(x2,PT+ph); ctx.stroke();
   }
 
-  // ── Series: Pace (line) ─────────────────────────────────────────────────
-  if(vis.pace&&pv.length){
-    ctx.beginPath();let started=false;
-    for(let i=0;i<N;i++){
-      const v=view[i].pace;
-      if(isNaN(v)||v<50||v>500){started=false;continue;}
-      const x=toX(xs[i]),y=toYP(v);
-      started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true;
-    }
-    ctx.strokeStyle=C.g;ctx.lineWidth=2.0;ctx.stroke();
+  if (vis.pace && pv.length) {
+    ctx.beginPath(); let started=false;
+    for (let i=0; i<N; i++) { const v=view[i].pace; if(isNaN(v)||v<50||v>500){started=false;continue;} started?ctx.lineTo(toX(xs[i]),toYP(v)):ctx.moveTo(toX(xs[i]),toYP(v)); started=true; }
+    ctx.strokeStyle=C.g; ctx.lineWidth=2.0; ctx.stroke();
   }
-
-  // ── Series: DPS (line) ─────────────────────────────────────────────────
-  if(vis.dps&&dv.length){
-    ctx.beginPath();let started=false;
-    for(let i=0;i<N;i++){
-      const v=view[i].dps;
-      if(isNaN(v)||v<1||v>25){started=false;continue;}
-      const x=toX(xs[i]),y=toYD(v);
-      started?ctx.lineTo(x,y):ctx.moveTo(x,y);started=true;
-    }
-    ctx.strokeStyle=C.p;ctx.lineWidth=1.5;ctx.stroke();
+  if (vis.dps && dv.length) {
+    ctx.beginPath(); let started=false;
+    for (let i=0; i<N; i++) { const v=view[i].dps; if(isNaN(v)||v<1||v>25){started=false;continue;} started?ctx.lineTo(toX(xs[i]),toYD(v)):ctx.moveTo(toX(xs[i]),toYD(v)); started=true; }
+    ctx.strokeStyle=C.p; ctx.lineWidth=1.5; ctx.stroke();
   }
-
-  // ── Series: Rate (dots) ────────────────────────────────────────────────
-  if(vis.rate&&rv.length){
+  if (vis.rate && rv.length) {
     ctx.fillStyle=C.y;
-    for(let i=0;i<N;i++){
-      const v=view[i].rate;
-      if(isNaN(v)||v<5||v>50)continue;
-      ctx.beginPath();ctx.arc(toX(xs[i]),toYR(v),2.2,0,6.283);ctx.fill();
-    }
+    for (let i=0; i<N; i++) { const v=view[i].rate; if(isNaN(v)||v<5||v>50)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYR(v),2.2,0,6.283); ctx.fill(); }
   }
-
-  // ── Series: Catch Jerk (scaled dots) ──────────────────────────────────
-  if(vis.jerk&&jv.length){
+  if (vis.jerk && jv.length) {
     const jMax=arrMax(jv);
-    for(let i=0;i<N;i++){
-      const v=view[i].jerk;
-      if(isNaN(v)||v<=0||v>300)continue;
-      const rad=clamp(1.5+(v/jMax)*3.5,1.5,5);
-      ctx.beginPath();ctx.arc(toX(xs[i]),toYR(v),rad,0,6.283);
-      ctx.fillStyle=C.r;ctx.fill();
-    }
+    for (let i=0; i<N; i++) { const v=view[i].jerk; if(isNaN(v)||v<=0||v>300)continue; const rad=clamp(1.5+(v/jMax)*3.5,1.5,5); ctx.beginPath(); ctx.arc(toX(xs[i]),toYR(v),rad,0,6.283); ctx.fillStyle=C.r; ctx.fill(); }
   }
-
-  // ── Series: Impulse (dots) ────────────────────────────────────────────
-  if(vis.impulse&&iv.length){
+  if (vis.impulse && iv.length) {
     ctx.fillStyle=C.i;
-    for(let i=0;i<N;i++){
-      const v=view[i].impulse;
-      if(isNaN(v)||v<=0||v>10)continue;
-      ctx.beginPath();ctx.arc(toX(xs[i]),toYImp(v),2.5,0,6.283);ctx.fill();
-    }
+    for (let i=0; i<N; i++) { const v=view[i].impulse; if(isNaN(v)||v<=0||v>10)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYImp(v),2.5,0,6.283); ctx.fill(); }
   }
-
-  // ── Series: Run Loss (dots) ───────────────────────────────────────────
-  if(vis.rloss&&rlv.length){
+  if (vis.rloss && rlv.length) {
     ctx.fillStyle=C.b;
-    for(let i=0;i<N;i++){
-      const v=view[i].rloss;
-      if(isNaN(v)||v<=0||v>=100)continue;
-      ctx.beginPath();ctx.arc(toX(xs[i]),toYRL(v),2.2,0,6.283);ctx.fill();
-    }
+    for (let i=0; i<N; i++) { const v=view[i].rloss; if(isNaN(v)||v<=0||v>=100)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYRL(v),2.2,0,6.283); ctx.fill(); }
   }
-
-  // ── Series: Stroke Char (dots) ────────────────────────────────────────
-  if(vis.schar&&scv.length){
+  if (vis.schar && scv.length) {
     ctx.fillStyle=C.o;
-    for(let i=0;i<N;i++){
-      const v=view[i].schar;
-      if(isNaN(v)||v<0||v>100)continue;
-      ctx.beginPath();ctx.arc(toX(xs[i]),toYSC(v),2.2,0,6.283);ctx.fill();
-    }
+    for (let i=0; i<N; i++) { const v=view[i].schar; if(isNaN(v)||v<0||v>100)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYSC(v),2.2,0,6.283); ctx.fill(); }
   }
-
-  // ── Series: RDI (dots) ───────────────────────────────────────────────
-  if(vis.rdi&&rdiv.length){
+  if (vis.rdi && rdiv.length) {
     ctx.fillStyle=C.d;
-    for(let i=0;i<N;i++){
-      const v=view[i].rdi;
-      if(isNaN(v)||v<-1||v>1)continue;
-      ctx.beginPath();ctx.arc(toX(xs[i]),toYRDI(v),2.2,0,Math.PI*2);ctx.fill();
-    }
+    for (let i=0; i<N; i++) { const v=view[i].rdi; if(isNaN(v)||v<-1||v>1)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYRDI(v),2.2,0,Math.PI*2); ctx.fill(); }
   }
 
-  // ── Chart border ─────────────────────────────────────────────────────
-  ctx.strokeStyle=C.frameLn;ctx.lineWidth=1;
-  ctx.strokeRect(PL,PT,pw,ph);
-
-  canvas._g={PL,PR,PT,PB,pw,ph,xs,N,W,H,xMin,xRng};
+  ctx.strokeStyle=C.frameLn; ctx.lineWidth=1; ctx.strokeRect(PL,PT,pw,ph);
+  canvas._g = {PL,PR,PT,PB,pw,ph,xs,N,W,H,xMin,xRng};
   setupMainEvents(canvas);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
 // OVERVIEW CHART
 // ══════════════════════════════════════════════════════════════════════════
-function drawOv(){
-  const canvas=document.getElementById('ovC');
-  const C=pal();
-  const dpr=window.devicePixelRatio||1;
-  const W=Math.floor(canvas.parentElement.clientWidth-18);
-  const H=48;
+function drawOv() {
+  const canvas = document.getElementById('ovC');
+  const C = pal();
+  const dpr = window.devicePixelRatio||1;
+  const W = Math.floor(canvas.parentElement.clientWidth-18);
+  const H = 48;
   canvas.width=W*dpr; canvas.height=H*dpr;
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
-  const ctx=canvas.getContext('2d');
+  const ctx = canvas.getContext('2d');
   ctx.scale(dpr,dpr);
   ctx.clearRect(0,0,W,H);
 
-  const N=ST.length;
-  if(N<2)return;
-  const P=4;
-  const pw=W-P*2, ph=H-P*2;
+  const N = ST.length;
+  if (N<2) return;
+  const P=4, pw=W-P*2, ph=H-P*2;
 
-  const xs=new Float32Array(N);
-  let xMin=Infinity,xMax=-Infinity;
-  for(let i=0;i<N;i++){
-    xs[i]=getX(ST[i]);
-    if(xs[i]<xMin)xMin=xs[i];
-    if(xs[i]>xMax)xMax=xs[i];
-  }
+  const xs = new Float32Array(N);
+  let xMin=Infinity, xMax=-Infinity;
+  for (let i=0; i<N; i++) { xs[i]=getX(ST[i]); if(xs[i]<xMin)xMin=xs[i]; if(xs[i]>xMax)xMax=xs[i]; }
   const xRng=xMax-xMin||1;
-  const toXov=v=>P+(v-xMin)/xRng*pw;
+  const toXov = v => P+(v-xMin)/xRng*pw;
 
-  let pMin=Infinity,pMax=-Infinity;
-  for(let i=0;i<N;i++){const v=ST[i].pace;if(v>50&&v<500){if(v<pMin)pMin=v;if(v>pMax)pMax=v;}}
-  if(pMin===Infinity){pMin=100;pMax=300;}
+  let pMin=Infinity, pMax=-Infinity;
+  for (let i=0; i<N; i++) { const v=ST[i].pace; if(v>50&&v<500){if(v<pMin)pMin=v;if(v>pMax)pMax=v;} }
+  if (pMin===Infinity){pMin=100;pMax=300;}
   const pRng=pMax-pMin||1;
-  const toYov=v=>P+ph-(1-(v-pMin)/pRng)*ph;
+  const toYov = v => P+ph-(1-(v-pMin)/pRng)*ph;
 
-  // Full-session dim pace line
-  ctx.beginPath();let s=false;
-  for(let i=0;i<N;i++){
-    const v=ST[i].pace;if(v<50||v>500){s=false;continue;}
-    s?ctx.lineTo(toXov(xs[i]),toYov(v)):ctx.moveTo(toXov(xs[i]),toYov(v));s=true;
-  }
-  ctx.strokeStyle=C.g;ctx.lineWidth=1;ctx.globalAlpha=0.35;ctx.stroke();ctx.globalAlpha=1;
+  ctx.beginPath(); let s=false;
+  for (let i=0; i<N; i++) { const v=ST[i].pace; if(v<50||v>500){s=false;continue;} s?ctx.lineTo(toXov(xs[i]),toYov(v)):ctx.moveTo(toXov(xs[i]),toYov(v)); s=true; }
+  ctx.strokeStyle=C.g; ctx.lineWidth=1; ctx.globalAlpha=0.35; ctx.stroke(); ctx.globalAlpha=1;
 
-  // View-window shaded region
-  const vx1=toXov(xs[viewS]);
-  const vx2=toXov(xs[viewE]);
-  ctx.fillStyle=C.selFill;
-  ctx.fillRect(vx1,P,vx2-vx1,ph);
-  ctx.strokeStyle=C.selStk;ctx.lineWidth=1.5;
-  ctx.strokeRect(vx1,P,vx2-vx1,ph);
+  const vx1=toXov(xs[viewS]), vx2=toXov(xs[viewE]);
+  ctx.fillStyle=C.selFill; ctx.fillRect(vx1,P,vx2-vx1,ph);
+  ctx.strokeStyle=C.selStk; ctx.lineWidth=1.5; ctx.strokeRect(vx1,P,vx2-vx1,ph);
 
-  // In-view bright pace line
-  ctx.beginPath();s=false;
-  for(let i=viewS;i<=viewE;i++){
-    const v=ST[i].pace;if(v<50||v>500){s=false;continue;}
-    s?ctx.lineTo(toXov(xs[i]),toYov(v)):ctx.moveTo(toXov(xs[i]),toYov(v));s=true;
-  }
-  ctx.strokeStyle=C.o;ctx.lineWidth=1.5;ctx.stroke();
+  ctx.beginPath(); s=false;
+  for (let i=viewS; i<=viewE; i++) { const v=ST[i].pace; if(v<50||v>500){s=false;continue;} s?ctx.lineTo(toXov(xs[i]),toYov(v)):ctx.moveTo(toXov(xs[i]),toYov(v)); s=true; }
+  ctx.strokeStyle=C.o; ctx.lineWidth=1.5; ctx.stroke();
 
-  // Selection highlight in overview
-  if(selS>=0&&selE>=0&&selS!==selE){
+  if (selS>=0 && selE>=0 && selS!==selE) {
     const vlen=viewE-viewS+1;
-    const s2=clamp(Math.min(selS,selE),0,vlen-1);
-    const e2=clamp(Math.max(selS,selE),0,vlen-1);
-    const sx1=toXov(xs[viewS+s2]);
-    const sx2=toXov(xs[viewS+e2]);
-    ctx.fillStyle='rgba(58,255,180,.28)';
-    ctx.fillRect(sx1,P,sx2-sx1,ph);
-    ctx.strokeStyle=C.g;ctx.lineWidth=1;
-    ctx.strokeRect(sx1,P,sx2-sx1,ph);
+    const s2=clamp(Math.min(selS,selE),0,vlen-1), e2=clamp(Math.max(selS,selE),0,vlen-1);
+    const sx1=toXov(xs[viewS+s2]), sx2=toXov(xs[viewS+e2]);
+    ctx.fillStyle='rgba(58,255,180,.28)'; ctx.fillRect(sx1,P,sx2-sx1,ph);
+    ctx.strokeStyle=C.g; ctx.lineWidth=1; ctx.strokeRect(sx1,P,sx2-sx1,ph);
   }
 
-  canvas._g={P,pw,ph,N,W,H,xs,xMin,xRng};
+  canvas._g = {P,pw,ph,N,W,H,xs,xMin,xRng};
   setupOvEvents(canvas);
 }
 
-// ── Overview hit-test ─────────────────────────────────────────────────────
-function getOvIdx(cx){
-  if(!ovCanvas||!ovCanvas._g)return 0;
+function getOvIdx(cx) {
+  if (!ovCanvas||!ovCanvas._g) return 0;
   const rect=ovCanvas.getBoundingClientRect();
   const{P,pw,xs,N,xMin,xRng}=ovCanvas._g;
   const xVal=xMin+((cx-rect.left-P)/pw)*xRng;
-  let best=0,bestDist=Infinity;
-  for(let i=0;i<N;i++){
-    const d=Math.abs(xs[i]-xVal);
-    if(d<bestDist){bestDist=d;best=i;}
-  }
+  let best=0, bestDist=Infinity;
+  for (let i=0; i<N; i++) { const d=Math.abs(xs[i]-xVal); if(d<bestDist){bestDist=d;best=i;} }
   return clamp(best,0,N-1);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
 // HEART RATE CHART
 // ══════════════════════════════════════════════════════════════════════════
-function drawHR(){
-  const canvas=document.getElementById('hrC');
-  const C=pal();
-  const dpr=window.devicePixelRatio||1;
-  const W=Math.floor(canvas.parentElement.clientWidth-22);
-  const H=130;
+function drawHR() {
+  const canvas = document.getElementById('hrC');
+  const C = pal();
+  const dpr = window.devicePixelRatio||1;
+  const W = Math.floor(canvas.parentElement.clientWidth-22);
+  const H = 130;
   canvas.width=W*dpr; canvas.height=H*dpr;
   canvas.style.width=W+'px'; canvas.style.height=H+'px';
-  const ctx=canvas.getContext('2d');
+  const ctx = canvas.getContext('2d');
   ctx.scale(dpr,dpr);
   ctx.clearRect(0,0,W,H);
 
-  const N=HR.length;
-  if(!N)return;
+  const N = HR.length;
+  if (!N) return;
 
   const PL=40,PR=10,PT=8,PB=22;
   const pw=W-PL-PR, ph=H-PT-PB;
 
-  const hrt0=new Date(HR[0].ts).getTime();
-  let xMax=0,yMin=200,yMax=0,hsum=0;
-  for(let i=0;i<N;i++){
+  const hrt0 = new Date(HR[0].ts).getTime();
+  let xMax=0, yMin=200, yMax=0, hsum=0;
+  for (let i=0; i<N; i++) {
     const x=(new Date(HR[i].ts).getTime()-hrt0)/60000;
     const b=HR[i].bpm;
-    if(x>xMax)xMax=x;
-    if(b<yMin)yMin=b;
-    if(b>yMax)yMax=b;
-    hsum+=b;
+    if(x>xMax)xMax=x; if(b<yMin)yMin=b; if(b>yMax)yMax=b; hsum+=b;
   }
   const avg=hsum/N;
   yMin=yMin*.97; yMax=yMax*1.02;
   document.getElementById('hrlbl').textContent='avg '+Math.round(avg)+' bpm · max '+Math.round(yMax)+' bpm';
 
-  const toX=v=>PL+(v/xMax)*pw;
-  const toY=v=>PT+ph-(v-yMin)/(yMax-yMin)*ph;
+  const toX = v => PL+(v/xMax)*pw;
+  const toY = v => PT+ph-(v-yMin)/(yMax-yMin)*ph;
 
-  // HR zone bands
-  const zones=[
-    [90, 106, C.zoneBlue],
-    [107,124, C.zoneGreen],
-    [125,142, C.zoneYellow],
-    [143,160, C.zoneOrange],
-    [161,300, C.zoneRed],
-  ];
-  zones.forEach(([a,b,fill])=>{
-    const y1=toY(Math.min(b,yMax)),y2=toY(Math.max(a,yMin));
-    if(y1<PT+ph&&y2>PT){
-      ctx.fillStyle=fill;
-      ctx.fillRect(PL,Math.max(PT,y1),pw,Math.min(PT+ph,y2)-Math.max(PT,y1));
-    }
+  const zones=[[90,106,C.zoneBlue],[107,124,C.zoneGreen],[125,142,C.zoneYellow],[143,160,C.zoneOrange],[161,300,C.zoneRed]];
+  zones.forEach(([a,b,fill]) => {
+    const y1=toY(Math.min(b,yMax)), y2=toY(Math.max(a,yMin));
+    if (y1<PT+ph && y2>PT) { ctx.fillStyle=fill; ctx.fillRect(PL,Math.max(PT,y1),pw,Math.min(PT+ph,y2)-Math.max(PT,y1)); }
   });
 
-  // View-window band (aligned via absolute timestamps)
-  if(ST.length&&!isNaN(ST[viewS].ms)&&!isNaN(ST[viewE].ms)){
+  if (ST.length && !isNaN(ST[viewS].ms) && !isNaN(ST[viewE].ms)) {
     const vt1=clamp((ST[viewS].ms-hrt0)/60000,0,xMax);
     const vt2=clamp((ST[viewE].ms-hrt0)/60000,0,xMax);
-    const hx1=toX(vt1),hx2=toX(vt2);
-    if(hx2>hx1){
-      ctx.fillStyle=C.selFill;
-      ctx.fillRect(hx1,PT,hx2-hx1,ph);
-      ctx.strokeStyle=C.selStk;ctx.lineWidth=1;
-      ctx.strokeRect(hx1,PT,hx2-hx1,ph);
-    }
+    const hx1=toX(vt1), hx2=toX(vt2);
+    if (hx2>hx1) { ctx.fillStyle=C.selFill; ctx.fillRect(hx1,PT,hx2-hx1,ph); ctx.strokeStyle=C.selStk; ctx.lineWidth=1; ctx.strokeRect(hx1,PT,hx2-hx1,ph); }
   }
 
-  // Selection band (aligned via absolute timestamps)
-  if(ST.length&&selS>=0&&selE>=0&&selS!==selE){
-    const vlen=viewE-viewS+1;
-    const s2=clamp(Math.min(selS,selE),0,vlen-1);
-    const e2=clamp(Math.max(selS,selE),0,vlen-1);
-    const st=ST[viewS+s2],en=ST[viewS+e2];
-    if(!isNaN(st.ms)&&!isNaN(en.ms)){
-      const hx1=toX(clamp((st.ms-hrt0)/60000,0,xMax));
-      const hx2=toX(clamp((en.ms-hrt0)/60000,0,xMax));
-      if(hx2>hx1){
-        ctx.fillStyle='rgba(58,255,180,.18)';
-        ctx.fillRect(hx1,PT,hx2-hx1,ph);
-        ctx.strokeStyle=C.selStk;ctx.lineWidth=1;
-        ctx.beginPath();ctx.moveTo(hx1,PT);ctx.lineTo(hx1,PT+ph);ctx.stroke();
-        ctx.beginPath();ctx.moveTo(hx2,PT);ctx.lineTo(hx2,PT+ph);ctx.stroke();
-      }
-    }
-  }
-
-  // Grid
-  ctx.font='9px IBM Plex Mono,monospace';ctx.lineWidth=1;
-  niceSteps(yMin,yMax,5).forEach(g=>{
+  ctx.font='9px IBM Plex Mono,monospace'; ctx.lineWidth=1;
+  niceSteps(yMin,yMax,5).forEach(g => {
     const y=toY(g);
-    ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+pw,y);
-    ctx.strokeStyle=C.gridLn;ctx.stroke();
-    ctx.fillStyle=C.gridLb;ctx.textAlign='right';ctx.fillText(Math.round(g),PL-4,y+3);
+    ctx.beginPath(); ctx.moveTo(PL,y); ctx.lineTo(PL+pw,y); ctx.strokeStyle=C.gridLn; ctx.stroke();
+    ctx.fillStyle=C.gridLb; ctx.textAlign='right'; ctx.fillText(Math.round(g),PL-4,y+3);
   });
-  niceSteps(0,xMax,6).forEach(g=>{
+  niceSteps(0,xMax,6).forEach(g => {
     const x=toX(g);
-    ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+ph);
-    ctx.strokeStyle=C.gridLn;ctx.stroke();
-    ctx.fillStyle=C.gridLb;ctx.textAlign='center';ctx.fillText(Math.round(g)+'m',x,PT+ph+14);
+    ctx.beginPath(); ctx.moveTo(x,PT); ctx.lineTo(x,PT+ph); ctx.strokeStyle=C.gridLn; ctx.stroke();
+    ctx.fillStyle=C.gridLb; ctx.textAlign='center'; ctx.fillText(Math.round(g)+'m',x,PT+ph+14);
   });
 
-  // Average HR dashed line
-  ctx.setLineDash([4,4]);
-  ctx.strokeStyle='rgba(77,166,255,.4)';ctx.lineWidth=1;
-  ctx.beginPath();ctx.moveTo(PL,toY(avg));ctx.lineTo(PL+pw,toY(avg));ctx.stroke();
+  ctx.setLineDash([4,4]); ctx.strokeStyle='rgba(77,166,255,.4)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(PL,toY(avg)); ctx.lineTo(PL+pw,toY(avg)); ctx.stroke();
   ctx.setLineDash([]);
 
-  // HR gradient fill + line
-  const grad=ctx.createLinearGradient(0,PT,0,PT+ph);
-  grad.addColorStop(0,'rgba(77,166,255,.20)');grad.addColorStop(1,'rgba(77,166,255,0)');
+  const grad = ctx.createLinearGradient(0,PT,0,PT+ph);
+  grad.addColorStop(0,'rgba(77,166,255,.20)'); grad.addColorStop(1,'rgba(77,166,255,0)');
   ctx.beginPath();
   const x0=toX(0);
   ctx.moveTo(x0,toY(HR[0].bpm));
-  for(let i=1;i<N;i++){
-    ctx.lineTo(toX((new Date(HR[i].ts).getTime()-hrt0)/60000),toY(HR[i].bpm));
-  }
-  ctx.strokeStyle='#4da6ff';ctx.lineWidth=1.5;ctx.stroke();
-  ctx.lineTo(toX(xMax),PT+ph);ctx.lineTo(x0,PT+ph);ctx.closePath();
-  ctx.fillStyle=grad;ctx.fill();
-
-  ctx.strokeStyle=C.frameLn;ctx.lineWidth=1;ctx.strokeRect(PL,PT,pw,ph);
+  for (let i=1; i<N; i++) { ctx.lineTo(toX((new Date(HR[i].ts).getTime()-hrt0)/60000),toY(HR[i].bpm)); }
+  ctx.strokeStyle='#4da6ff'; ctx.lineWidth=1.5; ctx.stroke();
+  ctx.lineTo(toX(xMax),PT+ph); ctx.lineTo(x0,PT+ph); ctx.closePath(); ctx.fillStyle=grad; ctx.fill();
+  ctx.strokeStyle=C.frameLn; ctx.lineWidth=1; ctx.strokeRect(PL,PT,pw,ph);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
 // HOVER TOOLTIP
 // ══════════════════════════════════════════════════════════════════════════
 function ttRow(lbl, val, col) {
-  if(!val || val === EM) return '';
-  return `<div class="tt-row">
-    <span class="tt-lbl">${lbl}</span>
-    <span class="tt-val"${col ? ` style="color:${col}"` : ''}>${val}</span>
-  </div>`;
+  if (!val || val === EM) return '';
+  return `<div class="tt-row"><span class="tt-lbl">${lbl}</span><span class="tt-val"${col?` style="color:${col}"`:''}}>${val}</span></div>`;
 }
 
 function showTooltip(e) {
-  if(isDragMain || !currentView.length) return;
+  if (isDragMain || !currentView.length) return;
   const canvas = document.getElementById('mainC');
   const rect = canvas.getBoundingClientRect();
   const idx = getMainIdx(e.clientX - rect.left);
-  if(idx < 0 || idx >= currentView.length) return;
+  if (idx<0 || idx>=currentView.length) return;
   const s = currentView[idx];
   const C = pal();
 
-  const tip = document.getElementById('tooltip');
-  tip.innerHTML = `
+  document.getElementById('tooltip').innerHTML = `
     <div class="tt-hd">Stroke ${s.n}</div>
-    ${ttRow('Time',     fmtTime(s.elapsed))}
-    ${ttRow('Distance', isNaN(s.dist) ? EM : s.dist.toFixed(0)+'m')}
-    ${ttRow('Pace',     fmtPace(s.pace),                                           C.g)}
-    ${ttRow('Rate',     isNaN(s.rate)||s.rate<1   ? EM : f1(s.rate)+' spm',       C.y)}
-    ${ttRow('DPS',      isNaN(s.dps)||s.dps<1     ? EM : f1(s.dps)+'m',           C.p)}
-    ${ttRow('Catch Jerk', isNaN(s.jerk)||s.jerk<=0  ? EM : f1(s.jerk),            C.r)}
-    ${ttRow('Impulse',  isNaN(s.impulse)||s.impulse<=0 ? EM : s.impulse.toFixed(2), C.i)}
-    ${ttRow('Run Loss', isNaN(s.rloss)||s.rloss<=0  ? EM : f1(s.rloss)+'%',       C.b)}
-    ${ttRow('Stroke Char', isNaN(s.schar)            ? EM : f0(s.schar)+'%',      C.o)}
-    ${ttRow('RDI',      isNaN(s.rdi)||Math.abs(s.rdi)>1 ? EM : s.rdi.toFixed(2), C.d)}
+    ${ttRow('Time',      fmtTime(s.elapsed))}
+    ${ttRow('Distance',  isNaN(s.dist) ? EM : s.dist.toFixed(0)+'m')}
+    ${ttRow('Pace',      fmtPace(s.pace),                                            C.g)}
+    ${ttRow('Rate',      isNaN(s.rate)||s.rate<1   ? EM : f1(s.rate)+' spm',        C.y)}
+    ${ttRow('DPS',       isNaN(s.dps)||s.dps<1     ? EM : f1(s.dps)+'m',            C.p)}
+    ${ttRow('Catch Jerk',isNaN(s.jerk)||s.jerk<=0  ? EM : f1(s.jerk),               C.r)}
+    ${ttRow('Impulse',   isNaN(s.impulse)||s.impulse<=0 ? EM : s.impulse.toFixed(2), C.i)}
+    ${ttRow('Run Loss',  isNaN(s.rloss)||s.rloss<=0   ? EM : f1(s.rloss)+'%',       C.b)}
+    ${ttRow('Stroke Char', isNaN(s.schar)              ? EM : f0(s.schar)+'%',      C.o)}
+    ${ttRow('RDI',       isNaN(s.rdi)||Math.abs(s.rdi)>1 ? EM : s.rdi.toFixed(2),   C.d)}
   `;
 
-  // Position beside cursor, flip sides if near screen edge
+  const tip = document.getElementById('tooltip');
   tip.style.display = 'block';
-  const tw = tip.offsetWidth  || 160;
-  const th = tip.offsetHeight || 180;
-  let left = e.clientX + 18;
-  let top  = e.clientY - th / 2;
-  if(left + tw > window.innerWidth  - 12) left = e.clientX - tw - 12;
-  if(top  < 8)                            top  = 8;
-  if(top  + th > window.innerHeight - 8)  top  = window.innerHeight - th - 8;
-  tip.style.left = left + 'px';
-  tip.style.top  = top  + 'px';
+  const tw=tip.offsetWidth||160, th=tip.offsetHeight||180;
+  let left=e.clientX+18, top=e.clientY-th/2;
+  if (left+tw>window.innerWidth-12)  left=e.clientX-tw-12;
+  if (top<8)                          top=8;
+  if (top+th>window.innerHeight-8)    top=window.innerHeight-th-8;
+  tip.style.left=left+'px'; tip.style.top=top+'px';
 }
-
-function hideTooltip() {
-  document.getElementById('tooltip').style.display = 'none';
-}
+function hideTooltip() { document.getElementById('tooltip').style.display='none'; }
 
 // ══════════════════════════════════════════════════════════════════════════
 // MAIN CHART INTERACTION
 // ══════════════════════════════════════════════════════════════════════════
 let mainCanvas=null;
-function getMainIdx(cx){
-  if(!mainCanvas||!mainCanvas._g)return 0;
+function getMainIdx(cx) {
+  if (!mainCanvas||!mainCanvas._g) return 0;
   const rect=mainCanvas.getBoundingClientRect();
   const{PL,pw,N,xs,xMin,xRng}=mainCanvas._g;
   const xVal=xMin+((cx-rect.left-PL)/pw)*xRng;
-  let best=0,bestDist=Infinity;
-  for(let i=0;i<N;i++){
-    const d=Math.abs(xs[i]-xVal);
-    if(d<bestDist){bestDist=d;best=i;}
-  }
+  let best=0, bestDist=Infinity;
+  for (let i=0; i<N; i++) { const d=Math.abs(xs[i]-xVal); if(d<bestDist){bestDist=d;best=i;} }
   return clamp(best,0,N-1);
 }
 
-function setupMainEvents(canvas){
-  if(mainCanvas===canvas)return;
+function setupMainEvents(canvas) {
+  if (mainCanvas===canvas) return;
   mainCanvas=canvas;
-  canvas.addEventListener('mousedown',e=>{isDragMain=true;selS=selE=getMainIdx(e.clientX);schedRender();});
-  canvas.addEventListener('mousemove',e=>{
-    if(isDragMain){
-      selE=getMainIdx(e.clientX);
-      schedRender();
-    } else {
-      showTooltip(e);
-    }
-  });
-  canvas.addEventListener('touchstart',e=>{isDragMain=true;selS=selE=getMainIdx(e.touches[0].clientX);schedRender();},{passive:true});
-  canvas.addEventListener('touchmove',e=>{if(isDragMain){selE=getMainIdx(e.touches[0].clientX);schedRender();}},{passive:true});
-  canvas.addEventListener('touchend',()=>{isDragMain=false;zoomToSel();});
-  canvas.addEventListener('dblclick',()=>resetZoom());
+  canvas.addEventListener('mousedown', e => { isDragMain=true; selS=selE=getMainIdx(e.clientX); schedRender(); });
+  canvas.addEventListener('mousemove', e => { if(isDragMain){selE=getMainIdx(e.clientX);schedRender();}else{showTooltip(e);} });
+  canvas.addEventListener('touchstart', e => { isDragMain=true; selS=selE=getMainIdx(e.touches[0].clientX); schedRender(); }, {passive:true});
+  canvas.addEventListener('touchmove',  e => { if(isDragMain){selE=getMainIdx(e.touches[0].clientX);schedRender();} }, {passive:true});
+  canvas.addEventListener('touchend',   () => { isDragMain=false; zoomToSel(); });
+  canvas.addEventListener('dblclick',   () => resetZoom());
   canvas.addEventListener('mouseleave', hideTooltip);
 }
-document.addEventListener('mouseup',()=>{if(isDragMain){isDragMain=false;zoomToSel();}});
+document.addEventListener('mouseup', () => { if(isDragMain){isDragMain=false;zoomToSel();} });
 
-// ── Selection stats ───────────────────────────────────────────────────────
-function updateSel(){
-  const bar=document.getElementById('selbar');
-  if(selS<0||selE<0||selS===selE){bar.classList.remove('on');hlRows([]);return;}
+// ── Selection stats ────────────────────────────────────────────────────────
+function updateSel() {
+  const bar = document.getElementById('selbar');
+  if (selS<0||selE<0||selS===selE) { bar.classList.remove('on'); hlRows([]); return; }
 
   const vlen=viewE-viewS+1;
-  const s2=clamp(Math.min(selS,selE),0,vlen-1);
-  const e2=clamp(Math.max(selS,selE),0,vlen-1);
-  const view=ST.slice(viewS,viewE+1);
-  const sel=view.slice(s2,e2+1);
-  if(!sel.length){bar.classList.remove('on');return;}
+  const s2=clamp(Math.min(selS,selE),0,vlen-1), e2=clamp(Math.max(selS,selE),0,vlen-1);
+  const view=ST.slice(viewS,viewE+1), sel=view.slice(s2,e2+1);
+  if (!sel.length) { bar.classList.remove('on'); return; }
 
   const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[],rdv=[];
-  for(let i=0;i<sel.length;i++){
+  for (let i=0; i<sel.length; i++) {
     const s=sel[i];
     if(s.pace>50&&s.pace<500)pv.push(s.pace);
     if(s.rate>5&&s.rate<50)rv.push(s.rate);
@@ -1262,20 +1146,14 @@ function updateSel(){
     if(s.impulse>0&&s.impulse<10)iv.push(s.impulse);
     if(Math.abs(s.rdi)<1)rdv.push(s.rdi);
   }
-
-  const distStart=sel[0].dist||0;
-  const distEnd=sel[sel.length-1].dist||0;
+  const distStart=sel[0].dist||0, distEnd=sel[sel.length-1].dist||0;
   const distCovered=distEnd-distStart;
-  const timeStart=sel[0].elapsed||0;
-  const timeEnd=sel[sel.length-1].elapsed||0;
-  const elapsed=timeEnd-timeStart;
+  const elapsed=(sel[sel.length-1].elapsed||0)-(sel[0].elapsed||0);
 
-  function stat(lbl,val,clr){
-    return`<div class="ss"><div class="l">${lbl}</div><div class="v" style="color:${clr||'var(--text)'}">${val}</div></div>`;
-  }
+  function stat(lbl,val,clr){ return `<div class="ss"><div class="l">${lbl}</div><div class="v" style="color:${clr||'var(--text)'}">${val}</div></div>`; }
 
   bar.classList.add('on');
-  document.getElementById('selstats').innerHTML=`<div style="display:flex;flex-wrap:wrap;gap:12px;">
+  document.getElementById('selstats').innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:12px;">
     ${stat('Strokes',sel.length)}
     ${stat('Distance',(distCovered>0?distCovered.toFixed(0):EM)+'m')}
     ${stat('Time',fmtTime(elapsed>0?elapsed:0))}
@@ -1294,7 +1172,7 @@ function updateSel(){
   </div>`;
 
   const absIdxs=[];
-  for(let i=s2;i<=e2;i++)absIdxs.push(viewS+i);
+  for (let i=s2; i<=e2; i++) absIdxs.push(viewS+i);
   hlRows(absIdxs);
 }
 
@@ -1302,55 +1180,34 @@ function updateSel(){
 // OVERVIEW INTERACTION
 // ══════════════════════════════════════════════════════════════════════════
 let ovCanvas=null;
-
-function setupOvEvents(canvas){
-  if(ovCanvas===canvas)return;
+function setupOvEvents(canvas) {
+  if (ovCanvas===canvas) return;
   ovCanvas=canvas;
-
-  function start(cx){
-    isDragOv=true;
-    const idx=getOvIdx(cx);
-    const mg=Math.max(2,Math.round((viewE-viewS)*.08));
-    if(Math.abs(idx-viewS)<=mg)ovMode='L';
-    else if(Math.abs(idx-viewE)<=mg)ovMode='R';
-    else if(idx>=viewS&&idx<=viewE)ovMode='P';
-    else{ovMode='J';viewS=idx;viewE=Math.min(ST.length-1,idx+Math.max(50,viewE-viewS));}
-    ovAnch=cx;ovVS0=viewS;ovVE0=viewE;
-    selS=-1;selE=-1;schedRender();
-  }
-  function move(cx){
-    if(!isDragOv)return;
-    const n=ST.length;
-    const d=getOvIdx(cx)-getOvIdx(ovAnch);
-    if(ovMode==='P'){const sp=ovVE0-ovVS0;viewS=clamp(ovVS0+d,0,n-1-sp);viewE=viewS+sp;}
-    else if(ovMode==='L')viewS=clamp(ovVS0+d,0,viewE-5);
-    else if(ovMode==='R')viewE=clamp(ovVE0+d,viewS+5,n-1);
-    schedRender();
-  }
-  function end(){isDragOv=false;ovMode=null;}
-
-  canvas.addEventListener('mousedown',e=>start(e.clientX));
-  canvas.addEventListener('touchstart',e=>start(e.touches[0].clientX),{passive:true});
-  canvas.addEventListener('touchmove',e=>{if(isDragOv)move(e.touches[0].clientX);},{passive:true});
-  canvas.addEventListener('touchend',end);
-  canvas.addEventListener('dblclick',()=>resetZoom());
-  document.addEventListener('mousemove',e=>{if(isDragOv)move(e.clientX);});
-  document.addEventListener('mouseup',end);
+  function start(cx){ isDragOv=true; const idx=getOvIdx(cx); const mg=Math.max(2,Math.round((viewE-viewS)*.08)); if(Math.abs(idx-viewS)<=mg)ovMode='L';else if(Math.abs(idx-viewE)<=mg)ovMode='R';else if(idx>=viewS&&idx<=viewE)ovMode='P';else{ovMode='J';viewS=idx;viewE=Math.min(ST.length-1,idx+Math.max(50,viewE-viewS));} ovAnch=cx;ovVS0=viewS;ovVE0=viewE; selS=-1;selE=-1; schedRender(); }
+  function move(cx){ if(!isDragOv)return; const n=ST.length; const d=getOvIdx(cx)-getOvIdx(ovAnch); if(ovMode==='P'){const sp=ovVE0-ovVS0;viewS=clamp(ovVS0+d,0,n-1-sp);viewE=viewS+sp;}else if(ovMode==='L')viewS=clamp(ovVS0+d,0,viewE-5);else if(ovMode==='R')viewE=clamp(ovVE0+d,viewS+5,n-1); schedRender(); }
+  function end(){ isDragOv=false; ovMode=null; }
+  canvas.addEventListener('mousedown', e => start(e.clientX));
+  canvas.addEventListener('touchstart', e => start(e.touches[0].clientX), {passive:true});
+  canvas.addEventListener('touchmove',  e => { if(isDragOv) move(e.touches[0].clientX); }, {passive:true});
+  canvas.addEventListener('touchend', end);
+  canvas.addEventListener('dblclick', () => resetZoom());
+  document.addEventListener('mousemove', e => { if(isDragOv) move(e.clientX); });
+  document.addEventListener('mouseup', end);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
 // LAPS TABLE
 // ══════════════════════════════════════════════════════════════════════════
-function buildLaps(){
-  if(!LAPS.length)return;
-  document.getElementById('lapsec').style.display='block';
-  const hasHR='avg_hr_bpm' in LAPS[0];
-  const hasCal='calories' in LAPS[0];
-  document.querySelector('#laptbl thead').innerHTML=`<tr>
+function buildLaps() {
+  if (!LAPS.length) return;
+  document.getElementById('lapsec').style.display = 'block';
+  const hasHR = 'avg_hr_bpm' in LAPS[0];
+  const hasCal = 'calories' in LAPS[0];
+  document.querySelector('#laptbl thead').innerHTML = `<tr>
     <th>Lap</th><th>Dist</th><th>Time</th><th>Pace</th><th>Rate</th>
     ${hasHR?'<th>Avg HR</th><th>Max HR</th>':''}${hasCal?'<th>Cal</th>':''}
   </tr>`;
-  document.querySelector('#laptbl tbody').innerHTML=LAPS.map((l,i)=>`<tr>
+  document.querySelector('#laptbl tbody').innerHTML = LAPS.map((l,i) => `<tr>
     <td>Lap ${i+1}</td>
     <td>${(+l.distance_m||0).toFixed(0)}m</td>
     <td>${fmtTime(+l.time_s)}</td>
@@ -1364,13 +1221,13 @@ function buildLaps(){
 // ══════════════════════════════════════════════════════════════════════════
 // STROKE TABLE
 // ══════════════════════════════════════════════════════════════════════════
-function buildStrokeTable(){
-  document.getElementById('sth').innerHTML=`<tr>
+function buildStrokeTable() {
+  document.getElementById('sth').innerHTML = `<tr>
     <th>#</th><th>Dist m</th><th>Time</th><th>Pace /500</th>
     <th>Rate</th><th>Catch Jerk</th><th>Consist σ</th><th>DPS m</th>
     <th>Stroke Char%</th><th>Run Loss%</th><th>Impulse</th><th>RDI</th>
   </tr>`;
-  const rows=ST.slice(0,1000).map(s=>`<tr data-i="${s.n-1}">
+  document.getElementById('stb').innerHTML = ST.slice(0,1000).map(s => `<tr data-i="${s.n-1}">
     <td>${s.n}</td>
     <td>${isNaN(s.dist)?EM:s.dist.toFixed(0)}</td>
     <td>${fmtTime(s.elapsed)}</td>
@@ -1384,52 +1241,32 @@ function buildStrokeTable(){
     <td style="color:var(--i)">${isNaN(s.impulse)||s.impulse<=0?EM:s.impulse.toFixed(2)}</td>
     <td style="color:var(--d)">${isNaN(s.rdi)||s.rdi<-1||s.rdi>1?EM:s.rdi.toFixed(2)}</td>
   </tr>`).join('');
-  document.getElementById('stb').innerHTML=rows;
-  document.getElementById('tblcount').textContent=ST.length+' strokes';
+  document.getElementById('tblcount').textContent = ST.length + ' strokes';
 }
 
-function hlRows(idxs){
-  const set=new Set(idxs);
-  document.querySelectorAll('#stb tr').forEach(r=>{
-    r.classList.toggle('hl',set.has(+r.dataset.i));
-  });
-  if(idxs.length){
-    const f=document.querySelector(`#stb tr[data-i="${idxs[0]}"]`);
-    if(f)f.scrollIntoView({block:'nearest',behavior:'smooth'});
-  }
+function hlRows(idxs) {
+  const set = new Set(idxs);
+  document.querySelectorAll('#stb tr').forEach(r => { r.classList.toggle('hl', set.has(+r.dataset.i)); });
+  if (idxs.length) { const f=document.querySelector(`#stb tr[data-i="${idxs[0]}"]`); if(f)f.scrollIntoView({block:'nearest',behavior:'smooth'}); }
 }
 
 window.addEventListener('resize', () => { if (ST.length) schedRender(); });
 
-</script>
-<script>
-function toast(msg, ms = 2500) {
+// ── Toast ──────────────────────────────────────────────────────────────────
+function toast(msg, ms=2500) {
   let el = document.getElementById('_toast');
   if (!el) {
-    el = document.createElement('div');
-    el.id = '_toast';
-    el.style.cssText = `
-      position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);
-      background:var(--s1);border:1px solid var(--border);color:var(--text);
-      padding:9px 18px;border-radius:8px;font-size:11px;
-      font-family:'IBM Plex Mono',monospace;opacity:0;
-      transition:opacity .2s,transform .2s;z-index:9000;
-      pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.4);
-    `;
+    el = document.createElement('div'); el.id='_toast';
+    el.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--s1);border:1px solid var(--border);color:var(--text);padding:9px 18px;border-radius:8px;font-size:11px;font-family:IBM Plex Mono,monospace;opacity:0;transition:opacity .2s,transform .2s;z-index:9000;pointer-events:none;box-shadow:0 4px 16px rgba(0,0,0,.4);';
     document.body.appendChild(el);
   }
-  el.textContent = msg;
-  el.style.opacity = '1';
-  el.style.transform = 'translateX(-50%) translateY(0)';
+  el.textContent=msg; el.style.opacity='1'; el.style.transform='translateX(-50%) translateY(0)';
   clearTimeout(el._t);
-  el._t = setTimeout(() => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateX(-50%) translateY(10px)';
-  }, ms);
+  el._t=setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateX(-50%) translateY(10px)'; }, ms);
 }
+
+// ── Init ───────────────────────────────────────────────────────────────────
+AnalyserDrive.init();
 </script>
-<script src="https://kstg4cnkwh-netizen.github.io/Scull-metrics/drive-sync.js"></script>
-
-
 </body>
 </html>

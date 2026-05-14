@@ -726,7 +726,7 @@ function buildCards(sum) {
     <div class="card cy"><div class="lbl">Avg Rate</div><div class="val">${f1(arrMean(rv))}</div><div class="sub">spm · max ${f0(arrMax(rv))}</div></div>
     <div class="card cr"><div class="lbl">Avg slope</div><div class="val">${f0(arrMean(jv))}</div><div class="sub">peak ${f1(arrMax(jv))} ms³</div></div>
     <div class="card cp"><div class="lbl">Avg DPS</div><div class="val">${f1(arrMean(dv))}</div><div class="sub">m/stroke</div></div>
-    <div class="card cd"><div class="lbl">Avg RDI</div><div class="val">${f2(arrMean(rdv))}</div><div class="sub">higher=longer recovery</div></div>
+    <div class="card cd"><div class="lbl">Avg Recovery Index</div><div class="val">${f2(arrMean(rdv))}</div><div class="sub">higher=longer recovery</div></div>
     ${iv.length?`<div class="card ci"><div class="lbl">Avg Impulse</div><div class="val">${f2(arrMean(iv))}</div><div class="sub">peak ${f2(arrMax(iv))}</div></div>`:''}
   `;
   if (hv.length) html += `<div class="card cb"><div class="lbl">Avg HR</div><div class="val">${f0(arrMean(hv))}</div><div class="sub">max ${f0(arrMax(hv))} bpm</div></div>`;
@@ -742,7 +742,7 @@ const SERIES=[
   {k:'impulse', l:'Impulse',     c:'var(--i)'},
   {k:'rloss',   l:'Run Loss',    c:'var(--b)'},
   {k:'schar',   l:'Stroke Char', c:'var(--o)'},
-  {k:'rdi',     l:'RDI',         c:'var(--d)'},
+  {k:'rdi',     l:'Recovery Index', c:'var(--d)'},
 ];
 function buildLegend() {
   document.getElementById('leg').innerHTML = SERIES.map(s =>
@@ -1104,7 +1104,7 @@ function showTooltip(e) {
     ${ttRow('Impulse',   isNaN(s.impulse)||s.impulse<=0 ? EM : s.impulse.toFixed(2), C.i)}
     ${ttRow('Run Loss',  isNaN(s.rloss)||s.rloss<=0   ? EM : f1(s.rloss)+'%',       C.b)}
     ${ttRow('Stroke Char', isNaN(s.schar)              ? EM : f0(s.schar)+'%',      C.o)}
-    ${ttRow('RDI',       (s.rdi == null || isNaN(s.rdi) || Math.abs(s.rdi)>1) ? EM : s.rdi.toFixed(2),   C.d)}
+    ${ttRow('Recovery Index', (s.rdi == null || isNaN(s.rdi) || Math.abs(s.rdi)>1) ? EM : s.rdi.toFixed(2),   C.d)}
   `;
 
   const tip = document.getElementById('tooltip');
@@ -1189,7 +1189,7 @@ function updateSel() {
     ${rlv.length?stat('Avg Run Loss',f1(arrMean(rlv))+'%','var(--b)'):''}
     ${iv.length?stat('Avg Impulse',f2(arrMean(iv)),'var(--i)'):''}
     ${iv.length?stat('Peak Impulse',f2(arrMax(iv)),'var(--i)'):''}
-    ${rdv.length?stat('Avg RDI',f2(arrMean(rdv)),'var(--d)'):''}
+    ${rdv.length?stat('Avg Recovery Index',f2(arrMean(rdv)),'var(--d)'):''}
   </div>`;
 
   const absIdxs=[];

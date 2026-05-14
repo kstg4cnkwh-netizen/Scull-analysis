@@ -688,7 +688,7 @@ dz.addEventListener('drop', e => {
   if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
 });
 document.getElementById('xmode').onchange = schedRender;
-document.getElementById('selclear').onclick = () => { selS=-1; selE=-1; document.getElementById('selbar').classList.remove('on'); schedRender(); };
+document.getElementById('selclear').onclick = () => { selS=-1; selE=-1; document.getElementById('selbar').classList.remove('on'); schedRender(); resetZoom();};
 
 // ══════════════════════════════════════════════════════════════════════════
 // META / CARDS

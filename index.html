@@ -724,10 +724,10 @@ function buildCards(sum) {
     <div class="card cw"><div class="lbl">Duration</div><div class="val">${dur}</div><div class="sub">${ST.length} strokes</div></div>
     <div class="card cg"><div class="lbl">Avg Pace</div><div class="val">${fmtPace(arrMean(pv))}</div><div class="sub">/500m</div></div>
     <div class="card cy"><div class="lbl">Avg Rate</div><div class="val">${f1(arrMean(rv))}</div><div class="sub">spm · max ${f0(arrMax(rv))}</div></div>
-    <div class="card cr"><div class="lbl">Avg slope</div><div class="val">${f1(arrMean(jv))}</div><div class="sub">peak ${f1(arrMax(jv))} ms³</div></div>
+    <div class="card cr"><div class="lbl">Avg slope</div><div class="val">${f0(arrMean(jv))}</div><div class="sub">peak ${f1(arrMax(jv))} ms³</div></div>
     <div class="card cp"><div class="lbl">Avg DPS</div><div class="val">${f1(arrMean(dv))}</div><div class="sub">m/stroke</div></div>
-    <div class="card cd"><div class="lbl">Avg RDI</div><div class="val">${f1(arrMean(rdv))}</div><div class="sub">higher=longer recovery</div></div>
-    ${iv.length?`<div class="card ci"><div class="lbl">Avg Impulse</div><div class="val">${f1(arrMean(iv))}</div><div class="sub">peak ${f1(arrMax(iv))}</div></div>`:''}
+    <div class="card cd"><div class="lbl">Avg RDI</div><div class="val">${f2(arrMean(rdv))}</div><div class="sub">higher=longer recovery</div></div>
+    ${iv.length?`<div class="card ci"><div class="lbl">Avg Impulse</div><div class="val">${f2(arrMean(iv))}</div><div class="sub">peak ${f2(arrMax(iv))}</div></div>`:''}
   `;
   if (hv.length) html += `<div class="card cb"><div class="lbl">Avg HR</div><div class="val">${f0(arrMean(hv))}</div><div class="sub">max ${f0(arrMax(hv))} bpm</div></div>`;
   document.getElementById('cards').innerHTML = html;
@@ -1100,7 +1100,7 @@ function showTooltip(e) {
     ${ttRow('Pace',      fmtPace(s.pace),                                            C.g)}
     ${ttRow('Rate',      isNaN(s.rate)||s.rate<1   ? EM : f1(s.rate)+' spm',        C.y)}
     ${ttRow('DPS',       isNaN(s.dps)||s.dps<1     ? EM : f1(s.dps)+'m',            C.p)}
-    ${ttRow('Catch slope',isNaN(s.slope)||s.slope<=0  ? EM : f1(s.slope),               C.r)}
+    ${ttRow('Catch slope',isNaN(s.slope)||s.slope<=0  ? EM : f0(s.slope),               C.r)}
     ${ttRow('Impulse',   isNaN(s.impulse)||s.impulse<=0 ? EM : s.impulse.toFixed(2), C.i)}
     ${ttRow('Run Loss',  isNaN(s.rloss)||s.rloss<=0   ? EM : f1(s.rloss)+'%',       C.b)}
     ${ttRow('Stroke Char', isNaN(s.schar)              ? EM : f0(s.schar)+'%',      C.o)}
@@ -1182,14 +1182,14 @@ function updateSel() {
     ${pv.length?stat('Best Pace',fmtPace(arrMin(pv)),'var(--g)'):''}
     ${rv.length?stat('Avg Rate',f1(arrMean(rv))+' spm','var(--y)'):''}
     ${rv.length?stat('Max Rate',f0(arrMax(rv))+' spm','var(--y)'):''}
-    ${jv.length?stat('Avg slope',f1(arrMean(jv)),'var(--r)'):''}
-    ${jv.length?stat('Peak slope',f1(arrMax(jv)),'var(--r)'):''}
+    ${jv.length?stat('Avg slope',f0(arrMean(jv)),'var(--r)'):''}
+    ${jv.length?stat('Peak slope',f0(arrMax(jv)),'var(--r)'):''}
     ${dv.length?stat('Avg DPS',f1(arrMean(dv))+'m','var(--p)'):''}
-    ${scv.length?stat('Avg Stroke Char',f1(arrMean(scv))+'%','var(--o)'):''}
+    ${scv.length?stat('Avg Stroke Char',f0(arrMean(scv))+'%','var(--o)'):''}
     ${rlv.length?stat('Avg Run Loss',f1(arrMean(rlv))+'%','var(--b)'):''}
-    ${iv.length?stat('Avg Impulse',f1(arrMean(iv)),'var(--i)'):''}
-    ${iv.length?stat('Peak Impulse',f1(arrMax(iv)),'var(--i)'):''}
-    ${rdv.length?stat('Avg RDI',f1(arrMean(rdv)),'var(--d)'):''}
+    ${iv.length?stat('Avg Impulse',f2(arrMean(iv)),'var(--i)'):''}
+    ${iv.length?stat('Peak Impulse',f2(arrMax(iv)),'var(--i)'):''}
+    ${rdv.length?stat('Avg RDI',f2(arrMean(rdv)),'var(--d)'):''}
   </div>`;
 
   const absIdxs=[];

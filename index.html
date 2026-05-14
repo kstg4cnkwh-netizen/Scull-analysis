@@ -1204,8 +1204,40 @@ let ovCanvas=null;
 function setupOvEvents(canvas) {
   if (ovCanvas===canvas) return;
   ovCanvas=canvas;
-  function start(cx){ isDragOv=true; const idx=getOvIdx(cx); const mg=Math.max(2,Math.round((viewE-viewS)*.08)); if(Math.abs(idx-viewS)<=mg)ovMode='L';else if(Math.abs(idx-viewE)<=mg)ovMode='R';else if(idx>=viewS&&idx<=viewE)ovMode='P';else{ovMode='J';viewS=idx;viewE=Math.min(ST.length-1,idx+Math.max(50,viewE-viewS));} ovAnch=cx;ovVS0=viewS;ovVE0=viewE; selS=-1;selE=-1; schedRender(); }
-  function move(cx){ if(!isDragOv)return; const n=ST.length; const d=getOvIdx(cx)-getOvIdx(ovAnch); if(ovMode==='P'){const sp=ovVE0-ovVS0;viewS=clamp(ovVS0+d,0,n-1-sp);viewE=viewS+sp;}else if(ovMode==='L')viewS=clamp(ovVS0+d,0,viewE-5);else if(ovMode==='R')viewE=clamp(ovVE0+d,viewS+5,n-1); selS=viewS; selE=viewE; updateSel(); schedRender(); }
+
+  function start(cx) {
+    isDragOv = true;
+    const idx = getOvIdx(cx);
+    const mg = Math.max(2, Math.round((viewE-viewS)*.08));
+    if      (Math.abs(idx-viewS) <= mg) ovMode = 'L';
+    else if (Math.abs(idx-viewE) <= mg) ovMode = 'R';
+    else if (idx >= viewS && idx <= viewE) ovMode = 'P';
+    else {
+      ovMode = 'J';
+      viewS = idx;
+      viewE = Math.min(ST.length-1, idx + Math.max(50, ovVE0-ovVS0));
+    }
+    ovAnch = cx; ovVS0 = viewS; ovVE0 = viewE;
+    selS = 0;                   // ✓ was -1
+    selE = viewE - viewS;       // ✓ was -1
+    schedRender();
+  }
+
+  function move(cx) {
+    if (!isDragOv) return;
+    const n = ST.length;
+    const d = getOvIdx(cx) - getOvIdx(ovAnch);
+    if      (ovMode === 'P') { const sp = ovVE0-ovVS0; viewS = clamp(ovVS0+d, 0, n-1-sp); viewE = viewS+sp; }
+    else if (ovMode === 'L') viewS = clamp(ovVS0+d, 0, viewE-5);
+    else if (ovMode === 'R') viewE = clamp(ovVE0+d, viewS+5, n-1);
+
+    // ✓ relative to viewS, not absolute
+    selS = 0;
+    selE = viewE - viewS;
+
+    updateSel();
+    schedRender();
+  }
   function end(){ isDragOv=false; ovMode=null; }
   canvas.addEventListener('mousedown', e => start(e.clientX));
   canvas.addEventListener('touchstart', e => start(e.touches[0].clientX), {passive:true});

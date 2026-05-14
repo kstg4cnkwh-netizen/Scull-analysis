@@ -839,9 +839,9 @@ function drawMain() {
   if (pv.length) { yPMin=arrMin(pv)*.95; yPMax=210; }
   const toYP = v => PT+ph-(1-(v-yPMin)/(yPMax-yPMin))*ph;
 
-  let yRMin=0, yRMax=40;
+  let yRMin=0, yRMax=20;
   if (rv.length) { yRMin=arrMin(rv)*.9; yRMax=arrMax(rv)*1.1; }
-  if (jv.length) { const jmax=arrMax(jv)*1.1; if(jmax>yRMax)yRMax=100; }
+  if (jv.length) { const jmax=arrMax(jv)*1.1; if(jmax>yRMax)yRMax=50; }
   const toYR = v => PT+ph-(v-yRMin)/(yRMax-yRMin||1)*ph;
 
   let yDMin=4, yDMax=14;

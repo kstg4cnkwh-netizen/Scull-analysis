@@ -1174,7 +1174,7 @@ function updateSel() {
   function stat(lbl,val,clr){ return `<div class="ss"><div class="l">${lbl}</div><div class="v" style="color:${clr||'var(--text)'}">${val}</div></div>`; }
 
   bar.classList.add('on');
-  document.getElementById('selstats').innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:12px;">
+  document.getElementById('selstats').innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:12px;text-align:center;">
     ${stat('Strokes',sel.length)}
     ${stat('Distance',(distCovered>0?distCovered.toFixed(0):EM)+'m')}
     ${stat('Time',fmtTime(elapsed>0?elapsed:0))}

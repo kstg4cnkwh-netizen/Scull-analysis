@@ -360,7 +360,7 @@ let ST=[],HR=[],LAPS=[];
 let currentView=[];
 let viewS=0,viewE=0;
 let selS=-1,selE=-1;
-let vis={pace:true,rate:true,jerk:false,dps:true,impulse:false,rloss:false,schar:false,rdi:true};
+let vis={pace:true,rate:true,slope:false,dps:true,impulse:false,rloss:false,schar:false,rdi:true};
 let rafId=null;
 let isDragMain=false,isDragOv=false;
 let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
@@ -406,7 +406,7 @@ function parseCSV(text) {
           n:           parseInt(row.stroke) || strokes.length + 1,
           ms,
           elapsed,
-          jerk:        parseFloat(row.catch_jerk_ms3),
+          slope:        parseFloat(row.catch_slope_ms3),
           schar:       parseFloat(row.stroke_char_pct),
           consistency: parseFloat(row.catch_consistency_stdev),
           rate:        parseFloat(row.stroke_rate_spm),
@@ -488,7 +488,7 @@ function sessionToAnalyserFmt(s) {
     avg_catch_consistency_stdev: s.avgConsistency,
     detected_axis: s.detectedAxis,
     cal_noise_floor_ms2: s.calNoiseFloor,
-    cal_jerk_thresh_ms3: s.calThresh,
+    cal_slope_thresh_ms3: s.calThresh,
   };
 
   // Coerce any null/undefined field to NaN so downstream isNaN() guards work correctly.
@@ -500,7 +500,7 @@ function sessionToAnalyserFmt(s) {
     n:           i + 1,
     ms:          r.t,
     elapsed:     (r.t - t0) / 1000,
-    jerk:        num(r.catchPeak),
+    slope:        num(r.catchPeak),
     schar:       num(r.char),
     consistency: num(r.catchConsistency),
     rate:        num(r.rate),
@@ -706,7 +706,7 @@ function sessionStats() {
     const s=ST[i];
     if(s.pace>50&&s.pace<500)pv.push(s.pace);
     if(s.rate>5&&s.rate<50)rv.push(s.rate);
-    if(s.jerk>0&&s.jerk<300)jv.push(s.jerk);
+    if(s.slope>0&&s.slope<300)jv.push(s.slope);
     if(s.dps>1&&s.dps<25)dv.push(s.dps);
     if(s.impulse>0&&s.impulse<10)iv.push(s.impulse);
     if(!isNaN(s.rdi)&&Math.abs(s.rdi)<=1)rdv.push(s.rdi);
@@ -724,7 +724,7 @@ function buildCards(sum) {
     <div class="card cw"><div class="lbl">Duration</div><div class="val">${dur}</div><div class="sub">${ST.length} strokes</div></div>
     <div class="card cg"><div class="lbl">Avg Pace</div><div class="val">${fmtPace(arrMean(pv))}</div><div class="sub">/500m</div></div>
     <div class="card cy"><div class="lbl">Avg Rate</div><div class="val">${f1(arrMean(rv))}</div><div class="sub">spm · max ${f0(arrMax(rv))}</div></div>
-    <div class="card cr"><div class="lbl">Avg Jerk</div><div class="val">${f1(arrMean(jv))}</div><div class="sub">peak ${f1(arrMax(jv))} ms³</div></div>
+    <div class="card cr"><div class="lbl">Avg slope</div><div class="val">${f1(arrMean(jv))}</div><div class="sub">peak ${f1(arrMax(jv))} ms³</div></div>
     <div class="card cp"><div class="lbl">Avg DPS</div><div class="val">${f1(arrMean(dv))}</div><div class="sub">m/stroke</div></div>
     <div class="card cd"><div class="lbl">Avg RDI</div><div class="val">${f1(arrMean(rdv))}</div><div class="sub">higher=longer recovery</div></div>
     ${iv.length?`<div class="card ci"><div class="lbl">Avg Impulse</div><div class="val">${f1(arrMean(iv))}</div><div class="sub">peak ${f1(arrMax(iv))}</div></div>`:''}
@@ -737,7 +737,7 @@ function buildCards(sum) {
 const SERIES=[
   {k:'pace',    l:'Pace',        c:'var(--g)'},
   {k:'rate',    l:'Rate',        c:'var(--y)'},
-  {k:'jerk',    l:'Catch Jerk',  c:'var(--r)'},
+  {k:'slope',    l:'Catch slope',  c:'var(--r)'},
   {k:'dps',     l:'DPS',         c:'var(--p)'},
   {k:'impulse', l:'Impulse',     c:'var(--i)'},
   {k:'rloss',   l:'Run Loss',    c:'var(--b)'},
@@ -827,7 +827,7 @@ function drawMain() {
     const s=view[i];
     if(vis.pace&&s.pace>50&&s.pace<500)pv.push(s.pace);
     if(vis.rate&&s.rate>5&&s.rate<50)rv.push(s.rate);
-    if(vis.jerk&&s.jerk>0&&s.jerk<300)jv.push(s.jerk);
+    if(vis.slope&&s.slope>0&&s.slope<300)jv.push(s.slope);
     if(vis.dps&&s.dps>1&&s.dps<25)dv.push(s.dps);
     if(vis.impulse&&s.impulse>0&&s.impulse<10)iv.push(s.impulse);
     if(vis.rloss&&s.rloss>0&&s.rloss<10)rlv.push(s.rloss);
@@ -873,7 +873,7 @@ function drawMain() {
     ctx.fillStyle=C.gridLb; ctx.textAlign='center';
     ctx.fillText(g.toFixed(0), x, PT+ph+14);
   });
-  if (vis.rate||vis.jerk) {
+  if (vis.rate||vis.slope) {
     niceSteps(yRMin,yRMax,5).forEach(g => {
       ctx.fillStyle=C.gridLb; ctx.textAlign='left';
       ctx.fillText(g.toFixed(0), PL+pw+4, toYR(g)+3);
@@ -910,9 +910,9 @@ function drawMain() {
     ctx.fillStyle=C.y;
     for (let i=0; i<N; i++) { const v=view[i].rate; if(isNaN(v)||v<5||v>50)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYR(v),2.2,0,6.283); ctx.fill(); }
   }
-  if (vis.jerk && jv.length) {
+  if (vis.slope && jv.length) {
     const jMax=arrMax(jv);
-    for (let i=0; i<N; i++) { const v=view[i].jerk; if(isNaN(v)||v<=0||v>300)continue; const rad=clamp(1.5+(v/jMax)*3.5,1.5,5); ctx.beginPath(); ctx.arc(toX(xs[i]),toYR(v),rad,0,6.283); ctx.fillStyle=C.r; ctx.fill(); }
+    for (let i=0; i<N; i++) { const v=view[i].slope; if(isNaN(v)||v<=0||v>300)continue; const rad=clamp(1.5+(v/jMax)*3.5,1.5,5); ctx.beginPath(); ctx.arc(toX(xs[i]),toYR(v),rad,0,6.283); ctx.fillStyle=C.r; ctx.fill(); }
   }
   if (vis.impulse && iv.length) {
     ctx.fillStyle=C.i;
@@ -1100,7 +1100,7 @@ function showTooltip(e) {
     ${ttRow('Pace',      fmtPace(s.pace),                                            C.g)}
     ${ttRow('Rate',      isNaN(s.rate)||s.rate<1   ? EM : f1(s.rate)+' spm',        C.y)}
     ${ttRow('DPS',       isNaN(s.dps)||s.dps<1     ? EM : f1(s.dps)+'m',            C.p)}
-    ${ttRow('Catch Jerk',isNaN(s.jerk)||s.jerk<=0  ? EM : f1(s.jerk),               C.r)}
+    ${ttRow('Catch slope',isNaN(s.slope)||s.slope<=0  ? EM : f1(s.slope),               C.r)}
     ${ttRow('Impulse',   isNaN(s.impulse)||s.impulse<=0 ? EM : s.impulse.toFixed(2), C.i)}
     ${ttRow('Run Loss',  isNaN(s.rloss)||s.rloss<=0   ? EM : f1(s.rloss)+'%',       C.b)}
     ${ttRow('Stroke Char', isNaN(s.schar)              ? EM : f0(s.schar)+'%',      C.o)}
@@ -1160,7 +1160,7 @@ function updateSel() {
     const s=sel[i];
     if(s.pace>50&&s.pace<500)pv.push(s.pace);
     if(s.rate>5&&s.rate<50)rv.push(s.rate);
-    if(s.jerk>0&&s.jerk<300)jv.push(s.jerk);
+    if(s.slope>0&&s.slope<300)jv.push(s.slope);
     if(s.dps>1&&s.dps<25)dv.push(s.dps);
     if(!isNaN(s.schar)&&s.schar>=0)scv.push(s.schar);
     if(!isNaN(s.rloss)&&s.rloss>=0)rlv.push(s.rloss);
@@ -1182,8 +1182,8 @@ function updateSel() {
     ${pv.length?stat('Best Pace',fmtPace(arrMin(pv)),'var(--g)'):''}
     ${rv.length?stat('Avg Rate',f1(arrMean(rv))+' spm','var(--y)'):''}
     ${rv.length?stat('Max Rate',f0(arrMax(rv))+' spm','var(--y)'):''}
-    ${jv.length?stat('Avg Jerk',f1(arrMean(jv)),'var(--r)'):''}
-    ${jv.length?stat('Peak Jerk',f1(arrMax(jv)),'var(--r)'):''}
+    ${jv.length?stat('Avg slope',f1(arrMean(jv)),'var(--r)'):''}
+    ${jv.length?stat('Peak slope',f1(arrMax(jv)),'var(--r)'):''}
     ${dv.length?stat('Avg DPS',f1(arrMean(dv))+'m','var(--p)'):''}
     ${scv.length?stat('Avg Stroke Char',f1(arrMean(scv))+'%','var(--o)'):''}
     ${rlv.length?stat('Avg Run Loss',f1(arrMean(rlv))+'%','var(--b)'):''}
@@ -1245,7 +1245,7 @@ function buildLaps() {
 function buildStrokeTable() {
   document.getElementById('sth').innerHTML = `<tr>
     <th>#</th><th>Dist m</th><th>Time</th><th>Pace /500</th>
-    <th>Rate</th><th>Catch Jerk</th><th>Consist σ</th><th>DPS m</th>
+    <th>Rate</th><th>Catch slope</th><th>Consist σ</th><th>DPS m</th>
     <th>Stroke Char%</th><th>Run Loss%</th><th>Impulse</th><th>RDI</th>
   </tr>`;
   document.getElementById('stb').innerHTML = ST.slice(0,1000).map(s => `<tr data-i="${s.n-1}">
@@ -1254,7 +1254,7 @@ function buildStrokeTable() {
     <td>${fmtTime(s.elapsed)}</td>
     <td style="color:var(--g)">${fmtPace(s.pace)}</td>
     <td style="color:var(--y)">${isNaN(s.rate)||s.rate<1?EM:f0(s.rate)}</td>
-    <td style="color:var(--r)">${isNaN(s.jerk)||s.jerk<=0?EM:f1(s.jerk)}</td>
+    <td style="color:var(--r)">${isNaN(s.slope)||s.slope<=0?EM:f1(s.slope)}</td>
     <td>${isNaN(s.consistency)||s.consistency<=0?EM:f1(s.consistency)}</td>
     <td style="color:var(--p)">${isNaN(s.dps)||s.dps<1?EM:f1(s.dps)}</td>
     <td style="color:var(--o)">${isNaN(s.schar)?EM:f0(s.schar)+'%'}</td>

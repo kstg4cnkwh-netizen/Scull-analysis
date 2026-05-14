@@ -891,9 +891,16 @@ function drawMain() {
 
   if (vis.pace && pv.length) {
     ctx.beginPath(); let started=false;
-    for (let i=0; i<N; i++) { const v=view[i].pace; if(isNaN(v)||v<50||v>500){started=false;continue;} started?ctx.lineTo(toX(xs[i]),toYP(v)):ctx.moveTo(toX(xs[i]),toYP(v)); started=true; }
+    for (let i=0; i<N; i++) {
+      const v=view[i].pace;
+      if(isNaN(v)||v<50||v>500){started=false;continue;}
+      const vc=Math.max(yPMin,Math.min(yPMax,v));
+      started?ctx.lineTo(toX(xs[i]),toYP(vc)):ctx.moveTo(toX(xs[i]),toYP(vc));
+      started=true;
+    }
     ctx.strokeStyle=C.g; ctx.lineWidth=2.0; ctx.stroke();
   }
+
   if (vis.dps && dv.length) {
     ctx.beginPath(); let started=false;
     for (let i=0; i<N; i++) { const v=view[i].dps; if(isNaN(v)||v<1||v>25){started=false;continue;} started?ctx.lineTo(toX(xs[i]),toYD(v)):ctx.moveTo(toX(xs[i]),toYD(v)); started=true; }

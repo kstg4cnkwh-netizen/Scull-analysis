@@ -179,6 +179,16 @@
           <option value="dist">Distance (m)</option>
           <option value="time">Time (min)</option>
         </select>
+        <span style="font-size:10px;color:var(--muted);margin-left:8px;">Smooth:</span>
+        <select id="emaMode">
+          <option value="1">Off</option>
+          <option value="0.5">3 str (~6s)</option>
+          <option value="0.333">5 str (~10s)</option>
+          <option value="0.182">10 str (~20s)</option>
+          <option value="0.125">15 str (~30s)</option>
+          <option value="0.095">20 str (~40s)</option>
+          <option value="0.065">30 str (~1min)</option>
+        </select>
       </div>
     </div>
     <div class="cbox"><canvas id="mainC" height="250"></canvas><div class="hint">Drag to select · double-click to reset zoom</div></div>
@@ -688,6 +698,7 @@ dz.addEventListener('drop', e => {
   if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
 });
 document.getElementById('xmode').onchange = schedRender;
+document.getElementById('emaMode').onchange = schedRender;
 document.getElementById('selclear').onclick = () => { selS=-1; selE=-1; document.getElementById('selbar').classList.remove('on'); schedRender(); resetZoom();};
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -790,6 +801,25 @@ function zoomToSel() {
 function resetZoom() { viewS=0; viewE=ST.length-1; selS=-1; selE=-1; schedRender(); }
 
 // ══════════════════════════════════════════════════════════════════════════
+// EMA SMOOTHING
+// ══════════════════════════════════════════════════════════════════════════
+function emaSmooth(view, alpha) {
+  if (alpha >= 1) return view;
+  const out = view.map(s => Object.assign({}, s));
+  const fields = ['pace','rate','slope','dps','impulse','rloss','schar','rdi'];
+  for (const f of fields) {
+    let ema = NaN;
+    for (let i = 0; i < out.length; i++) {
+      const v = out[i][f];
+      if (isNaN(v) || v == null) { ema = NaN; continue; }
+      ema = isNaN(ema) ? v : alpha * v + (1 - alpha) * ema;
+      out[i][f] = ema;
+    }
+  }
+  return out;
+}
+
+// ══════════════════════════════════════════════════════════════════════════
 // MAIN CHART
 // ══════════════════════════════════════════════════════════════════════════
 function drawMain() {
@@ -805,7 +835,9 @@ function drawMain() {
   ctx.clearRect(0,0,W,H);
 
   const view = ST.slice(viewS, viewE+1);
-  currentView = view;
+  currentView = view;   // raw — tooltip always shows real values
+  const alpha = parseFloat(document.getElementById('emaMode').value) || 1;
+  const sv = emaSmooth(view, alpha);
   const N = view.length;
   if (!N) return;
 
@@ -824,7 +856,7 @@ function drawMain() {
 
   const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[],rdiv=[];
   for (let i=0; i<N; i++) {
-    const s=view[i];
+    const s=sv[i];
     if(vis.pace&&s.pace>50&&s.pace<500)pv.push(s.pace);
     if(vis.rate&&s.rate>5&&s.rate<50)rv.push(s.rate);
     if(vis.slope&&s.slope>0&&s.slope<300)jv.push(s.slope);
@@ -892,7 +924,7 @@ function drawMain() {
   if (vis.pace && pv.length) {
     ctx.beginPath(); let started=false;
     for (let i=0; i<N; i++) {
-      const v=view[i].pace;
+      const v=sv[i].pace;
       if(isNaN(v)||v<50||v>500){started=false;continue;}
       const vc=Math.max(yPMin,Math.min(yPMax,v));
       started?ctx.lineTo(toX(xs[i]),toYP(vc)):ctx.moveTo(toX(xs[i]),toYP(vc));
@@ -903,32 +935,32 @@ function drawMain() {
 
   if (vis.dps && dv.length) {
     ctx.beginPath(); let started=false;
-    for (let i=0; i<N; i++) { const v=view[i].dps; if(isNaN(v)||v<1||v>25){started=false;continue;} started?ctx.lineTo(toX(xs[i]),toYD(v)):ctx.moveTo(toX(xs[i]),toYD(v)); started=true; }
+    for (let i=0; i<N; i++) { const v=sv[i].dps; if(isNaN(v)||v<1||v>25){started=false;continue;} started?ctx.lineTo(toX(xs[i]),toYD(v)):ctx.moveTo(toX(xs[i]),toYD(v)); started=true; }
     ctx.strokeStyle=C.p; ctx.lineWidth=1.5; ctx.stroke();
   }
   if (vis.rate && rv.length) {
     ctx.fillStyle=C.y;
-    for (let i=0; i<N; i++) { const v=view[i].rate; if(isNaN(v)||v<5||v>50)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYR(v),2.2,0,6.283); ctx.fill(); }
+    for (let i=0; i<N; i++) { const v=sv[i].rate; if(isNaN(v)||v<5||v>50)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYR(v),2.2,0,6.283); ctx.fill(); }
   }
   if (vis.slope && jv.length) {
     const jMax=arrMax(jv);
-    for (let i=0; i<N; i++) { const v=view[i].slope; if(isNaN(v)||v<=0||v>300)continue; const rad=clamp(1.5+(v/jMax)*3.5,1.5,5); ctx.beginPath(); ctx.arc(toX(xs[i]),toYR(v),rad,0,6.283); ctx.fillStyle=C.r; ctx.fill(); }
+    for (let i=0; i<N; i++) { const v=sv[i].slope; if(isNaN(v)||v<=0||v>300)continue; const rad=clamp(1.5+(v/jMax)*3.5,1.5,5); ctx.beginPath(); ctx.arc(toX(xs[i]),toYR(v),rad,0,6.283); ctx.fillStyle=C.r; ctx.fill(); }
   }
   if (vis.impulse && iv.length) {
     ctx.fillStyle=C.i;
-    for (let i=0; i<N; i++) { const v=view[i].impulse; if(isNaN(v)||v<=0||v>10)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYImp(v),2.5,0,6.283); ctx.fill(); }
+    for (let i=0; i<N; i++) { const v=sv[i].impulse; if(isNaN(v)||v<=0||v>10)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYImp(v),2.5,0,6.283); ctx.fill(); }
   }
   if (vis.rloss && rlv.length) {
     ctx.fillStyle=C.b;
-    for (let i=0; i<N; i++) { const v=view[i].rloss; if(isNaN(v)||v<=0||v>=100)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYRL(v),2.2,0,6.283); ctx.fill(); }
+    for (let i=0; i<N; i++) { const v=sv[i].rloss; if(isNaN(v)||v<=0||v>=100)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYRL(v),2.2,0,6.283); ctx.fill(); }
   }
   if (vis.schar && scv.length) {
     ctx.fillStyle=C.o;
-    for (let i=0; i<N; i++) { const v=view[i].schar; if(isNaN(v)||v<0||v>100)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYSC(v),2.2,0,6.283); ctx.fill(); }
+    for (let i=0; i<N; i++) { const v=sv[i].schar; if(isNaN(v)||v<0||v>100)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYSC(v),2.2,0,6.283); ctx.fill(); }
   }
   if (vis.rdi && rdiv.length) {
     ctx.fillStyle=C.d;
-    for (let i=0; i<N; i++) { const v=view[i].rdi; if(isNaN(v)||v<-1||v>1)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYRDI(v),2.2,0,Math.PI*2); ctx.fill(); }
+    for (let i=0; i<N; i++) { const v=sv[i].rdi; if(isNaN(v)||v<-1||v>1)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYRDI(v),2.2,0,Math.PI*2); ctx.fill(); }
   }
 
   ctx.strokeStyle=C.frameLn; ctx.lineWidth=1; ctx.strokeRect(PL,PT,pw,ph);

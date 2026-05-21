@@ -240,7 +240,7 @@
 // ══════════════════════════════════════════════════════════════════════════
 const AnalyserDrive = {
   CLIENT_ID: '729480414852-kko8e7bi3r38tcg2rf6iiupptagoegpc.apps.googleusercontent.com',
-  SCOPE: 'https://www.googleapis.com/auth/drive.file',
+  SCOPE: 'https://www.googleapis.com/auth/drive.appdata',
   _token: null,
 
   // Call once on page load — handles OAuth redirect return
@@ -286,7 +286,7 @@ const AnalyserDrive = {
     this._check();
     const q = encodeURIComponent("name contains 'RowSess_' and name contains '.json' and trashed=false");
     const resp = await fetch(
-      `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,createdTime,size)&orderBy=createdTime+desc&pageSize=200`,
+      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=${q}&fields=files(id,name,createdTime,size)&orderBy=createdTime+desc&pageSize=200`,
       { headers: { Authorization: 'Bearer ' + this._token } }
     );
     if (resp.status === 401) { this._expire(); throw new Error('Session expired — please sign in again'); }
@@ -423,7 +423,7 @@ function parseCSV(text) {
           pace:        parseFloat(row.pace_s_per_500m),
           dist:        parseFloat(row.distance_m),
           dps:         parseFloat(row.dist_per_stroke_m),
-          rloss:       parseFloat(row.run_loss_pct),
+          rloss:       parseFloat(row.run_loss_m_per_stroke),
           runeff:      parseFloat(row.run_efficiency_vmin_vmax),
           impulse:     parseFloat(row.drive_impulse),
           rdi:         parseFloat(row.recovery_drive_index),
@@ -491,7 +491,7 @@ function sessionToAnalyserFmt(s) {
     catch_peak_sess_ms3: s.catchPeakSess,
     avg_catch_ms3: s.avgCatch,
     avg_dps_m: s.avgDPS,
-    avg_run_loss_pct: s.avgRunLoss,
+    avg_run_loss_m_per_stroke: s.avgRunLoss,
     avg_efficiency_vmin_vmax: s.avgEfficiency,
     avg_impulse: s.avgImpulse,
     avg_stroke_char_pct: s.avgChar,
@@ -517,7 +517,7 @@ function sessionToAnalyserFmt(s) {
     pace:        num(r.pace),
     dist:        num(r.dist),
     dps:         num(r.dps),
-    rloss:       num(r.runLossPct),
+    rloss:       num(r.runLossM),
     runeff:      num(r.runEfficiency),
     impulse:     num(r.driveImpulse),
     rdi:         num(r.rdi),
@@ -862,7 +862,7 @@ function drawMain() {
     if(vis.slope&&s.slope>0&&s.slope<300)jv.push(s.slope);
     if(vis.dps&&s.dps>1&&s.dps<25)dv.push(s.dps);
     if(vis.impulse&&s.impulse>0&&s.impulse<10)iv.push(s.impulse);
-    if(vis.rloss&&s.rloss>0&&s.rloss<10)rlv.push(s.rloss);
+    if(vis.rloss&&s.rloss>0&&s.rloss<2)rlv.push(s.rloss);
     if(vis.schar&&!isNaN(s.schar)&&s.schar>=0&&s.schar<=100)scv.push(s.schar);
     if(vis.rdi&&!isNaN(s.rdi)&&Math.abs(s.rdi)<1)rdiv.push(s.rdi);
   }
@@ -884,7 +884,7 @@ function drawMain() {
   if (iv.length) { yImpMin=arrMin(iv)*.9; yImpMax=arrMax(iv)*1.1; }
   const toYImp = v => PT+ph-(v-yImpMin)/(yImpMax-yImpMin||1)*ph;
 
-  const yRLMax = rlv.length ? Math.max(arrMax(rlv)*1.2,10) : 10;
+  const yRLMax = rlv.length ? Math.max(arrMax(rlv)*1.3, 2) : 2;
   const toYRL  = v => PT+ph-(v/yRLMax)*ph;
   const toYSC  = v => PT+ph-(v/100)*ph;
   const toYRDI = v => PT+ph-((v+1)/2)*ph;
@@ -1134,7 +1134,7 @@ function showTooltip(e) {
     ${ttRow('DPS',       isNaN(s.dps)||s.dps<1     ? EM : f1(s.dps)+'m',            C.p)}
     ${ttRow('Catch slope',isNaN(s.slope)||s.slope<=0  ? EM : f0(s.slope),               C.r)}
     ${ttRow('Impulse',   isNaN(s.impulse)||s.impulse<=0 ? EM : s.impulse.toFixed(2), C.i)}
-    ${ttRow('Run Loss',  isNaN(s.rloss)||s.rloss<=0   ? EM : f1(s.rloss)+'%',       C.b)}
+    ${ttRow('Run Loss',  isNaN(s.rloss)||s.rloss<=0   ? EM : f2(s.rloss)+' m',       C.b)}
     ${ttRow('Stroke Char', isNaN(s.schar)              ? EM : f0(s.schar)+'%',      C.o)}
     ${ttRow('Recovery Index', (s.rdi == null || isNaN(s.rdi) || Math.abs(s.rdi)>1) ? EM : s.rdi.toFixed(2),   C.d)}
   `;
@@ -1322,7 +1322,7 @@ function buildStrokeTable() {
     <td>${isNaN(s.consistency)||s.consistency<=0?EM:f1(s.consistency)}</td>
     <td style="color:var(--p)">${isNaN(s.dps)||s.dps<1?EM:f1(s.dps)}</td>
     <td style="color:var(--o)">${isNaN(s.schar)?EM:f0(s.schar)+'%'}</td>
-    <td style="color:var(--b)">${isNaN(s.rloss)||s.rloss<=0?EM:f1(s.rloss)+'%'}</td>
+    <td style="color:var(--b)">${isNaN(s.rloss)||s.rloss<=0?EM:f2(s.rloss)+' m'}</td>
     <td style="color:var(--i)">${isNaN(s.impulse)||s.impulse<=0?EM:s.impulse.toFixed(2)}</td>
     <td style="color:var(--d)">${(s.rdi == null || isNaN(s.rdi) || s.rdi<-1||s.rdi>1)?EM:s.rdi.toFixed(2)}</td>
   </tr>`).join('');

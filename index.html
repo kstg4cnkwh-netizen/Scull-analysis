@@ -11,7 +11,7 @@
     --bg: #0b0e13; --s1: #111520; --s2: #181d2a; --s3: #1e2434;
     --border: #242c40; --dim: #1a2030;
     --g: #3affb4; --b: #4da6ff; --y: #ffc947; --r: #f54040;
-    --p: #c084fc; --o: #ffb347; --i: #f393cd; --d: #5b8cff;
+    --p: #c084fc; --o: #ffb347; --i: #f393cd; --d: #5b8cff; --tc: #26d9c7;
     --text: #d8e0f0; --muted: #5a6480; --faint: #2d3450;
     --grid-ln: rgba(30,36,56,1); --grid-lb: #3a4460; --frame-ln: #242c40;
     --sel-fill: rgba(58,255,180,.07); --sel-stk: rgba(58,255,180,.35);
@@ -21,7 +21,7 @@
     --bg: #f5f7fb; --s1: #ffffff; --s2: #eef2f7; --s3: #e4e9f2;
     --border: #cfd7e6; --dim: #dde3ee;
     --g: #0a7a3a; --b: #2271d4; --y: #9c7c00; --r: #cd2020;
-    --p: #7e56a6; --o: #c07012; --i: #c03088; --d: #1c48b9;
+    --p: #7e56a6; --o: #c07012; --i: #c03088; --d: #1c48b9; --tc: #0b8a7e;
     --text: #111827; --muted: #5b6475; --faint: #7d8ead;
     --grid-ln: #dde4ef; --grid-lb: #7080a0; --frame-ln: #b8c4d8;
     --sel-fill: rgba(10,122,58,.06); --sel-stk: rgba(10,122,58,.40);
@@ -329,7 +329,7 @@ function pal() {
   const v  = n => cs.getPropertyValue(n).trim();
   return {
     g: v('--g'), b: v('--b'), y: v('--y'), r: v('--r'),
-    p: v('--p'), o: v('--o'), i: v('--i'), d: v('--d'),
+    p: v('--p'), o: v('--o'), i: v('--i'), d: v('--d'), tc: v('--tc'),
     gridLn: v('--grid-ln'), gridLb: v('--grid-lb'), frameLn: v('--frame-ln'),
     selFill: v('--sel-fill'), selStk: v('--sel-stk'),
     text: v('--text'), muted: v('--muted'),
@@ -370,7 +370,7 @@ let ST=[],HR=[],LAPS=[];
 let currentView=[];
 let viewS=0,viewE=0;
 let selS=-1,selE=-1;
-let vis={pace:true,rate:true,slope:false,dps:true,impulse:false,rloss:false,schar:false,rdi:true};
+let vis={pace:true,rate:true,slope:false,dps:true,impulse:false,rloss:false,schar:false,rdi:true,ratio:false};
 let rafId=null;
 let isDragMain=false,isDragOv=false;
 let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
@@ -427,6 +427,7 @@ function parseCSV(text) {
           runeff:      parseFloat(row.run_efficiency_vmin_vmax),
           impulse:     parseFloat(row.drive_impulse),
           rdi:         parseFloat(row.recovery_drive_index),
+          ratio:       parseFloat(row.ratio),
         });
         break;
       }
@@ -494,6 +495,7 @@ function sessionToAnalyserFmt(s) {
     avg_run_loss_m_per_stroke: s.avgRunLoss,
     avg_efficiency_vmin_vmax: s.avgEfficiency,
     avg_impulse: s.avgImpulse,
+    avg_ratio:   s.avgRatio,
     avg_stroke_char_pct: s.avgChar,
     avg_catch_consistency_stdev: s.avgConsistency,
     detected_axis: s.detectedAxis,
@@ -521,6 +523,7 @@ function sessionToAnalyserFmt(s) {
     runeff:      num(r.runEfficiency),
     impulse:     num(r.driveImpulse),
     rdi:         num(r.rdi),
+    ratio:       num(r.strokeRatio),
   }));
 
   const hr = (s.hrTrace || []).map(h => ({ ts: new Date(h.t).toISOString(), bpm: h.hr }));
@@ -712,7 +715,7 @@ function buildMeta(fname, sum) {
 }
 
 function sessionStats() {
-  const pv=[],rv=[],jv=[],dv=[],iv=[],hv=[],rdv=[];
+  const pv=[],rv=[],jv=[],dv=[],iv=[],hv=[],rdv=[],ratv=[];
   for (let i=0; i<ST.length; i++) {
     const s=ST[i];
     if(s.pace>50&&s.pace<500)pv.push(s.pace);
@@ -721,13 +724,14 @@ function sessionStats() {
     if(s.dps>1&&s.dps<25)dv.push(s.dps);
     if(s.impulse>0&&s.impulse<10)iv.push(s.impulse);
     if(!isNaN(s.rdi)&&Math.abs(s.rdi)<=1)rdv.push(s.rdi);
+    if(!isNaN(s.ratio)&&s.ratio>0.3&&s.ratio<8)ratv.push(s.ratio);
   }
   for (let i=0; i<HR.length; i++) { const b=HR[i].bpm; if(b>40&&b<220)hv.push(b); }
-  return {pv,rv,jv,dv,iv,hv,rdv};
+  return {pv,rv,jv,dv,iv,hv,rdv,ratv};
 }
 
 function buildCards(sum) {
-  const {pv,rv,jv,dv,iv,hv,rdv} = sessionStats();
+  const {pv,rv,jv,dv,iv,hv,rdv,ratv} = sessionStats();
   const km  = ((+sum.distance_m||0)/1000).toFixed(2);
   const dur = fmtTime(+sum.duration_s);
   let html = `
@@ -738,6 +742,7 @@ function buildCards(sum) {
     <div class="card cr"><div class="lbl">Avg slope</div><div class="val">${f0(arrMean(jv))}</div><div class="sub">peak ${f1(arrMax(jv))} ms³</div></div>
     <div class="card cp"><div class="lbl">Avg DPS</div><div class="val">${f1(arrMean(dv))}</div><div class="sub">m/stroke</div></div>
     <div class="card cd"><div class="lbl">Avg Recovery Index</div><div class="val">${f2(arrMean(rdv))}</div><div class="sub">higher=longer recovery</div></div>
+    ${ratv.length?`<div class="card" style="border-top:2px solid var(--tc)"><div class="lbl">Avg Stroke Ratio</div><div class="val" style="color:var(--tc)">${f2(arrMean(ratv))}</div><div class="sub">rec÷drive · ideal 1.5–2.5</div></div>`:''}
     ${iv.length?`<div class="card ci"><div class="lbl">Avg Impulse</div><div class="val">${f2(arrMean(iv))}</div><div class="sub">peak ${f2(arrMax(iv))}</div></div>`:''}
   `;
   if (hv.length) html += `<div class="card cb"><div class="lbl">Avg HR</div><div class="val">${f0(arrMean(hv))}</div><div class="sub">max ${f0(arrMax(hv))} bpm</div></div>`;
@@ -754,6 +759,7 @@ const SERIES=[
   {k:'rloss',   l:'Run Loss',    c:'var(--b)'},
   {k:'schar',   l:'Stroke Char', c:'var(--o)'},
   {k:'rdi',     l:'Recovery Index', c:'var(--d)'},
+  {k:'ratio',   l:'Stroke Ratio',   c:'var(--tc)'},
 ];
 function buildLegend() {
   document.getElementById('leg').innerHTML = SERIES.map(s =>
@@ -806,7 +812,7 @@ function resetZoom() { viewS=0; viewE=ST.length-1; selS=-1; selE=-1; schedRender
 function emaSmooth(view, alpha) {
   if (alpha >= 1) return view;
   const out = view.map(s => Object.assign({}, s));
-  const fields = ['pace','rate','slope','dps','impulse','rloss','schar','rdi'];
+  const fields = ['pace','rate','slope','dps','impulse','rloss','schar','rdi','ratio'];
   for (const f of fields) {
     let ema = NaN;
     for (let i = 0; i < out.length; i++) {
@@ -854,7 +860,7 @@ function drawMain() {
   const xRng = xMax-xMin||1;
   const toX = v => PL+(v-xMin)/xRng*pw;
 
-  const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[],rdiv=[];
+  const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[],rdiv=[],ratv=[];
   for (let i=0; i<N; i++) {
     const s=sv[i];
     if(vis.pace&&s.pace>50&&s.pace<500)pv.push(s.pace);
@@ -865,6 +871,7 @@ function drawMain() {
     if(vis.rloss&&s.rloss>0&&s.rloss<2)rlv.push(s.rloss);
     if(vis.schar&&!isNaN(s.schar)&&s.schar>=0&&s.schar<=100)scv.push(s.schar);
     if(vis.rdi&&!isNaN(s.rdi)&&Math.abs(s.rdi)<1)rdiv.push(s.rdi);
+    if(vis.ratio&&!isNaN(s.ratio)&&s.ratio>0.3&&s.ratio<8)ratv.push(s.ratio);
   }
 
   let yPMin=80, yPMax=210;
@@ -961,6 +968,23 @@ function drawMain() {
   if (vis.rdi && rdiv.length) {
     ctx.fillStyle=C.d;
     for (let i=0; i<N; i++) { const v=sv[i].rdi; if(isNaN(v)||v<-1||v>1)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYRDI(v),2.2,0,Math.PI*2); ctx.fill(); }
+  }
+  if (vis.ratio && ratv.length) {
+    const yRatMax = Math.max(arrMax(ratv)*1.1, 3);
+    const yRatMin = Math.max(0, arrMin(ratv)*0.9);
+    const toYRat = v => PT+ph-((v-yRatMin)/(yRatMax-yRatMin||1))*ph;
+    // Draw as a connected line for easy trend reading
+    ctx.beginPath(); let ratStarted=false;
+    for (let i=0; i<N; i++) {
+      const v=sv[i].ratio;
+      if(isNaN(v)||v<=0.3||v>=8){ratStarted=false;continue;}
+      ratStarted ? ctx.lineTo(toX(xs[i]),toYRat(v)) : ctx.moveTo(toX(xs[i]),toYRat(v));
+      ratStarted=true;
+    }
+    ctx.strokeStyle=C.tc; ctx.lineWidth=1.5; ctx.stroke();
+    // Reference band 1.5–2.5
+    const y25=toYRat(Math.min(2.5,yRatMax)), y15=toYRat(Math.max(1.5,yRatMin));
+    if(y25<y15){ ctx.fillStyle='rgba(38,217,199,.07)'; ctx.fillRect(PL,y25,pw,y15-y25); }
   }
 
   ctx.strokeStyle=C.frameLn; ctx.lineWidth=1; ctx.strokeRect(PL,PT,pw,ph);
@@ -1137,6 +1161,7 @@ function showTooltip(e) {
     ${ttRow('Run Loss',  isNaN(s.rloss)||s.rloss<=0   ? EM : f2(s.rloss)+' m',       C.b)}
     ${ttRow('Stroke Char', isNaN(s.schar)              ? EM : f0(s.schar)+'%',      C.o)}
     ${ttRow('Recovery Index', (s.rdi == null || isNaN(s.rdi) || Math.abs(s.rdi)>1) ? EM : s.rdi.toFixed(2),   C.d)}
+    ${ttRow('Stroke Ratio', (!s.ratio || isNaN(s.ratio) || s.ratio<=0) ? EM : f2(s.ratio), C.tc)}
   `;
 
   const tip = document.getElementById('tooltip');
@@ -1187,7 +1212,7 @@ function updateSel() {
   const view=ST.slice(viewS,viewE+1), sel=view.slice(s2,e2+1);
   if (!sel.length) { bar.classList.remove('on'); return; }
 
-  const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[],rdv=[];
+  const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[],rdv=[],ratv=[];
   for (let i=0; i<sel.length; i++) {
     const s=sel[i];
     if(s.pace>50&&s.pace<500)pv.push(s.pace);
@@ -1198,6 +1223,7 @@ function updateSel() {
     if(!isNaN(s.rloss)&&s.rloss>=0)rlv.push(s.rloss);
     if(s.impulse>0&&s.impulse<10)iv.push(s.impulse);
     if(!isNaN(s.rdi)&&Math.abs(s.rdi)<=1)rdv.push(s.rdi);
+    if(!isNaN(s.ratio)&&s.ratio>0.3&&s.ratio<8)ratv.push(s.ratio);
   }
   const distStart=sel[0].dist||0, distEnd=sel[sel.length-1].dist||0;
   const distCovered=distEnd-distStart;
@@ -1222,6 +1248,7 @@ function updateSel() {
     ${iv.length?stat('Avg Impulse',f2(arrMean(iv)),'var(--i)'):''}
     ${iv.length?stat('Peak Impulse',f2(arrMax(iv)),'var(--i)'):''}
     ${rdv.length?stat('Avg Recovery Index',f2(arrMean(rdv)),'var(--d)'):''}
+    ${ratv.length?stat('Avg Stroke Ratio',f2(arrMean(ratv)),'var(--tc)'):''}
   </div>`;
 
   const absIdxs=[];
@@ -1310,7 +1337,7 @@ function buildStrokeTable() {
   document.getElementById('sth').innerHTML = `<tr>
     <th>#</th><th>Dist m</th><th>Time</th><th>Pace /500</th>
     <th>Rate</th><th>Catch slope</th><th>Consist σ</th><th>DPS m</th>
-    <th>Stroke Char%</th><th>Run Loss%</th><th>Impulse</th><th>RDI</th>
+    <th>Stroke Char%</th><th>Run Loss%</th><th>Impulse</th><th>RDI</th><th>Ratio</th>
   </tr>`;
   document.getElementById('stb').innerHTML = ST.slice(0,1000).map(s => `<tr data-i="${s.n-1}">
     <td>${s.n}</td>
@@ -1325,6 +1352,7 @@ function buildStrokeTable() {
     <td style="color:var(--b)">${isNaN(s.rloss)||s.rloss<=0?EM:f2(s.rloss)+' m'}</td>
     <td style="color:var(--i)">${isNaN(s.impulse)||s.impulse<=0?EM:s.impulse.toFixed(2)}</td>
     <td style="color:var(--d)">${(s.rdi == null || isNaN(s.rdi) || s.rdi<-1||s.rdi>1)?EM:s.rdi.toFixed(2)}</td>
+    <td style="color:var(--tc)">${(!s.ratio||isNaN(s.ratio)||s.ratio<=0)?EM:f2(s.ratio)}</td>
   </tr>`).join('');
   document.getElementById('tblcount').textContent = ST.length + ' strokes';
 }

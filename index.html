@@ -1379,7 +1379,7 @@ function buildStrokeTable() {
   document.getElementById('sth').innerHTML = `<tr>
     <th>#</th><th>Dist m</th><th>Time</th><th>Pace /500</th>
     <th>Rate</th><th>Catch slope</th><th>Consist σ</th><th>DPS m</th>
-    <th>Stroke Char%</th><th>Run Loss%</th><th>Impulse</th><th>RDI</th>
+    <th>Stroke Char%</th><th>Run Loss%</th><th>Impulse</th><th>Oar Angle</th>
   </tr>`;
   document.getElementById('stb').innerHTML = ST.slice(0,1000).map(s => `<tr data-i="${s.n-1}">
     <td>${s.n}</td>
@@ -1393,7 +1393,7 @@ function buildStrokeTable() {
     <td style="color:var(--o)">${isNaN(s.schar)?EM:f0(s.schar)+'%'}</td>
     <td style="color:var(--b)">${isNaN(s.rloss)||s.rloss<=0?EM:f2(s.rloss)+' m'}</td>
     <td style="color:var(--i)">${isNaN(s.impulse)||s.impulse<=0?EM:s.impulse.toFixed(2)}</td>
-    <td style="color:var(--d)">${(s.rdi == null || isNaN(s.rdi) || s.rdi<-1||s.rdi>1)?EM:s.rdi.toFixed(2)}</td>
+    <td style="color:#2de0d4">${isNaN(s.strokeAngle)||s.strokeAngle<=0?EM:f1(s.strokeAngle)+'°'}</td>
   </tr>`).join('');
   document.getElementById('tblcount').textContent = ST.length + ' strokes';
 }

@@ -656,15 +656,15 @@ function computeStrokeAngles(strokes) {
   // carries oarAngle computed via IMU integration (the accurate method).
   // Use that directly.  For older sessions without it, fall back to the
   // RDI-based estimate with 5-stroke smoothing.
-  const OUTBOARD = 2.0;
-  const MAX_WIN  = 5;
-  const R2D      = 180 / Math.PI;
+  const OUTBOARD      = 2.0;
+  const MAX_WIN       = 5;
+  const R2D           = 180 / Math.PI;
+  const SLIP_FRACTION = 0.10;  // same slip model as Metrics live calculation
 
   // Check whether this session has stored IMU-derived angles
   const hasIMU = strokes.some(s => !isNaN(s.oarAngle) && s.oarAngle > 20 && s.oarAngle < 180);
 
   if (hasIMU) {
-    // Stored values are already smoothed by Metrics — use directly
     for (let i = 0; i < strokes.length; i++) {
       const a = strokes[i].oarAngle;
       strokes[i].strokeAngle = (!isNaN(a) && a > 20 && a < 180) ? a : NaN;
@@ -673,8 +673,9 @@ function computeStrokeAngles(strokes) {
   }
 
   // ── Fallback: estimate from pace + RDI ────────────────────────────────
-  // NOTE: uses average speed × drive time, which ignores within-stroke
-  // speed variation.  Less accurate than the IMU method.
+  // drive_dist = speed × drive_time  (average speed, ignores within-stroke variation)
+  // Geometry fix: angle = 2 × arcsin(effective_dist / 2L)  not  dist/L
+  // Slip fix:     effective_dist = drive_dist × (1 − SLIP_FRACTION)
   const raw = new Array(strokes.length).fill(NaN);
   for (let i = 0; i < strokes.length; i++) {
     const s   = strokes[i];
@@ -682,7 +683,10 @@ function computeStrokeAngles(strokes) {
     const T   = (s.rate > 5  && s.rate < 50)               ? 60  / s.rate : NaN;
     const rdi = (!isNaN(s.rdi) && Math.abs(s.rdi) <= 0.95) ? s.rdi        : NaN;
     if (isNaN(v) || isNaN(T) || isNaN(rdi)) continue;
-    raw[i] = (v * (T * (1 - rdi) / 2) / OUTBOARD) * R2D;
+    const driveDist    = v * (T * (1 - rdi) / 2);
+    const effectiveDist = driveDist * (1 - SLIP_FRACTION);
+    const sinArg       = Math.min(effectiveDist / (2 * OUTBOARD), 0.9999);
+    raw[i] = 2 * Math.asin(sinArg) * R2D;
   }
 
   for (let i = 0; i < strokes.length; i++) {

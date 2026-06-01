@@ -292,7 +292,13 @@ const AnalyserDrive = {
     if (resp.status === 401) { this._expire(); throw new Error('Session expired — please sign in again'); }
     if (!resp.ok) throw new Error('Drive list failed: HTTP ' + resp.status);
     const d = await resp.json();
-    return d.files || [];
+    // Deduplicate by name — keep the first occurrence (newest, since ordered by createdTime desc)
+    const seen = new Set();
+    return (d.files || []).filter(f => {
+      if (seen.has(f.name)) return false;
+      seen.add(f.name);
+      return true;
+    });
   },
 
   async fetchSession(fileId) {

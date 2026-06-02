@@ -1003,7 +1003,7 @@ function drawMain() {
 
   let yRMin=0, yRMax=20;
   if (rv.length) { yRMin=arrMin(rv)*.9; yRMax=arrMax(rv)*1.1; }
-  if (jv.length) { const jmax=arrMax(jv)*1.1; if(jmax>yRMax)yRMax=50; }
+  if (jv.length) { const jmax=arrMax(jv)*1.1; if(jmax>yRMax)yRMax=jmax; }
   const toYR = v => PT+ph-(v-yRMin)/(yRMax-yRMin||1)*ph;
 
   let yDMin=4, yDMax=14;
@@ -1017,12 +1017,10 @@ function drawMain() {
   const yRLMax = rlv.length ? Math.max(arrMax(rlv)*1.3, 2) : 2;
   const toYRL    = v => PT+ph-(v/yRLMax)*ph;
   const toYSC    = v => PT+ph-(v/100)*ph;
-  let yRatMin=1.0, yRatMax=4.0;
-  if (ratv.length) { yRatMin=Math.max(0.5,arrMin(ratv)*0.9); yRatMax=Math.min(5.0,arrMax(ratv)*1.1); }
+  const yRatMin=1.0, yRatMax=5.0;
   const toYRatio = v => PT+ph-(v-yRatMin)/(yRatMax-yRatMin||1)*ph;
-  let yAngMin=50, yAngMax=130;
-  if (angv.length) { yAngMin=arrMin(angv)*0.95; yAngMax=arrMax(angv)*1.05; }
-  const toYAngle = v => PT+ph-(v-yAngMin)/(yAngMax-yAngMin||1)*ph;
+  const yAngMin=60, yAngMax=150;
+  const toYAngle = v => PT+ph-(v-yAngMin)/(yAngMax-yAngMin)*ph;
 
   ctx.font = '9px IBM Plex Mono,monospace';
 
@@ -1098,6 +1096,13 @@ function drawMain() {
     for (let i=0; i<N; i++) { const v=sv[i].ratio; if(isNaN(v)||v<0.5||v>5)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYRatio(v),2.2,0,6.283); ctx.fill(); }
   }
   if (vis.angle && angv.length) {
+    [60,90,120,150].forEach(ref => {
+      const y=toYAngle(ref);
+      ctx.beginPath(); ctx.moveTo(PL,y); ctx.lineTo(PL+pw,y);
+      ctx.strokeStyle='rgba(45,224,212,.35)'; ctx.lineWidth=1; ctx.setLineDash([4,4]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle='rgba(45,224,212,.7)'; ctx.textAlign='left';
+      ctx.fillText(ref+'°', PL+pw+4, y+3);
+    });
     ctx.fillStyle='#2de0d4';
     for (let i=0; i<N; i++) { const v=sv[i].strokeAngle; if(isNaN(v)||v<20||v>180)continue; ctx.beginPath(); ctx.arc(toX(xs[i]),toYAngle(v),2.2,0,6.283); ctx.fill(); }
   }

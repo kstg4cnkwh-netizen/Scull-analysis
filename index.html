@@ -146,13 +146,14 @@
 </style>
 </head>
 <body>
+<body class="light">
 
 <div id="hdr">
   <h1>⊳ Scull</h1>
   <div class="meta" id="hdrmeta"></div>
   <div class="sp"></div>
   <button class="hbtn" id="resetbtn">↩ New file</button>
-  <button class="hbtn" id="hdrThemeBtn">Light Mode</button>
+  <button class="hbtn" id="hdrThemeBtn">Dark Mode</button>
 </div>
 
 <div id="dz">
@@ -310,6 +311,15 @@ const AnalyserDrive = {
     if (resp.status === 401) { this._expire(); throw new Error('Session expired — please sign in again'); }
     if (!resp.ok) throw new Error('Drive fetch failed: HTTP ' + resp.status);
     return resp.json();
+  },
+
+  async deleteFile(fileId) {
+    this._check();
+    const resp = await fetch(
+      `https://www.googleapis.com/drive/v3/files/${fileId}`,
+      { method: 'DELETE', headers: { Authorization: 'Bearer ' + this._token } }
+    );
+    if (!resp.ok && resp.status !== 204) throw new Error('Delete failed: HTTP ' + resp.status);
   },
 
   _check() { if (!this._token) throw new Error('Not signed in to Drive'); },
@@ -626,19 +636,60 @@ function showDrivePicker(files, onSelect) {
   title.style.cssText = 'font-size:1rem;font-weight:700;margin-bottom:12px;color:var(--g);font-family:IBM Plex Sans,sans-serif;';
   panel.appendChild(title);
 
-  files.forEach(f => {
-    // RowSess_2026-05-13_0630.json → 2026-05-13 0630
-    const label = f.name.replace('RowSess_','').replace('.json','').replace('_',' ');
-    const btn = document.createElement('button');
-    btn.textContent = label;
-    btn.style.cssText = 'display:block;width:100%;text-align:left;padding:9px 12px;margin-bottom:6px;background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:.85rem;cursor:pointer;';
-    btn.onmouseenter = () => btn.style.borderColor = 'var(--g)';
-    btn.onmouseleave = () => btn.style.borderColor = 'var(--border)';
-    btn.onclick = () => { overlay.remove(); onSelect(f.id, label); };
-    panel.appendChild(btn);
-  });
+  let fileList = [...files];
+
+  function renderList() {
+    // Remove all file rows (everything except title and cancel)
+    [...panel.querySelectorAll('.drive-file-row')].forEach(el => el.remove());
+    const cancel = panel.querySelector('.drive-cancel-btn');
+
+    fileList.forEach(f => {
+      const label = f.name.replace('RowSess_', '').replace('.json', '').replace('_', ' ');
+      const row = document.createElement('div');
+      row.className = 'drive-file-row';
+      row.style.cssText = 'display:flex;align-items:center;gap:6px;margin-bottom:6px;';
+
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      btn.style.cssText = 'flex:1;text-align:left;padding:9px 12px;background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:.85rem;cursor:pointer;';
+      btn.onmouseenter = () => btn.style.borderColor = 'var(--g)';
+      btn.onmouseleave = () => btn.style.borderColor = 'var(--border)';
+      btn.onclick = () => { overlay.remove(); onSelect(f.id, label); };
+
+      const del = document.createElement('button');
+      del.textContent = '🗑';
+      del.title = 'Delete from Drive';
+      del.style.cssText = 'padding:9px 10px;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:6px;color:#e74c3c;cursor:pointer;font-size:.85rem;flex-shrink:0;';
+      del.onclick = async () => {
+        if (!confirm('Delete "' + label + '" from Drive?')) return;
+        del.textContent = '…';
+        del.disabled = true;
+        try {
+          await AnalyserDrive.deleteFile(f.id);
+          fileList = fileList.filter(x => x.id !== f.id);
+          renderList();
+        } catch (e) {
+          toast('Delete failed: ' + e.message);
+          del.textContent = '🗑';
+          del.disabled = false;
+        }
+      };
+
+      row.appendChild(btn);
+      row.appendChild(del);
+      panel.insertBefore(row, cancel);
+    });
+
+    if (!fileList.length) {
+      const empty = document.createElement('div');
+      empty.style.cssText = 'color:var(--muted);font-size:.85rem;padding:8px 0;';
+      empty.textContent = 'No sessions on Drive.';
+      panel.insertBefore(empty, cancel);
+    }
+  }
 
   const cancel = document.createElement('button');
+  cancel.className = 'drive-cancel-btn';
   cancel.textContent = 'Cancel';
   cancel.style.cssText = 'display:block;width:100%;padding:8px;margin-top:6px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-family:monospace;';
   cancel.onclick = () => overlay.remove();
@@ -647,6 +698,8 @@ function showDrivePicker(files, onSelect) {
   overlay.appendChild(panel);
   overlay.onclick = e => { if (e.target === overlay) overlay.remove(); };
   document.body.appendChild(overlay);
+
+  renderList();
 }
 
 // ══════════════════════════════════════════════════════════════════════════

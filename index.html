@@ -572,6 +572,12 @@ function showDrivePicker(files, onSelect) {
   title.style.cssText='font-size:1rem;font-weight:700;margin-bottom:12px;color:var(--g);font-family:IBM Plex Sans,sans-serif;';
   panel.appendChild(title);
   let fileList=[...files];
+
+  function parseFilenameStats(name) {
+    const m=name.match(/_(\d+)m_(\d+)s\.json$/);
+    return m ? { dist:parseInt(m[1]), dur:parseInt(m[2]) } : null;
+  }
+
   function renderList(){
     [...panel.querySelectorAll('.drive-file-row')].forEach(el=>el.remove());
     const cancel=panel.querySelector('.drive-cancel-btn');
@@ -580,12 +586,26 @@ function showDrivePicker(files, onSelect) {
       const row=document.createElement('div');
       row.className='drive-file-row';
       row.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:6px;';
+
       const btn=document.createElement('button');
-      btn.textContent=label;
-      btn.style.cssText='flex:1;text-align:left;padding:9px 12px;background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:.85rem;cursor:pointer;';
+      btn.style.cssText='flex:1;text-align:left;padding:8px 12px;background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:.85rem;cursor:pointer;line-height:1.5;';
       btn.onmouseenter=()=>btn.style.borderColor='var(--g)';
       btn.onmouseleave=()=>btn.style.borderColor='var(--border)';
       btn.onclick=()=>{overlay.remove();onSelect(f.id,label);};
+
+      const nameDiv=document.createElement('div');
+      nameDiv.textContent=label;
+
+      const metaDiv=document.createElement('div');
+      metaDiv.style.cssText='font-size:.72rem;color:var(--muted);margin-top:1px;';
+      const stats=parseFilenameStats(f.name);
+      metaDiv.textContent=stats
+        ? (stats.dist/1000).toFixed(2)+'km · '+fmtTime(stats.dur)
+        : new Date(f.createdTime).toLocaleDateString();
+
+      btn.appendChild(nameDiv);
+      btn.appendChild(metaDiv);
+
       const del=document.createElement('button');
       del.textContent='🗑';del.title='Delete from Drive';
       del.style.cssText='padding:9px 10px;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:6px;color:#e74c3c;cursor:pointer;font-size:.85rem;flex-shrink:0;';
@@ -595,11 +615,18 @@ function showDrivePicker(files, onSelect) {
         try{await AnalyserDrive.deleteFile(f.id);fileList=fileList.filter(x=>x.id!==f.id);renderList();}
         catch(e){toast('Delete failed: '+e.message);del.textContent='🗑';del.disabled=false;}
       };
+
       row.appendChild(btn);row.appendChild(del);
       panel.insertBefore(row,cancel);
     });
-    if(!fileList.length){const empty=document.createElement('div');empty.style.cssText='color:var(--muted);font-size:.85rem;padding:8px 0;';empty.textContent='No sessions on Drive.';panel.insertBefore(empty,cancel);}
+    if(!fileList.length){
+      const empty=document.createElement('div');
+      empty.style.cssText='color:var(--muted);font-size:.85rem;padding:8px 0;';
+      empty.textContent='No sessions on Drive.';
+      panel.insertBefore(empty,cancel);
+    }
   }
+
   const cancel=document.createElement('button');
   cancel.className='drive-cancel-btn';cancel.textContent='Cancel';
   cancel.style.cssText='display:block;width:100%;padding:8px;margin-top:6px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-family:monospace;';

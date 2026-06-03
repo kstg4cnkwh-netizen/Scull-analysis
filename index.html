@@ -561,15 +561,54 @@ async function loadFromDrive() {
 }
 
 function showDrivePicker(files, onSelect) {
+  document.getElementById('_drive_picker')?.remove();
   const overlay=document.createElement('div');
-  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:1000;display:flex;align-items:center;justify-content:center;';
-  const box=document.createElement('div');
-  box.style.cssText='background:var(--s1);border:1px solid var(--border);border-radius:12px;padding:20px;max-width:480px;width:90%;max-height:70vh;overflow-y:auto;';
-  box.innerHTML=`<div style="font-family:IBM Plex Sans,sans-serif;font-size:14px;font-weight:700;color:var(--text);margin-bottom:14px;">Select session</div>`+
-    files.map(f=>`<div class="drive-item" data-id="${f.id}" style="padding:9px 12px;border-radius:8px;cursor:pointer;border:1px solid var(--border);margin-bottom:6px;font-size:11px;"><div style="color:var(--text)">${f.name.replace('RowSess_','').replace('.json','')}</div><div style="color:var(--muted);font-size:9px;margin-top:2px;">${(f.size/1024).toFixed(1)}KB · ${new Date(f.createdTime).toLocaleDateString()}</div></div>`).join('');
-  box.querySelectorAll('.drive-item').forEach(el=>{ el.addEventListener('mouseenter',()=>el.style.background='var(--s2)'); el.addEventListener('mouseleave',()=>el.style.background=''); el.addEventListener('click',()=>{ document.body.removeChild(overlay); onSelect(el.dataset.id,el.querySelector('div').textContent); }); });
-  overlay.addEventListener('click',e=>{ if(e.target===overlay) document.body.removeChild(overlay); });
-  overlay.appendChild(box); document.body.appendChild(overlay);
+  overlay.id='_drive_picker';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:9999;';
+  const panel=document.createElement('div');
+  panel.style.cssText='background:var(--s1);border:1px solid var(--border);border-radius:10px;padding:18px;max-width:440px;width:92%;max-height:80vh;overflow-y:auto;color:var(--text);font-family:monospace;';
+  const title=document.createElement('div');
+  title.textContent='Drive Sessions';
+  title.style.cssText='font-size:1rem;font-weight:700;margin-bottom:12px;color:var(--g);font-family:IBM Plex Sans,sans-serif;';
+  panel.appendChild(title);
+  let fileList=[...files];
+  function renderList(){
+    [...panel.querySelectorAll('.drive-file-row')].forEach(el=>el.remove());
+    const cancel=panel.querySelector('.drive-cancel-btn');
+    fileList.forEach(f=>{
+      const label=f.name.replace('RowSess_','').replace('.json','').replace('_',' ');
+      const row=document.createElement('div');
+      row.className='drive-file-row';
+      row.style.cssText='display:flex;align-items:center;gap:6px;margin-bottom:6px;';
+      const btn=document.createElement('button');
+      btn.textContent=label;
+      btn.style.cssText='flex:1;text-align:left;padding:9px 12px;background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:.85rem;cursor:pointer;';
+      btn.onmouseenter=()=>btn.style.borderColor='var(--g)';
+      btn.onmouseleave=()=>btn.style.borderColor='var(--border)';
+      btn.onclick=()=>{overlay.remove();onSelect(f.id,label);};
+      const del=document.createElement('button');
+      del.textContent='🗑';del.title='Delete from Drive';
+      del.style.cssText='padding:9px 10px;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:6px;color:#e74c3c;cursor:pointer;font-size:.85rem;flex-shrink:0;';
+      del.onclick=async()=>{
+        if(!confirm('Delete "'+label+'" from Drive?'))return;
+        del.textContent='…';del.disabled=true;
+        try{await AnalyserDrive.deleteFile(f.id);fileList=fileList.filter(x=>x.id!==f.id);renderList();}
+        catch(e){toast('Delete failed: '+e.message);del.textContent='🗑';del.disabled=false;}
+      };
+      row.appendChild(btn);row.appendChild(del);
+      panel.insertBefore(row,cancel);
+    });
+    if(!fileList.length){const empty=document.createElement('div');empty.style.cssText='color:var(--muted);font-size:.85rem;padding:8px 0;';empty.textContent='No sessions on Drive.';panel.insertBefore(empty,cancel);}
+  }
+  const cancel=document.createElement('button');
+  cancel.className='drive-cancel-btn';cancel.textContent='Cancel';
+  cancel.style.cssText='display:block;width:100%;padding:8px;margin-top:6px;background:transparent;border:1px solid var(--border);border-radius:6px;color:var(--muted);cursor:pointer;font-family:monospace;';
+  cancel.onclick=()=>overlay.remove();
+  panel.appendChild(cancel);
+  overlay.appendChild(panel);
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  document.body.appendChild(overlay);
+  renderList();
 }
 
 // ══════════════════════════════════════════════════════════════════════════

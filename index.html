@@ -143,7 +143,22 @@
     .sec { padding: 0 10px 10px; }
     #selbar { margin: 0 10px 10px; }
   }
+
+  /* ── Map ── */
+  #mapbox { height: 340px; border-radius: 6px; overflow: hidden; background: var(--s2); }
+  /* Leaflet popup styling to match dark theme */
+  .lap-marker {
+    background: var(--g); color: #000; border-radius: 50%;
+    width: 22px; height: 22px; display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 700; font-family: 'IBM Plex Mono', monospace;
+    border: 2px solid #000; box-shadow: 0 1px 4px rgba(0,0,0,.6);
+  }
+  .leaflet-popup-content-wrapper { background: var(--s2); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  .leaflet-popup-tip { background: var(--s2); }
+  .leaflet-popup-close-button { color: var(--muted) !important; }
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 </head>
 <body>
 <body class="light">
@@ -223,6 +238,11 @@
   <div class="sec" id="lapsec" style="display:none;">
     <div class="sec-hd"><h2>Laps</h2></div>
     <div class="twrap"><table id="laptbl"><thead></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="sec" id="mapsec" style="display:none;">
+    <div class="sec-hd"><h2>Route Map</h2><span id="maplbl" style="font-size:10px;color:var(--muted);"></span></div>
+    <div id="mapbox"></div>
   </div>
 
   <div class="sec">
@@ -382,7 +402,7 @@ function f0(v){return isNaN(v)?EM:String(Math.round(v));}
 function niceSteps(min,max,n){const r=max-min||1,raw=r/n,mag=Math.pow(10,Math.floor(Math.log10(raw)));let step=mag;for(const f of[1,2,2.5,5,10]){if(mag*f>=raw){step=mag*f;break;}}const out=[],start=Math.ceil(min/step)*step;for(let v=start;v<=max+step*.001;v+=step)out.push(parseFloat(v.toPrecision(8)));return out;}
 
 // ── State ──────────────────────────────────────────────────────────────────
-let ST=[],HR=[],LAPS=[];
+let ST=[],HR=[],LAPS=[],GPSTRACE=[];
 let currentView=[];
 let viewS=0,viewE=0;
 let selS=-1,selE=-1;
@@ -390,6 +410,7 @@ let vis={pace:true,rate:true,slope:false,dps:true,impulse:false,rloss:false,scha
 let rafId=null;
 let isDragMain=false,isDragOv=false;
 let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
+let leafletMap=null;
 
 // ══════════════════════════════════════════════════════════════════════════
 // PARSE CSV  (Scull Metrics exportCSV format)
@@ -487,7 +508,7 @@ function parseCSV(text) {
     }
   }
 
-  return { sum, strokes, hr, laps, glaps };
+  return { sum, strokes, hr, laps, glaps, gpsTrace: [] };
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -563,7 +584,11 @@ function sessionToAnalyserFmt(s) {
     avg_stroke_dist_m: l.avgStrokeDist,
   }));
 
-  return { sum, strokes, hr, laps, glaps };
+  const gpsTrace = (s.gpsTrace || [])
+    .filter(p => p.lat != null && p.lon != null)
+    .map(p => ({ lat: p.lat, lon: p.lon, t: p.t, dist: p.dist }));
+
+  return { sum, strokes, hr, laps, glaps, gpsTrace };
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -765,12 +790,85 @@ function computeStrokeAngles(strokes) {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// MAP — GPS route with lap markers (Leaflet + CartoDB dark tiles)
+// ══════════════════════════════════════════════════════════════════════════
+function buildMap() {
+  const sec = document.getElementById('mapsec');
+  if (!GPSTRACE.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+
+  // Destroy previous map instance if present
+  if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+
+  const latlngs = GPSTRACE.map(p => [p.lat, p.lon]);
+
+  leafletMap = L.map('mapbox', { zoomControl: true, attributionControl: false });
+
+  // CartoDB dark tiles — suit our dark theme
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    subdomains: 'abcd', maxZoom: 19
+  }).addTo(leafletMap);
+
+  // Route polyline — green to match app accent
+  const routeLine = L.polyline(latlngs, {
+    color: '#3affb4', weight: 3, opacity: 0.85
+  }).addTo(leafletMap);
+
+  // Start marker (white circle)
+  L.circleMarker(latlngs[0], {
+    radius: 6, fillColor: '#fff', color: '#000', weight: 2, fillOpacity: 1
+  }).bindTooltip('Start', { permanent: false }).addTo(leafletMap);
+
+  // Finish marker (red circle)
+  L.circleMarker(latlngs[latlngs.length - 1], {
+    radius: 6, fillColor: '#f54040', color: '#000', weight: 2, fillOpacity: 1
+  }).bindTooltip('Finish', { permanent: false }).addTo(leafletMap);
+
+  // Lap boundary markers — placed at cumulative distance on GPS trace
+  // scull laps have per-lap dist; build cumulative distances
+  const scullLaps = LAPS.filter(l => l.stroke_rate_spm != null || l.pace_s_per_500m != null);
+  if (scullLaps.length > 1) {
+    let cumDist = 0;
+    for (let i = 0; i < scullLaps.length - 1; i++) {
+      cumDist += scullLaps[i].distance_m || 0;
+      // Find GPS point closest in cumulative distance to this lap boundary
+      let best = null, bestDelta = Infinity;
+      for (const p of GPSTRACE) {
+        if (p.dist == null) continue;
+        const d = Math.abs(p.dist - cumDist);
+        if (d < bestDelta) { bestDelta = d; best = p; }
+      }
+      if (!best || bestDelta > 200) continue; // skip if no good match
+
+      const lapNum = i + 1;
+      const icon = L.divIcon({
+        html: `<div class="lap-marker">${lapNum}</div>`,
+        iconSize: [22, 22], iconAnchor: [11, 11], className: ''
+      });
+      const lap = scullLaps[i];
+      const popupHtml = `<b>Lap ${lapNum}</b><br>${Math.round(lap.distance_m)}m · ${fmtPace(lap.pace_s_per_500m)}/500m · ${lap.stroke_rate_spm ? Math.round(lap.stroke_rate_spm) + ' spm' : ''}`;
+      L.marker([best.lat, best.lon], { icon })
+        .bindPopup(popupHtml)
+        .addTo(leafletMap);
+    }
+  }
+
+  leafletMap.fitBounds(routeLine.getBounds(), { padding: [20, 20] });
+
+  const nPts = GPSTRACE.length;
+  const distM = GPSTRACE[nPts - 1].dist ?? 0;
+  document.getElementById('maplbl').textContent =
+    `${nPts} GPS points · ${Math.round(distM)}m covered`;
+}
+
 // ── Mount parsed data ──────────────────────────────────────────────────────
 function mountData(d, label) {
   ST = d.strokes;
   computeStrokeAngles(ST);
   HR = d.hr;
   LAPS = [...d.laps, ...d.glaps];
+  GPSTRACE = d.gpsTrace || [];
   viewS = 0; viewE = ST.length - 1; selS = -1; selE = -1;
 
   // Garmin laps may exist even when stroke data is absent (e.g. FIT-only import).
@@ -787,19 +885,22 @@ function mountData(d, label) {
   buildMeta(label, d.sum);
   buildCards(d.sum);
   buildLaps();
+  buildMap();
   buildStrokeTable();
   document.getElementById('hrsec').style.display = HR.length > 10 ? 'block' : 'none';
   schedRender();
 }
 
 function resetApp() {
-  ST=[]; HR=[]; LAPS=[];
+  ST=[]; HR=[]; LAPS=[]; GPSTRACE=[];
   selS=-1; selE=-1;
+  if (leafletMap) { leafletMap.remove(); leafletMap = null; }
   document.getElementById('app').style.display = 'none';
   document.getElementById('dz').style.display = 'flex';
   document.getElementById('fin').value = '';
   document.getElementById('hrsec').style.display = 'none';
   document.getElementById('lapsec').style.display = 'none';
+  document.getElementById('mapsec').style.display = 'none';
   document.getElementById('selbar').classList.remove('on');
   ['mainC','ovC','hrC'].forEach(id => {
     const c = document.getElementById(id);

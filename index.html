@@ -127,12 +127,16 @@
   tbody tr.hl td { background: rgba(58,255,180,.08) !important; }
   tbody td { padding: 5px 9px; color: var(--muted); text-align: right; }
   tbody td:first-child { color: var(--text); text-align: left; }
-  .curve-stats-col .twrap { max-height: 280px; }
+  .curve-stats-col .twrap { max-height: none; overflow: visible; }
 
   tbody tr.hl-g0 td { background: rgba(255,201,71,.09) !important; }
   tbody tr.hl-g1 td { background: rgba(192,132,252,.09) !important; }
   tbody tr.hl-g2 td { background: rgba(58,255,180,.09) !important; }
   tbody tr.hl-g3 td { background: rgba(245,64,64,.09) !important; }
+  tbody tr.hl-g4 td { background: rgba(84,160,255,.09) !important; }
+  tbody tr.hl-g5 td { background: rgba(253,121,168,.09) !important; }
+  tbody tr.hl-g6 td { background: rgba(225,112,85,.09) !important; }
+  tbody tr.hl-g7 td { background: rgba(0,206,201,.09) !important; }
 
   /* ── Map-left + Stroke-right row ── */
   #map-stroke-row { display: none; flex-wrap: wrap; gap: 10px; padding: 0 14px 10px; }
@@ -255,7 +259,7 @@
     </div>
     <div class="curve-layout">
       <div class="curve-col">
-        <div class="cbox"><canvas id="curveC" height="200"></canvas></div>
+        <div class="cbox"><canvas id="curveC" height="300"></canvas></div>
         <div class="hint" id="curvehint" style="margin-top:4px;"></div>
       </div>
       <div class="curve-stats-col">
@@ -413,8 +417,8 @@ function niceSteps(min,max,n){const r=max-min||1,raw=r/n,mag=Math.pow(10,Math.fl
 
 // ── State ──────────────────────────────────────────────────────────────────
 const CURVE_POINTS = 80;
-const GROUP_COLORS = ['#ffc947','#c084fc','#3affb4','#f54040'];
-const GROUP_BG     = ['rgba(255,201,71,.14)','rgba(192,132,252,.14)','rgba(58,255,180,.14)','rgba(245,64,64,.14)'];
+const GROUP_COLORS = ['#ffc947','#c084fc','#3affb4','#f54040','#54a0ff','#fd79a8','#e17055','#00cec9'];
+const GROUP_BG     = ['rgba(255,201,71,.14)','rgba(192,132,252,.14)','rgba(58,255,180,.14)','rgba(245,64,64,.14)','rgba(84,160,255,.14)','rgba(253,121,168,.14)','rgba(225,112,85,.14)','rgba(0,206,201,.14)'];
 
 // Canonical metric order — used by stats strip, curve stats, cards
 // filter: returns valid values from a stroke array
@@ -424,7 +428,7 @@ const METRIC_DEFS = [
   {k:'rate',   l:'Rate',        c:'var(--y)', filter:s=>s.rate>5&&s.rate<50,          val:s=>s.rate,        fmtAvg:v=>f1(v)+' spm',     fmtBest:null},
   {k:'slope',  l:'Catch Slope', c:'var(--r)', filter:s=>s.slope>0&&s.slope<300,       val:s=>s.slope,       fmtAvg:v=>f0(v),            fmtBest:null},
   {k:'dps',    l:'DPS',         c:'var(--p)', filter:s=>s.dps>1&&s.dps<25,            val:s=>s.dps,         fmtAvg:v=>f1(v)+'m',        fmtBest:null},
-  {k:'schar',  l:'Stroke Char', c:'var(--o)', filter:s=>!isNaN(s.schar)&&s.schar>=0,  val:s=>s.schar,       fmtAvg:v=>f0(v)+'%',        fmtBest:null},
+  {k:'schar',  l:'Stroke Char', c:'var(--o)', filter:s=>!isNaN(s.schar)&&s.schar>0&&s.schar<=100, val:s=>s.schar,       fmtAvg:v=>f0(v)+'%',        fmtBest:null},
   {k:'rloss',  l:'Run Loss',    c:'var(--b)', filter:s=>!isNaN(s.rloss)&&s.rloss>0&&s.rloss<100, val:s=>s.rloss, fmtAvg:v=>f2(v)+'m',  fmtBest:null},
   {k:'impulse',l:'Impulse',     c:'var(--i)', filter:s=>s.impulse>0&&s.impulse<10,    val:s=>s.impulse,     fmtAvg:v=>f2(v),            fmtBest:null},
   {k:'ratio',  l:'Ratio',       c:'var(--d)', filter:s=>!isNaN(s.ratio)&&s.ratio>0.5&&s.ratio<5, val:s=>s.ratio, fmtAvg:v=>f2(v),       fmtBest:null},
@@ -1159,7 +1163,7 @@ function updateSel(){
   if(!sel.length){bar.classList.remove('on');updateStatsStrip();return;}
   const hasCurves=sel.some(s=>s.curve&&s.curve.length===CURVE_POINTS);
   document.getElementById('selnote').textContent=`${sel.length} strokes${hasCurves?' · has curves':''}`;
-  document.getElementById('addcurvebtn').style.display=curveGroups.length<4?'inline-block':'none';
+  document.getElementById('addcurvebtn').style.display=curveGroups.length<8?'inline-block':'none';
   bar.classList.add('on');
   const absIdxs=[];for(let i=s2;i<=e2;i++)absIdxs.push(viewS+i);
   hlRows(absIdxs);
@@ -1167,39 +1171,32 @@ function updateSel(){
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// STATS STRIP — shows selection stats when active, else view stats
+// STATS STRIP — shows selection stats when active, else "No selection"
 // ══════════════════════════════════════════════════════════════════════════
 function updateStatsStrip(){
   const strip=document.getElementById('statsstrip');
   if(!ST.length){strip.style.display='none';return;}
   strip.style.display='block';
 
-  // Determine source strokes
   const hasSel=selS>=0&&selE>=0&&selS!==selE;
-  let strokes, label;
-  if(hasSel){
-    const vlen=viewE-viewS+1;
-    const s2=clamp(Math.min(selS,selE),0,vlen-1),e2=clamp(Math.max(selS,selE),0,vlen-1);
-    strokes=ST.slice(viewS+s2,viewS+e2+1);
-    label='Selection · '+strokes.length+' strokes';
-  } else {
-    strokes=ST.slice(viewS,viewE+1);
-    label='View · '+strokes.length+' strokes';
+  if(!hasSel){
+    document.getElementById('stripcontext').textContent='No selection';
+    document.getElementById('stripinner').innerHTML='';
+    return;
   }
 
-  document.getElementById('stripcontext').textContent=label;
+  const vlen=viewE-viewS+1;
+  const s2=clamp(Math.min(selS,selE),0,vlen-1),e2=clamp(Math.max(selS,selE),0,vlen-1);
+  const strokes=ST.slice(viewS+s2,viewS+e2+1);
+  document.getElementById('stripcontext').textContent='Selection · '+strokes.length+' strokes';
 
   function sp(l,v,c){return`<div class="sp-stat"><div class="l">${l}</div><div class="v" style="color:${c||'var(--text)'}">${v}</div></div>`;}
   let html='';
   for(const m of METRIC_DEFS){
     const arr=strokes.filter(m.filter).map(m.val);
     if(!arr.length)continue;
-    const avg=arrMean(arr);
-    html+=sp('Avg '+m.l,m.fmtAvg(avg),m.c);
-    if(m.showBest){
-      const best=m.bestIsMin?arrMin(arr):arrMax(arr);
-      html+=sp('Best '+m.l,m.fmtAvg(best),m.c);
-    }
+    html+=sp('Avg '+m.l,m.fmtAvg(arrMean(arr)),m.c);
+    if(m.showBest) html+=sp('Best '+m.l,m.fmtAvg(m.bestIsMin?arrMin(arr):arrMax(arr)),m.c);
   }
   document.getElementById('stripinner').innerHTML=html;
 }
@@ -1208,7 +1205,7 @@ function updateStatsStrip(){
 // CURVE COMPARISON — pin / remove / draw / stats
 // ══════════════════════════════════════════════════════════════════════════
 function pinSelection(){
-  if(curveGroups.length>=4||selS<0||selE<0)return;
+  if(curveGroups.length>=8||selS<0||selE<0)return;
   const vlen=viewE-viewS+1;
   const s2=clamp(Math.min(selS,selE),0,vlen-1);
   const e2=clamp(Math.max(selS,selE),0,vlen-1);
@@ -1274,7 +1271,7 @@ function drawCurvePanel(){
   const C=pal();
   const dpr=window.devicePixelRatio||1;
   const W=Math.floor(canvas.parentElement.clientWidth-22);
-  const H=200;
+  const H=300;
   canvas.width=W*dpr;canvas.height=H*dpr;
   canvas.style.width=W+'px';canvas.style.height=H+'px';
   const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);ctx.clearRect(0,0,W,H);
@@ -1394,6 +1391,7 @@ function setupOvEvents(canvas){
   let dragGroupIdx=-1;
   let dragAnchorAbsIdx=0;
   let dragOrigAbsS=0,dragOrigAbsE=0;
+  let dragStartClientX=0,dragMoved=false;
 
   function hitTest(cx){
     const g=ovCanvas._g;
@@ -1432,6 +1430,8 @@ function setupOvEvents(canvas){
     const hit=hitTest(cx);
     const absIdx=getOvIdx(cx);
     dragAnchorAbsIdx=absIdx;
+    dragStartClientX=cx;
+    dragMoved=false;
     if(hit.mode==='new-sel'){
       dragMode='new-sel';
       ovAbsSelS=ovAbsSelE=absIdx;
@@ -1452,6 +1452,7 @@ function setupOvEvents(canvas){
 
   function move(cx){
     if(!isDragOv)return;
+    if(Math.abs(cx-dragStartClientX)>5)dragMoved=true;
     const absIdx=getOvIdx(cx);
     const n=ST.length;
     if(dragMode==='new-sel'){
@@ -1493,8 +1494,9 @@ function setupOvEvents(canvas){
       updateSel();
     } else if(dragMode==='group-M'||dragMode==='group-L'||dragMode==='group-R'){
       const grp=curveGroups[dragGroupIdx];
-      if(grp.absS===dragOrigAbsS&&grp.absE===dragOrigAbsE){
-        // No movement → click = refocus this group as active selection
+      if(!dragMoved){
+        // Click (no real drag) → restore positions then refocus as active selection
+        grp.absS=dragOrigAbsS;grp.absE=dragOrigAbsE;
         viewS=0;viewE=ST.length-1;selS=grp.absS;selE=grp.absE;
         updateSel();
       } else {
@@ -1608,7 +1610,7 @@ function buildLaps(){
 // STROKE TABLE
 // ══════════════════════════════════════════════════════════════════════════
 function buildStrokeTable(){
-  document.getElementById('sth').innerHTML=`<tr><th>#</th><th>Dist m</th><th>Time</th><th>Pace /500</th><th>Rate</th><th>Catch slope</th><th>Consist σ</th><th>DPS m</th><th>Stroke Char%</th><th>Run Loss m</th><th>Impulse</th><th>Ratio</th></tr>`;
+  document.getElementById('sth').innerHTML=`<tr><th>#</th><th>Dist m</th><th>Time</th><th>Pace /500</th><th>Rate</th><th>Catch slope</th><th>Consist σ</th><th>DPS m</th><th>Stroke Char%</th><th>Run Loss m</th><th>Impulse</th><th>Ratio</th><th>Oar Arc°</th></tr>`;
   document.getElementById('stb').innerHTML=ST.slice(0,1000).map(s=>`<tr data-i="${s.n-1}">
     <td>${s.n}</td>
     <td>${isNaN(s.dist)?EM:s.dist.toFixed(0)}</td>
@@ -1618,10 +1620,11 @@ function buildStrokeTable(){
     <td style="color:var(--r)">${isNaN(s.slope)||s.slope<=0?EM:f1(s.slope)}</td>
     <td>${isNaN(s.consistency)||s.consistency<=0?EM:f1(s.consistency)}</td>
     <td style="color:var(--p)">${isNaN(s.dps)||s.dps<1?EM:f1(s.dps)}</td>
-    <td style="color:var(--o)">${isNaN(s.schar)?EM:f0(s.schar)+'%'}</td>
+    <td style="color:var(--o)">${isNaN(s.schar)||s.schar<=0?EM:f0(s.schar)+'%'}</td>
     <td style="color:var(--b)">${isNaN(s.rloss)||s.rloss<=0?EM:f2(s.rloss)+' m'}</td>
     <td style="color:var(--i)">${isNaN(s.impulse)||s.impulse<=0?EM:s.impulse.toFixed(2)}</td>
     <td style="color:var(--d)">${(s.ratio==null||isNaN(s.ratio)||s.ratio<0.5||s.ratio>5)?EM:s.ratio.toFixed(2)}</td>
+    <td style="color:#2de0d4">${(!isNaN(s.strokeAngle)&&s.strokeAngle>20&&s.strokeAngle<180)?f1(s.strokeAngle)+'°':EM}</td>
   </tr>`).join('');
   document.getElementById('tblcount').textContent=ST.length+' strokes';
 }
@@ -1641,7 +1644,7 @@ function applyGroupHighlights(){
     }
   }
   document.querySelectorAll('#stb tr').forEach(r=>{
-    r.classList.remove('hl-g0','hl-g1','hl-g2','hl-g3');
+    r.classList.remove('hl-g0','hl-g1','hl-g2','hl-g3','hl-g4','hl-g5','hl-g6','hl-g7');
     const firstTd=r.querySelector('td');
     if(!firstTd)return;
     const groups=groupMap.get(+r.dataset.i)||[];

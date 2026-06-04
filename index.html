@@ -1146,12 +1146,12 @@ function setupMainEvents(canvas){
   });
   canvas.addEventListener('touchstart',e=>{isDragMain=true;selS=selE=getMainIdx(e.touches[0].clientX-canvas.getBoundingClientRect().left);schedRender();},{passive:true});
   canvas.addEventListener('touchmove',e=>{if(isDragMain){selE=getMainIdx(e.touches[0].clientX-canvas.getBoundingClientRect().left);schedRender();}},{passive:true});
-  canvas.addEventListener('touchend',()=>{isDragMain=false;updateSel();});
+  canvas.addEventListener('touchend',()=>{isDragMain=false;updateSel(false);});
   canvas.addEventListener('dblclick',()=>resetZoom());
   canvas.addEventListener('mouseleave',hideTooltip);
   canvas.addEventListener('wheel',e=>{e.preventDefault();scrollZoom(canvas,e.deltaY,e.clientX);},{passive:false});
 }
-document.addEventListener('mouseup',()=>{if(isDragMain){isDragMain=false;updateSel();}});
+document.addEventListener('mouseup',()=>{if(isDragMain){isDragMain=false;updateSel(false);}});
 
 // ── Selection → action bar ─────────────────────────────────────────────────
 function updateSel(doScroll=true){

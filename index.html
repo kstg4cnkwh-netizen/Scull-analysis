@@ -52,12 +52,11 @@
   #app { display: none; padding-bottom: 40px; }
 
   /* ── Cards ── */
-  #cards { display: flex; align-items: flex-start; text-align: center; gap: 8px; padding: 12px 14px; flex-wrap: wrap; }
-  #cards::-webkit-scrollbar { display: none; }
-  .card { flex-shrink: 0; min-width: 86px; background: var(--s1); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
-  .card .lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; }
-  .card .val { font-size: 16px; font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; margin-top: 2px; }
-  .card .sub { font-size: 9px; color: var(--muted); margin-top: 1px; }
+  #cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px; padding: 10px 14px; }
+  .card { background: var(--s1); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; text-align: center; }
+  .card .lbl { font-size: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .val { font-size: 15px; font-family: 'IBM Plex Sans', sans-serif; font-weight: 700; margin-top: 2px; }
+  .card .sub { font-size: 8px; color: var(--muted); margin-top: 1px; }
   .cg{border-top:2px solid var(--g)}.cg .val{color:var(--g)}
   .cb{border-top:2px solid var(--b)}.cb .val{color:var(--b)}
   .cy{border-top:2px solid var(--y)}.cy .val{color:var(--y)}
@@ -100,9 +99,10 @@
   .zlegend { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
   .zl { font-size: 9px; color: var(--muted); }
 
-  /* ── Stats strip (zoom window) ── */
-  #statsstrip { display: none; margin: 4px 14px 8px; padding: 8px 12px; background: var(--s1); border: 1px solid var(--border); border-radius: 8px; }
-  #stripinner { display: flex; flex-wrap: wrap; gap: 14px; }
+  /* ── Stats strip ── */
+  #statsstrip { display: none; margin: 4px 14px 8px; padding: 7px 12px; background: var(--s1); border: 1px solid var(--border); border-radius: 8px; }
+  #stripcontext { font-size: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 5px; }
+  #stripinner { display: flex; flex-wrap: wrap; gap: 12px 18px; }
   .sp-stat { display: flex; flex-direction: column; gap: 1px; }
   .sp-stat .l { font-size: 8px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
   .sp-stat .v { font-size: 12px; font-weight: 500; }
@@ -133,21 +133,17 @@
   tbody tr.hl-g1 td { background: rgba(192,132,252,.09) !important; }
   tbody tr.hl-g2 td { background: rgba(58,255,180,.09) !important; }
   tbody tr.hl-g3 td { background: rgba(245,64,64,.09) !important; }
-  tbody tr.hl-g0 td:first-child { border-left: 3px solid #ffc947; }
-  tbody tr.hl-g1 td:first-child { border-left: 3px solid #c084fc; }
-  tbody tr.hl-g2 td:first-child { border-left: 3px solid #3affb4; }
-  tbody tr.hl-g3 td:first-child { border-left: 3px solid #f54040; }
 
   /* ── Map-left + Stroke-right row ── */
   #map-stroke-row { display: none; flex-wrap: wrap; gap: 10px; padding: 0 14px 10px; }
   #map-stroke-row.on { display: flex; }
-  .map-col { flex: 0 0 330px; min-width: 260px; }
+  .map-col { flex: 0 0 25%; min-width: 240px; }
   .map-col .sec-hd { margin-bottom: 4px; }
   .stroke-col { flex: 1; min-width: 280px; overflow: hidden; }
   .stroke-col .twrap { max-height: 480px; }
 
   /* ── Map — always dark regardless of theme ── */
-  #mapbox { height: 280px; border-radius: 8px; overflow: hidden; background: #0b0e13; }
+  #mapbox { height: 320px; border-radius: 8px; overflow: hidden; background: #0b0e13; }
   .lap-marker { background: #3affb4; color: #000; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; border: 2px solid #000; box-shadow: 0 1px 4px rgba(0,0,0,.7); }
   /* Hard-coded dark colours — intentionally NOT using CSS vars */
   .leaflet-popup-content-wrapper { background: #181d2a !important; color: #d8e0f0 !important; border: 1px solid #242c40 !important; border-radius: 6px !important; font-family: 'IBM Plex Mono', monospace !important; font-size: 11px !important; box-shadow: 0 4px 16px rgba(0,0,0,.6) !important; }
@@ -247,8 +243,8 @@
     <div class="hint" style="margin-top:3px;">Drag to select strokes · drag group bands to move/resize</div>
   </div>
 
-  <!-- Stats strip: zoom window averages, always visible -->
-  <div id="statsstrip"><div id="stripinner"></div></div>
+  <!-- Stats strip: selection or view averages -->
+  <div id="statsstrip"><div id="stripcontext"></div><div id="stripinner"></div></div>
 
   <!-- Curve comparison -->
   <div class="sec" id="curvesec">
@@ -419,6 +415,21 @@ function niceSteps(min,max,n){const r=max-min||1,raw=r/n,mag=Math.pow(10,Math.fl
 const CURVE_POINTS = 80;
 const GROUP_COLORS = ['#ffc947','#c084fc','#3affb4','#f54040'];
 const GROUP_BG     = ['rgba(255,201,71,.14)','rgba(192,132,252,.14)','rgba(58,255,180,.14)','rgba(245,64,64,.14)'];
+
+// Canonical metric order — used by stats strip, curve stats, cards
+// filter: returns valid values from a stroke array
+// fmt: formats a single averaged/min value
+const METRIC_DEFS = [
+  {k:'pace',   l:'Pace',        c:'var(--g)', filter:s=>s.pace>50&&s.pace<500,        val:s=>s.pace,        fmtAvg:v=>fmtPace(v),       fmtBest:v=>fmtPace(v), showBest:true,  bestIsMin:true},
+  {k:'rate',   l:'Rate',        c:'var(--y)', filter:s=>s.rate>5&&s.rate<50,          val:s=>s.rate,        fmtAvg:v=>f1(v)+' spm',     fmtBest:null},
+  {k:'slope',  l:'Catch Slope', c:'var(--r)', filter:s=>s.slope>0&&s.slope<300,       val:s=>s.slope,       fmtAvg:v=>f0(v),            fmtBest:null},
+  {k:'dps',    l:'DPS',         c:'var(--p)', filter:s=>s.dps>1&&s.dps<25,            val:s=>s.dps,         fmtAvg:v=>f1(v)+'m',        fmtBest:null},
+  {k:'schar',  l:'Stroke Char', c:'var(--o)', filter:s=>!isNaN(s.schar)&&s.schar>=0,  val:s=>s.schar,       fmtAvg:v=>f0(v)+'%',        fmtBest:null},
+  {k:'rloss',  l:'Run Loss',    c:'var(--b)', filter:s=>!isNaN(s.rloss)&&s.rloss>0&&s.rloss<100, val:s=>s.rloss, fmtAvg:v=>f2(v)+'m',  fmtBest:null},
+  {k:'impulse',l:'Impulse',     c:'var(--i)', filter:s=>s.impulse>0&&s.impulse<10,    val:s=>s.impulse,     fmtAvg:v=>f2(v),            fmtBest:null},
+  {k:'ratio',  l:'Ratio',       c:'var(--d)', filter:s=>!isNaN(s.ratio)&&s.ratio>0.5&&s.ratio<5, val:s=>s.ratio, fmtAvg:v=>f2(v),       fmtBest:null},
+  {k:'angle',  l:'Oar Arc',     c:'#2de0d4',  filter:s=>!isNaN(s.strokeAngle)&&s.strokeAngle>20&&s.strokeAngle<180, val:s=>s.strokeAngle, fmtAvg:v=>f1(v)+'°', fmtBest:null},
+];
 
 let ST=[],HR=[],LAPS=[],GPSTRACE=[];
 let curveGroups = []; // [{color,bg,strokes,absS,absE,label}]
@@ -697,23 +708,27 @@ function sessionStats() {
   return {pv,rv,jv,dv,iv,hv,ratv,av};
 }
 function buildCards(sum) {
-  const {pv,rv,jv,dv,iv,hv,ratv,av}=sessionStats();
   const km=((+sum.distance_m||0)/1000).toFixed(2);
   const dur=fmtTime(+sum.duration_s);
   const movPace=+sum.avg_moving_pace_s_per_500m||0;
-  let html=`
-    <div class="card cw"><div class="lbl">Distance</div><div class="val">${km}</div><div class="sub">km</div></div>
-    <div class="card cw"><div class="lbl">Duration</div><div class="val">${dur}</div><div class="sub">${ST.length} strokes</div></div>
-    <div class="card cg"><div class="lbl">Avg Pace</div><div class="val">${fmtPace(arrMean(pv))}</div><div class="sub">/500m</div></div>
-    ${movPace>0?`<div class="card cg"><div class="lbl">Moving Pace</div><div class="val">${fmtPace(movPace)}</div><div class="sub">moving</div></div>`:''}
-    <div class="card cy"><div class="lbl">Avg Rate</div><div class="val">${f1(arrMean(rv))}</div><div class="sub">spm · max ${f0(arrMax(rv))}</div></div>
-    <div class="card cr"><div class="lbl">Avg Slope</div><div class="val">${f0(arrMean(jv))}</div><div class="sub">peak ${f1(arrMax(jv))}</div></div>
-    <div class="card cp"><div class="lbl">Avg DPS</div><div class="val">${f1(arrMean(dv))}</div><div class="sub">m/stroke</div></div>
-    <div class="card cd"><div class="lbl">Stroke Ratio</div><div class="val">${f2(arrMean(ratv))}</div><div class="sub">rec÷drive</div></div>
-    ${iv.length?`<div class="card ci"><div class="lbl">Avg Impulse</div><div class="val">${f2(arrMean(iv))}</div><div class="sub">peak ${f2(arrMax(iv))}</div></div>`:''}
-    ${av.length?`<div class="card" style="border-top:2px solid #2de0d4"><div class="lbl">Oar Arc</div><div class="val" style="color:#2de0d4">${f1(arrMean(av))}°</div><div class="sub">drive phase</div></div>`:''}
-  `;
-  if (hv.length) html+=`<div class="card cb"><div class="lbl">Avg HR</div><div class="val">${f0(arrMean(hv))}</div><div class="sub">max ${f0(arrMax(hv))} bpm</div></div>`;
+  // Session-level per-metric averages
+  const vals={};
+  for(const m of METRIC_DEFS){const arr=ST.filter(m.filter).map(m.val);vals[m.k]=arr.length?{mean:arrMean(arr),min:arrMin(arr),max:arrMax(arr),n:arr.length}:null;}
+  const hv=HR.filter(h=>h.bpm>40&&h.bpm<220).map(h=>h.bpm);
+  const card=(cls,lbl,val,sub)=>`<div class="card ${cls}"><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;
+  let html=
+    card('cw','Distance',km,'km')+
+    card('cw','Duration',dur,ST.length+' strokes')+
+    (vals.pace?card('cg','Avg Pace',fmtPace(vals.pace.mean),movPace>0?'mov '+fmtPace(movPace):'/500m'):'')  +
+    (vals.rate?card('cy','Rate',f1(vals.rate.mean),'spm · max '+f0(vals.rate.max)):'')  +
+    (vals.slope?card('cr','Catch Slope',f0(vals.slope.mean),'peak '+f1(vals.slope.max)):'')  +
+    (vals.dps?card('cp','DPS',f1(vals.dps.mean),'m/stroke'):'')  +
+    (vals.schar?card('co','Stroke Char',f0(vals.schar.mean)+'%',''):'')  +
+    (vals.rloss?card('cb','Run Loss',f2(vals.rloss.mean)+'m','avg/stroke'):'')  +
+    (vals.impulse?card('ci','Impulse',f2(vals.impulse.mean),'peak '+f2(vals.impulse.max)):'')  +
+    (vals.ratio?card('cd','Ratio',f2(vals.ratio.mean),'rec÷drive'):'')  +
+    (vals.angle?`<div class="card" style="border-top:2px solid #2de0d4"><div class="lbl">Oar Arc</div><div class="val" style="color:#2de0d4">${f1(vals.angle.mean)}°</div><div class="sub">drive phase</div></div>`:'')  +
+    (hv.length?card('cb','Avg HR',f0(arrMean(hv)),'max '+f0(arrMax(hv))+' bpm'):'');
   document.getElementById('cards').innerHTML=html;
 }
 
@@ -1137,47 +1152,56 @@ document.addEventListener('mouseup',()=>{if(isDragMain){isDragMain=false;updateS
 // ── Selection → action bar ─────────────────────────────────────────────────
 function updateSel(){
   const bar=document.getElementById('selbar');
-  if(selS<0||selE<0||selS===selE){bar.classList.remove('on');hlRows([]);return;}
+  if(selS<0||selE<0||selS===selE){bar.classList.remove('on');hlRows([]);updateStatsStrip();return;}
   const vlen=viewE-viewS+1;
   const s2=clamp(Math.min(selS,selE),0,vlen-1),e2=clamp(Math.max(selS,selE),0,vlen-1);
   const sel=ST.slice(viewS+s2,viewS+e2+1);
-  if(!sel.length){bar.classList.remove('on');return;}
+  if(!sel.length){bar.classList.remove('on');updateStatsStrip();return;}
   const hasCurves=sel.some(s=>s.curve&&s.curve.length===CURVE_POINTS);
   document.getElementById('selnote').textContent=`${sel.length} strokes${hasCurves?' · has curves':''}`;
   document.getElementById('addcurvebtn').style.display=curveGroups.length<4?'inline-block':'none';
   bar.classList.add('on');
   const absIdxs=[];for(let i=s2;i<=e2;i++)absIdxs.push(viewS+i);
   hlRows(absIdxs);
+  updateStatsStrip();
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// STATS STRIP — always shows zoom window averages
+// STATS STRIP — shows selection stats when active, else view stats
 // ══════════════════════════════════════════════════════════════════════════
 function updateStatsStrip(){
   const strip=document.getElementById('statsstrip');
   if(!ST.length){strip.style.display='none';return;}
   strip.style.display='block';
-  const view=ST.slice(viewS,viewE+1);
-  const pv=[],rv=[],jv=[],dv=[],iv=[],ratv=[],av=[];
-  for(const s of view){
-    if(s.pace>50&&s.pace<500)pv.push(s.pace);
-    if(s.rate>5&&s.rate<50)rv.push(s.rate);
-    if(s.slope>0&&s.slope<300)jv.push(s.slope);
-    if(s.dps>1&&s.dps<25)dv.push(s.dps);
-    if(s.impulse>0&&s.impulse<10)iv.push(s.impulse);
-    if(!isNaN(s.ratio)&&s.ratio>0.5&&s.ratio<5)ratv.push(s.ratio);
-    if(!isNaN(s.strokeAngle)&&s.strokeAngle>20&&s.strokeAngle<180)av.push(s.strokeAngle);
+
+  // Determine source strokes
+  const hasSel=selS>=0&&selE>=0&&selS!==selE;
+  let strokes, label;
+  if(hasSel){
+    const vlen=viewE-viewS+1;
+    const s2=clamp(Math.min(selS,selE),0,vlen-1),e2=clamp(Math.max(selS,selE),0,vlen-1);
+    strokes=ST.slice(viewS+s2,viewS+e2+1);
+    label='Selection · '+strokes.length+' strokes';
+  } else {
+    strokes=ST.slice(viewS,viewE+1);
+    label='View · '+strokes.length+' strokes';
   }
+
+  document.getElementById('stripcontext').textContent=label;
+
   function sp(l,v,c){return`<div class="sp-stat"><div class="l">${l}</div><div class="v" style="color:${c||'var(--text)'}">${v}</div></div>`;}
-  document.getElementById('stripinner').innerHTML=
-    sp('Strokes',view.length)+
-    (pv.length?sp('Avg pace',fmtPace(arrMean(pv)),'var(--g)')+''+sp('Best pace',fmtPace(arrMin(pv)),'var(--g)'):'')  +
-    (rv.length?sp('Avg rate',f1(arrMean(rv))+' spm','var(--y)'):'')  +
-    (jv.length?sp('Avg slope',f0(arrMean(jv)),'var(--r)'):'')  +
-    (dv.length?sp('Avg DPS',f1(arrMean(dv))+'m','var(--p)'):'')  +
-    (iv.length?sp('Avg impulse',f2(arrMean(iv)),'var(--i)'):'')  +
-    (ratv.length?sp('Avg ratio',f2(arrMean(ratv)),'var(--d)'):'')  +
-    (av.length?sp('Oar arc',f1(arrMean(av))+'°','#2de0d4'):'');
+  let html='';
+  for(const m of METRIC_DEFS){
+    const arr=strokes.filter(m.filter).map(m.val);
+    if(!arr.length)continue;
+    const avg=arrMean(arr);
+    html+=sp('Avg '+m.l,m.fmtAvg(avg),m.c);
+    if(m.showBest){
+      const best=m.bestIsMin?arrMin(arr):arrMax(arr);
+      html+=sp('Best '+m.l,m.fmtAvg(best),m.c);
+    }
+  }
+  document.getElementById('stripinner').innerHTML=html;
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1198,6 +1222,7 @@ function pinSelection(){
   selS=-1;selE=-1;
   document.getElementById('selbar').classList.remove('on');
   buildCurveSection();
+  updateStatsStrip();
   schedRender();
 }
 
@@ -1330,43 +1355,65 @@ function drawCurvePanel(){
 }
 
 function buildCurveStats(){
+  // Build rows from canonical METRIC_DEFS order
   const rows=[
     {l:'Strokes',fn:g=>String(g.strokes.length)},
     {l:'w/ curves',fn:g=>String(g.strokes.filter(s=>s.curve&&s.curve.length).length)},
-    {l:'Avg rate',fn:g=>{const v=g.strokes.filter(s=>s.rate>5&&s.rate<50).map(s=>s.rate);return v.length?f1(arrMean(v))+' spm':EM;},c:true},
-    {l:'Avg pace',fn:g=>{const v=g.strokes.filter(s=>s.pace>50&&s.pace<500).map(s=>s.pace);return v.length?fmtPace(arrMean(v)):EM;},c:true},
-    {l:'Avg slope',fn:g=>{const v=g.strokes.filter(s=>s.slope>0&&s.slope<300).map(s=>s.slope);return v.length?f0(arrMean(v)):EM;},c:true},
-    {l:'Avg DPS',fn:g=>{const v=g.strokes.filter(s=>s.dps>1&&s.dps<25).map(s=>s.dps);return v.length?f1(arrMean(v))+'m':EM;},c:true},
-    {l:'Avg impulse',fn:g=>{const v=g.strokes.filter(s=>s.impulse>0&&s.impulse<10).map(s=>s.impulse);return v.length?f2(arrMean(v)):EM;},c:true},
-    {l:'Avg ratio',fn:g=>{const v=g.strokes.filter(s=>!isNaN(s.ratio)&&s.ratio>0.5&&s.ratio<5).map(s=>s.ratio);return v.length?f2(arrMean(v)):EM;},c:true},
-    {l:'Oar arc',fn:g=>{const v=g.strokes.filter(s=>!isNaN(s.strokeAngle)&&s.strokeAngle>20&&s.strokeAngle<180).map(s=>s.strokeAngle);return v.length?f1(arrMean(v))+'°':EM;},c:true},
   ];
+  for(const m of METRIC_DEFS){
+    rows.push({l:'Avg '+m.l, c:m.c, fn:g=>{
+      const arr=g.strokes.filter(m.filter).map(m.val);
+      return arr.length?m.fmtAvg(arrMean(arr)):EM;
+    }});
+    if(m.showBest) rows.push({l:'Best '+m.l, c:m.c, fn:g=>{
+      const arr=g.strokes.filter(m.filter).map(m.val);
+      return arr.length?m.fmtAvg(m.bestIsMin?arrMin(arr):arrMax(arr)):EM;
+    }});
+  }
   const thead=document.getElementById('curvethead');
   const tbody=document.getElementById('curvebody');
-  thead.innerHTML=`<tr><th>Metric</th>${curveGroups.map(g=>`<th><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${g.color};margin-right:4px;"></span>${g.label}</th>`).join('')}</tr>`;
-  tbody.innerHTML=rows.map(row=>`<tr><td>${row.l}</td>${curveGroups.map(g=>`<td>${row.fn(g)}</td>`).join('')}</tr>`).join('');
+  thead.innerHTML=`<tr><th>Metric</th>${curveGroups.map(g=>`<th><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${g.color};margin-right:4px;vertical-align:middle;"></span>${g.label}</th>`).join('')}</tr>`;
+  tbody.innerHTML=rows.map(row=>`<tr><td style="${row.c?'color:'+row.c:''}">${row.l}</td>${curveGroups.map(g=>`<td>${row.fn(g)}</td>`).join('')}</tr>`).join('');
 }
 
+// ── helpers for pending selection absolute positions ──────────────────────
+function getSelAbsS(){return selS<0||selE<0?-1:viewS+Math.min(selS,selE);}
+function getSelAbsE(){return selS<0||selE<0?-1:viewS+Math.max(selS,selE);}
+
 // ══════════════════════════════════════════════════════════════════════════
-// OVERVIEW INTERACTION — drag empty=select, drag band=move, drag edge=resize
+// OVERVIEW INTERACTION
+// Empty drag = new selection · sel band drag/edge = adjust pending selection
+// Group drag/edge = move/resize pinned group · group click = refocus as selection
 // ══════════════════════════════════════════════════════════════════════════
 let ovCanvas=null;
 function setupOvEvents(canvas){
   if(ovCanvas===canvas)return;
   ovCanvas=canvas;
 
-  let dragMode=null; // 'sel' | 'group-M' | 'group-L' | 'group-R'
+  let dragMode=null; // 'new-sel'|'sel-M'|'sel-L'|'sel-R'|'group-M'|'group-L'|'group-R'
   let dragGroupIdx=-1;
   let dragAnchorAbsIdx=0;
   let dragOrigAbsS=0,dragOrigAbsE=0;
 
   function hitTest(cx){
     const g=ovCanvas._g;
-    if(!g)return{mode:'sel'};
+    if(!g)return{mode:'new-sel'};
     const rect=ovCanvas.getBoundingClientRect();
     const px=cx-rect.left;
     const{P,pw,xs,xMin,xRng}=g;
     const EDGE=10;
+    // Pending selection band has highest priority
+    const sas=getSelAbsS(),sae=getSelAbsE();
+    if(sas>=0&&sae>=0&&sas!==sae){
+      const sx1=P+(xs[sas]-xMin)/xRng*pw;
+      const sx2=P+(xs[sae]-xMin)/xRng*pw;
+      if(px>=sx1-EDGE&&px<=sx2+EDGE){
+        if(Math.abs(px-sx1)<=EDGE)return{mode:'sel-L'};
+        if(Math.abs(px-sx2)<=EDGE)return{mode:'sel-R'};
+        if(px>sx1&&px<sx2)return{mode:'sel-M'};
+      }
+    }
+    // Then pinned groups
     for(let i=curveGroups.length-1;i>=0;i--){
       const grp=curveGroups[i];
       const px1=P+(xs[grp.absS]-xMin)/xRng*pw;
@@ -1377,20 +1424,26 @@ function setupOvEvents(canvas){
         return{mode:'group-M',idx:i};
       }
     }
-    return{mode:'sel'};
+    return{mode:'new-sel'};
   }
 
   function start(cx){
     isDragOv=true;
     const hit=hitTest(cx);
     const absIdx=getOvIdx(cx);
-    if(hit.mode==='sel'){
-      dragMode='sel';
+    dragAnchorAbsIdx=absIdx;
+    if(hit.mode==='new-sel'){
+      dragMode='new-sel';
       ovAbsSelS=ovAbsSelE=absIdx;
+    } else if(hit.mode==='sel-L'||hit.mode==='sel-R'||hit.mode==='sel-M'){
+      const as=getSelAbsS(),ae=getSelAbsE();
+      viewS=0;viewE=ST.length-1;
+      selS=as;selE=ae;
+      dragOrigAbsS=as;dragOrigAbsE=ae;
+      dragMode=hit.mode;
     } else {
       dragMode=hit.mode;
       dragGroupIdx=hit.idx;
-      dragAnchorAbsIdx=absIdx;
       dragOrigAbsS=curveGroups[hit.idx].absS;
       dragOrigAbsE=curveGroups[hit.idx].absE;
     }
@@ -1401,8 +1454,20 @@ function setupOvEvents(canvas){
     if(!isDragOv)return;
     const absIdx=getOvIdx(cx);
     const n=ST.length;
-    if(dragMode==='sel'){
+    if(dragMode==='new-sel'){
       ovAbsSelE=absIdx;
+    } else if(dragMode==='sel-M'){
+      const span=dragOrigAbsE-dragOrigAbsS;
+      const d=absIdx-dragAnchorAbsIdx;
+      selS=clamp(dragOrigAbsS+d,0,n-1-span);
+      selE=selS+span;
+      updateSel();
+    } else if(dragMode==='sel-L'){
+      selS=clamp(absIdx,0,selE-2);
+      updateSel();
+    } else if(dragMode==='sel-R'){
+      selE=clamp(absIdx,selS+2,n-1);
+      updateSel();
     } else if(dragMode==='group-M'){
       const grp=curveGroups[dragGroupIdx];
       const span=dragOrigAbsE-dragOrigAbsS;
@@ -1410,11 +1475,9 @@ function setupOvEvents(canvas){
       grp.absS=clamp(dragOrigAbsS+d,0,n-1-span);
       grp.absE=grp.absS+span;
     } else if(dragMode==='group-L'){
-      const grp=curveGroups[dragGroupIdx];
-      grp.absS=clamp(absIdx,0,grp.absE-2);
+      curveGroups[dragGroupIdx].absS=clamp(absIdx,0,curveGroups[dragGroupIdx].absE-2);
     } else if(dragMode==='group-R'){
-      const grp=curveGroups[dragGroupIdx];
-      grp.absE=clamp(absIdx,grp.absS+2,n-1);
+      curveGroups[dragGroupIdx].absE=clamp(absIdx,curveGroups[dragGroupIdx].absS+2,n-1);
     }
     schedRender();
   }
@@ -1422,33 +1485,35 @@ function setupOvEvents(canvas){
   function end(){
     if(!isDragOv)return;
     isDragOv=false;
-    if(dragMode==='sel'){
+    if(dragMode==='new-sel'){
       const s=Math.min(ovAbsSelS,ovAbsSelE),e=Math.max(ovAbsSelS,ovAbsSelE);
       ovAbsSelS=-1;ovAbsSelE=-1;
-      if(s!==e){
-        viewS=0;viewE=ST.length-1;
-        selS=s;selE=e;
-        updateSel();
-      }
-    } else if(dragMode&&dragMode!=='sel'){
+      if(s!==e){viewS=0;viewE=ST.length-1;selS=s;selE=e;updateSel();}
+    } else if(dragMode==='sel-L'||dragMode==='sel-R'||dragMode==='sel-M'){
+      updateSel();
+    } else if(dragMode==='group-M'||dragMode==='group-L'||dragMode==='group-R'){
       const grp=curveGroups[dragGroupIdx];
-      grp.strokes=ST.slice(grp.absS,grp.absE+1);
-      buildCurveSection();
-      applyGroupHighlights();
+      if(grp.absS===dragOrigAbsS&&grp.absE===dragOrigAbsE){
+        // No movement → click = refocus this group as active selection
+        viewS=0;viewE=ST.length-1;selS=grp.absS;selE=grp.absE;
+        updateSel();
+      } else {
+        grp.strokes=ST.slice(grp.absS,grp.absE+1);
+        buildCurveSection();
+        applyGroupHighlights();
+      }
     }
     dragMode=null;
     schedRender();
   }
 
-  // Cursor feedback
   canvas.addEventListener('mousemove',e=>{
     if(isDragOv)return;
     const hit=hitTest(e.clientX);
-    if(hit.mode==='group-L'||hit.mode==='group-R')canvas.style.cursor='ew-resize';
-    else if(hit.mode==='group-M')canvas.style.cursor='grab';
+    if(hit.mode==='sel-L'||hit.mode==='group-L'||hit.mode==='sel-R'||hit.mode==='group-R')canvas.style.cursor='ew-resize';
+    else if(hit.mode==='sel-M'||hit.mode==='group-M')canvas.style.cursor='grab';
     else canvas.style.cursor='crosshair';
   });
-
   canvas.addEventListener('mousedown',e=>start(e.clientX));
   canvas.addEventListener('touchstart',e=>start(e.touches[0].clientX),{passive:true});
   canvas.addEventListener('touchmove',e=>{if(isDragOv)move(e.touches[0].clientX);},{passive:true});
@@ -1566,15 +1631,26 @@ function hlRows(idxs){
   if(idxs.length){const f=document.querySelector(`#stb tr[data-i="${idxs[0]}"]`);if(f)f.scrollIntoView({block:'nearest',behavior:'smooth'});}
 }
 function applyGroupHighlights(){
+  // Build map: absStrokeIdx → [groupIdx, ...]
   const groupMap=new Map();
   for(let gi=0;gi<curveGroups.length;gi++){
     const g=curveGroups[gi];
-    for(let i=g.absS;i<=g.absE;i++)groupMap.set(i,gi);
+    for(let i=g.absS;i<=g.absE;i++){
+      if(!groupMap.has(i))groupMap.set(i,[]);
+      groupMap.get(i).push(gi);
+    }
   }
   document.querySelectorAll('#stb tr').forEach(r=>{
     r.classList.remove('hl-g0','hl-g1','hl-g2','hl-g3');
-    const gi=groupMap.get(+r.dataset.i);
-    if(gi!=null)r.classList.add('hl-g'+gi);
+    const firstTd=r.querySelector('td');
+    if(!firstTd)return;
+    const groups=groupMap.get(+r.dataset.i)||[];
+    if(!groups.length){firstTd.style.boxShadow='';return;}
+    // Background from first/dominant group
+    r.classList.add('hl-g'+groups[0]);
+    // Stack inset box-shadows left to right for each group colour (4px each)
+    const W=4;
+    firstTd.style.boxShadow=groups.map((gi,n)=>`inset ${(n+1)*W}px 0 0 ${GROUP_COLORS[gi]}`).join(',');
   });
 }
 window.toggleTable=function(){

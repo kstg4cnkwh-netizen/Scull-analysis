@@ -1154,9 +1154,9 @@ function setupMainEvents(canvas){
 document.addEventListener('mouseup',()=>{if(isDragMain){isDragMain=false;updateSel();}});
 
 // ── Selection → action bar ─────────────────────────────────────────────────
-function updateSel(){
+function updateSel(doScroll=true){
   const bar=document.getElementById('selbar');
-  if(selS<0||selE<0||selS===selE){bar.classList.remove('on');hlRows([]);updateStatsStrip();return;}
+  if(selS<0||selE<0||selS===selE){bar.classList.remove('on');hlRows([],false);updateStatsStrip();return;}
   const vlen=viewE-viewS+1;
   const s2=clamp(Math.min(selS,selE),0,vlen-1),e2=clamp(Math.max(selS,selE),0,vlen-1);
   const sel=ST.slice(viewS+s2,viewS+e2+1);
@@ -1166,7 +1166,7 @@ function updateSel(){
   document.getElementById('addcurvebtn').style.display=curveGroups.length<8?'inline-block':'none';
   bar.classList.add('on');
   const absIdxs=[];for(let i=s2;i<=e2;i++)absIdxs.push(viewS+i);
-  hlRows(absIdxs);
+  hlRows(absIdxs, doScroll);
   updateStatsStrip();
 }
 
@@ -1392,6 +1392,34 @@ function setupOvEvents(canvas){
   let dragAnchorAbsIdx=0;
   let dragOrigAbsS=0,dragOrigAbsE=0;
   let dragStartClientX=0,dragMoved=false;
+  // Layer cycling: track last click position and cycle index so repeated clicks
+  // at the same position cycle through overlapping pinned group bands
+  let cyclePx=-1,cycleIdx=0;
+
+  function groupsAt(px,g){
+    // Returns array of group indices whose bands cover pixel px
+    const{P,pw,xs,xMin,xRng}=g;
+    const EDGE=16;
+    const hits=[];
+    for(let i=0;i<curveGroups.length;i++){
+      const grp=curveGroups[i];
+      const px1=P+(xs[grp.absS]-xMin)/xRng*pw;
+      const px2=P+(xs[grp.absE]-xMin)/xRng*pw;
+      if(px>=px1-EDGE&&px<=px2+EDGE)hits.push(i);
+    }
+    return hits;
+  }
+
+  function groupHitMode(grpIdx,px,g){
+    const{P,pw,xs,xMin,xRng}=g;
+    const EDGE=16;
+    const grp=curveGroups[grpIdx];
+    const px1=P+(xs[grp.absS]-xMin)/xRng*pw;
+    const px2=P+(xs[grp.absE]-xMin)/xRng*pw;
+    if(Math.abs(px-px1)<=EDGE)return{mode:'group-L',idx:grpIdx};
+    if(Math.abs(px-px2)<=EDGE)return{mode:'group-R',idx:grpIdx};
+    return{mode:'group-M',idx:grpIdx};
+  }
 
   function hitTest(cx){
     const g=ovCanvas._g;
@@ -1399,8 +1427,9 @@ function setupOvEvents(canvas){
     const rect=ovCanvas.getBoundingClientRect();
     const px=cx-rect.left;
     const{P,pw,xs,xMin,xRng}=g;
-    const EDGE=10;
-    // Pending selection band has highest priority
+    const EDGE=16;
+
+    // Pending selection has highest priority
     const sas=getSelAbsS(),sae=getSelAbsE();
     if(sas>=0&&sae>=0&&sas!==sae){
       const sx1=P+(xs[sas]-xMin)/xRng*pw;
@@ -1411,18 +1440,15 @@ function setupOvEvents(canvas){
         if(px>sx1&&px<sx2)return{mode:'sel-M'};
       }
     }
-    // Then pinned groups
-    for(let i=curveGroups.length-1;i>=0;i--){
-      const grp=curveGroups[i];
-      const px1=P+(xs[grp.absS]-xMin)/xRng*pw;
-      const px2=P+(xs[grp.absE]-xMin)/xRng*pw;
-      if(px>=px1-EDGE&&px<=px2+EDGE){
-        if(px<=px1+EDGE)return{mode:'group-L',idx:i};
-        if(px>=px2-EDGE)return{mode:'group-R',idx:i};
-        return{mode:'group-M',idx:i};
-      }
-    }
-    return{mode:'new-sel'};
+
+    // Pinned groups — collect all overlapping, use cycle to pick one
+    const hits=groupsAt(px,g);
+    if(!hits.length)return{mode:'new-sel'};
+    // If px is near last click position, advance in cycle; otherwise reset
+    const nearLast=Math.abs(px-cyclePx)<15;
+    if(!nearLast)cycleIdx=0;
+    const chosen=hits[cycleIdx%hits.length];
+    return groupHitMode(chosen,px,g);
   }
 
   function start(cx){
@@ -1462,13 +1488,13 @@ function setupOvEvents(canvas){
       const d=absIdx-dragAnchorAbsIdx;
       selS=clamp(dragOrigAbsS+d,0,n-1-span);
       selE=selS+span;
-      updateSel();
+      updateSel(false); // no scroll during live drag
     } else if(dragMode==='sel-L'){
       selS=clamp(absIdx,0,selE-2);
-      updateSel();
+      updateSel(false);
     } else if(dragMode==='sel-R'){
       selE=clamp(absIdx,selS+2,n-1);
-      updateSel();
+      updateSel(false);
     } else if(dragMode==='group-M'){
       const grp=curveGroups[dragGroupIdx];
       const span=dragOrigAbsE-dragOrigAbsS;
@@ -1486,20 +1512,27 @@ function setupOvEvents(canvas){
   function end(){
     if(!isDragOv)return;
     isDragOv=false;
+    const rect=ovCanvas.getBoundingClientRect();
+    const endPx=dragStartClientX-rect.left; // approximate end position
     if(dragMode==='new-sel'){
       const s=Math.min(ovAbsSelS,ovAbsSelE),e=Math.max(ovAbsSelS,ovAbsSelE);
       ovAbsSelS=-1;ovAbsSelE=-1;
-      if(s!==e){viewS=0;viewE=ST.length-1;selS=s;selE=e;updateSel();}
+      cyclePx=-1;cycleIdx=0; // reset cycle on new selection
+      if(s!==e){viewS=0;viewE=ST.length-1;selS=s;selE=e;updateSel(true);}
     } else if(dragMode==='sel-L'||dragMode==='sel-R'||dragMode==='sel-M'){
-      updateSel();
+      updateSel(true); // scroll once drag completes
     } else if(dragMode==='group-M'||dragMode==='group-L'||dragMode==='group-R'){
       const grp=curveGroups[dragGroupIdx];
       if(!dragMoved){
-        // Click (no real drag) → restore positions then refocus as active selection
+        // Click: restore positions, refocus as active selection, advance cycle
         grp.absS=dragOrigAbsS;grp.absE=dragOrigAbsE;
+        cyclePx=endPx;
+        cycleIdx++; // next click at same position selects next layer
         viewS=0;viewE=ST.length-1;selS=grp.absS;selE=grp.absE;
-        updateSel();
+        updateSel(true);
       } else {
+        // Real drag: update group, reset cycle
+        cyclePx=-1;cycleIdx=0;
         grp.strokes=ST.slice(grp.absS,grp.absE+1);
         buildCurveSection();
         applyGroupHighlights();
@@ -1628,10 +1661,10 @@ function buildStrokeTable(){
   </tr>`).join('');
   document.getElementById('tblcount').textContent=ST.length+' strokes';
 }
-function hlRows(idxs){
+function hlRows(idxs, doScroll=true){
   const set=new Set(idxs);
   document.querySelectorAll('#stb tr').forEach(r=>{r.classList.toggle('hl',set.has(+r.dataset.i));});
-  if(idxs.length){const f=document.querySelector(`#stb tr[data-i="${idxs[0]}"]`);if(f)f.scrollIntoView({block:'nearest',behavior:'smooth'});}
+  if(doScroll&&idxs.length){const f=document.querySelector(`#stb tr[data-i="${idxs[0]}"]`);if(f)f.scrollIntoView({block:'nearest',behavior:'smooth'});}
 }
 function applyGroupHighlights(){
   // Build map: absStrokeIdx → [groupIdx, ...]

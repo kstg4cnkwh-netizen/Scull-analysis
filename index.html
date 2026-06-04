@@ -514,6 +514,7 @@ const METRIC_DEFS = [
   {k:'impulse',l:'Impulse',     c:'var(--i)', filter:s=>s.impulse>0&&s.impulse<10,    val:s=>s.impulse,     fmtAvg:v=>f2(v),            fmtBest:null},
   {k:'ratio',  l:'Ratio',       c:'var(--d)', filter:s=>!isNaN(s.ratio)&&s.ratio>0.5&&s.ratio<5, val:s=>s.ratio, fmtAvg:v=>f2(v),       fmtBest:null},
   {k:'angle',  l:'Oar Arc',     c:'#2de0d4',  filter:s=>!isNaN(s.strokeAngle)&&s.strokeAngle>20&&s.strokeAngle<180, val:s=>s.strokeAngle, fmtAvg:v=>f1(v)+'°', fmtBest:null},
+  {k:'cdelta', l:'Check Delta', c:'#2980b9',  filter:s=>!isNaN(s.checkDelta)&&s.checkDelta>0.05&&s.checkDelta<5, val:s=>s.checkDelta, fmtAvg:v=>f2(v)+' m/s', fmtBest:null},
 ];
 
 let ST=[],HR=[],LAPS=[],GPSTRACE=[];
@@ -521,7 +522,7 @@ let curveGroups = []; // [{color,bg,strokes,absS,absE,label}]
 let currentView=[];
 let viewS=0,viewE=0;
 let selS=-1,selE=-1;
-let vis={pace:true,rate:true,slope:false,dps:true,impulse:false,rloss:false,schar:false,ratio:true,angle:false};
+let vis={pace:true,rate:true,slope:false,dps:true,impulse:false,rloss:false,schar:false,ratio:true,angle:false,cdelta:false};
 let rafId=null;
 let isDragMain=false,isDragOv=false;
 let ovAbsSelS=-1,ovAbsSelE=-1;
@@ -614,7 +615,8 @@ function sessionToAnalyserFmt(s) {
     avg_dps_m: s.avgDPS, avg_moving_pace_s_per_500m: s.avgMovingPace,
     avg_run_loss_m_per_stroke: s.avgRunLossM, avg_efficiency_vmin_vmax: s.avgEfficiency,
     avg_impulse: s.avgImpulse, avg_stroke_char_pct: s.avgChar,
-    avg_catch_consistency_stdev: s.avgConsistency, detected_axis: s.detectedAxis,
+    avg_catch_consistency_stdev: s.avgConsistency, avg_oar_angle_deg: s.avgOarAngle,
+    avg_check_delta_ms: s.avgCheckDelta, detected_axis: s.detectedAxis,
     cal_noise_floor_ms2: s.calNoiseFloor, cal_slope_thresh_ms3: s.calThresh,
   };
   const num = v => (v!=null&&!isNaN(+v)) ? +v : NaN;
@@ -624,7 +626,7 @@ function sessionToAnalyserFmt(s) {
     slope:num(r.catchPeak), schar:num(r.char), consistency:num(r.catchConsistency),
     rate:num(r.rate), pace:num(r.pace), dist:num(r.dist), dps:num(r.dps),
     rloss:num(r.runLossM), runeff:num(r.runEfficiency), impulse:num(r.driveImpulse),
-    ratio:num(r.strokeRatio), oarAngle:num(r.oarAngle),
+    ratio:num(r.strokeRatio), oarAngle:num(r.oarAngle), checkDelta:num(r.checkDelta),
     curve: r.curve||null, curveDriveFrac: r.curveDriveFrac||null,
   }));
   const hr = (s.hrTrace||[]).map(h=>({ ts:new Date(h.t).toISOString(), bpm:h.hr }));
@@ -846,6 +848,7 @@ function buildCards(sum) {
     (vals.impulse?card('ci','Impulse',f2(vals.impulse.mean),'peak '+f2(vals.impulse.max)):'')  +
     (vals.ratio?card('cd','Ratio',f2(vals.ratio.mean),'rec÷drive'):'')  +
     (vals.angle?`<div class="card" style="border-top:2px solid #2de0d4"><div class="lbl">Oar Arc</div><div class="val" style="color:#2de0d4">${f1(vals.angle.mean)}°</div><div class="sub">${unitSettings.boatClass==='sweep'?'sweep':'scull'}</div></div>`:'')  +
+    (vals.cdelta?`<div class="card" style="border-top:2px solid #2980b9"><div class="lbl">Check Delta</div><div class="val" style="color:#2980b9">${f2(vals.cdelta.mean)} m/s</div><div class="sub">speed range</div></div>`:'')  +
     (hv.length?card('cb','Avg HR',f0(arrMean(hv)),'max '+f0(arrMax(hv))+' bpm'):'');
   document.getElementById('cards').innerHTML=html;
 }
@@ -854,7 +857,7 @@ function buildCards(sum) {
 const SERIES=[
   {k:'pace',l:'Pace',c:'var(--g)'},{k:'rate',l:'Rate',c:'var(--y)'},{k:'slope',l:'Catch slope',c:'var(--r)'},
   {k:'dps',l:'DPS',c:'var(--p)'},{k:'impulse',l:'Impulse',c:'var(--i)'},{k:'rloss',l:'Run Loss',c:'var(--b)'},
-  {k:'schar',l:'Stroke Char',c:'var(--o)'},{k:'ratio',l:'Stroke Ratio',c:'var(--d)'},{k:'angle',l:'Oar Angle',c:'#2de0d4'},
+  {k:'schar',l:'Stroke Char',c:'var(--o)'},{k:'ratio',l:'Stroke Ratio',c:'var(--d)'},{k:'angle',l:'Oar Angle',c:'#2de0d4'},{k:'cdelta',l:'Check Delta',c:'#2980b9'},
 ];
 function buildLegend() {
   document.getElementById('leg').innerHTML=SERIES.map(s=>`<div class="leg${vis[s.k]?'':' off'}" onclick="toggleVis('${s.k}')"><div class="dot" style="background:${s.c}"></div>${s.l}</div>`).join('');
@@ -966,7 +969,7 @@ window.panSlide=function(val){
 function emaSmooth(view,alpha){
   if(alpha>=1)return view;
   const out=view.map(s=>Object.assign({},s));
-  const fields=['pace','rate','slope','dps','impulse','rloss','schar','ratio','strokeAngle'];
+  const fields=['pace','rate','slope','dps','impulse','rloss','schar','ratio','strokeAngle','checkDelta'];
   for(const f of fields){let ema=NaN;for(let i=0;i<out.length;i++){const v=out[i][f];if(isNaN(v)||v==null){ema=NaN;continue;}ema=isNaN(ema)?v:alpha*v+(1-alpha)*ema;out[i][f]=ema;}}
   return out;
 }
@@ -1032,7 +1035,7 @@ function drawMain(){
   const xRng=xMax-xMin||1;
   const toX=v=>PL+(v-xMin)/xRng*pw;
 
-  const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[],ratv=[],angv=[];
+  const pv=[],rv=[],jv=[],dv=[],iv=[],rlv=[],scv=[],ratv=[],angv=[],cdv=[];
   for(let i=0;i<N;i++){const s=sv[i];
     if(vis.pace&&s.pace>50&&s.pace<500)pv.push(s.pace);
     if(vis.rate&&s.rate>5&&s.rate<50)rv.push(s.rate);
@@ -1043,6 +1046,7 @@ function drawMain(){
     if(vis.schar&&!isNaN(s.schar)&&s.schar>=0&&s.schar<=100)scv.push(s.schar);
     if(vis.ratio&&!isNaN(s.ratio)&&s.ratio>0.5&&s.ratio<5)ratv.push(s.ratio);
     if(vis.angle&&!isNaN(s.strokeAngle)&&s.strokeAngle>20&&s.strokeAngle<180)angv.push(s.strokeAngle);
+    if(vis.cdelta&&!isNaN(s.checkDelta)&&s.checkDelta>0.05&&s.checkDelta<5)cdv.push(s.checkDelta);
   }
 
   let yPMin=80,yPMax=210;
@@ -1067,6 +1071,9 @@ function drawMain(){
   let yAngMin=50,yAngMax=130;
   if(angv.length){yAngMin=arrMin(angv)*0.95;yAngMax=arrMax(angv)*1.05;}
   const toYAngle=v=>PT+ph-(v-yAngMin)/(yAngMax-yAngMin||1)*ph;
+  let yCDMin=0.2,yCDMax=2.5;
+  if(cdv.length){yCDMin=arrMin(cdv)*0.9;yCDMax=arrMax(cdv)*1.1;}
+  const toYCD=v=>PT+ph-(v-yCDMin)/(yCDMax-yCDMin||1)*ph;
 
   ctx.font='9px IBM Plex Mono,monospace';
 
@@ -1114,6 +1121,7 @@ function drawMain(){
   if(vis.schar&&scv.length){ctx.fillStyle=C.o;for(let i=0;i<N;i++){const v=sv[i].schar;if(isNaN(v)||v<0||v>100)continue;ctx.beginPath();ctx.arc(toX(xs[i]),toYSC(v),2.2,0,6.283);ctx.fill();}}
   if(vis.ratio&&ratv.length){ctx.fillStyle=C.d;for(let i=0;i<N;i++){const v=sv[i].ratio;if(isNaN(v)||v<0.5||v>5)continue;ctx.beginPath();ctx.arc(toX(xs[i]),toYRatio(v),2.2,0,6.283);ctx.fill();}}
   if(vis.angle&&angv.length){ctx.fillStyle='#2de0d4';for(let i=0;i<N;i++){const v=sv[i].strokeAngle;if(isNaN(v)||v<20||v>180)continue;ctx.beginPath();ctx.arc(toX(xs[i]),toYAngle(v),2.2,0,6.283);ctx.fill();}}
+  if(vis.cdelta&&cdv.length){ctx.fillStyle='#2980b9';for(let i=0;i<N;i++){const v=sv[i].checkDelta;if(isNaN(v)||v<0.05||v>5)continue;ctx.beginPath();ctx.arc(toX(xs[i]),toYCD(v),2.2,0,6.283);ctx.fill();}}
 
   drawLapLines(ctx,computeLapBoundaryXValues(),toX,xMin,xRng,PT,ph,true);
   ctx.strokeStyle=C.frameLn;ctx.lineWidth=1;ctx.strokeRect(PL,PT,pw,ph);
@@ -1262,6 +1270,7 @@ function showTooltip(e){
     ${ttRow('Stroke Char',isNaN(s.schar)?EM:f0(s.schar)+'%',C.o)}
     ${ttRow('Stroke Ratio',(s.ratio==null||isNaN(s.ratio)||s.ratio<0.5||s.ratio>5)?EM:s.ratio.toFixed(2),C.d)}
     ${ttRow('Oar Arc',(!isNaN(s.strokeAngle)&&s.strokeAngle>20)?f1(s.strokeAngle)+'°':EM,'#2de0d4')}
+    ${ttRow('Check Delta',(!isNaN(s.checkDelta)&&s.checkDelta>0.05)?f2(s.checkDelta)+' m/s':EM,'#2980b9')}
   `;
   const tip=document.getElementById('tooltip');
   tip.style.display='block';
@@ -1793,7 +1802,7 @@ function buildLaps(){
 // STROKE TABLE
 // ══════════════════════════════════════════════════════════════════════════
 function buildStrokeTable(){
-  document.getElementById('sth').innerHTML=`<tr><th>#</th><th>Dist m</th><th>Time</th><th>Pace ${paceULabel()}</th><th>Rate</th><th>Catch slope</th><th>Consist σ</th><th>DPS ${dpsULabelU()}</th><th>Stroke Char%</th><th>Run Loss m</th><th>Impulse</th><th>Ratio</th><th>Oar Arc°</th></tr>`;
+  document.getElementById('sth').innerHTML=`<tr><th>#</th><th>Dist m</th><th>Time</th><th>Pace ${paceULabel()}</th><th>Rate</th><th>Catch slope</th><th>Consist σ</th><th>DPS ${dpsULabelU()}</th><th>Stroke Char%</th><th>Run Loss m</th><th>Impulse</th><th>Ratio</th><th>Oar Arc°</th><th>Chk Δ m/s</th></tr>`;
   document.getElementById('stb').innerHTML=ST.slice(0,1000).map(s=>`<tr data-i="${s.n-1}">
     <td>${s.n}</td>
     <td>${isNaN(s.dist)?EM:s.dist.toFixed(0)}</td>
@@ -1808,6 +1817,7 @@ function buildStrokeTable(){
     <td style="color:var(--i)">${isNaN(s.impulse)||s.impulse<=0?EM:s.impulse.toFixed(2)}</td>
     <td style="color:var(--d)">${(s.ratio==null||isNaN(s.ratio)||s.ratio<0.5||s.ratio>5)?EM:s.ratio.toFixed(2)}</td>
     <td style="color:#2de0d4">${(!isNaN(s.strokeAngle)&&s.strokeAngle>20&&s.strokeAngle<180)?f1(s.strokeAngle)+'°':EM}</td>
+    <td style="color:#2980b9">${(!isNaN(s.checkDelta)&&s.checkDelta>0.05)?f2(s.checkDelta):EM}</td>
   </tr>`).join('');
   document.getElementById('tblcount').textContent=ST.length+' strokes';
 }

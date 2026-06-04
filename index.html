@@ -52,7 +52,7 @@
   #app { display: none; padding-bottom: 40px; }
 
   /* ── Cards ── */
-  #cards { display: flex; align-items: center; text-align: center; gap: 8px; padding: 12px 14px; overflow-x: auto; scrollbar-width: none; }
+  #cards { display: flex; align-items: flex-start; text-align: center; gap: 8px; padding: 12px 14px; flex-wrap: wrap; }
   #cards::-webkit-scrollbar { display: none; }
   .card { flex-shrink: 0; min-width: 86px; background: var(--s1); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
   .card .lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; }
@@ -96,7 +96,7 @@
 
   /* ── Overview ── */
   .ovbox { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 5px 8px 2px; }
-  .ovbox canvas { display: block; width: 100% !important; touch-action: none; cursor: col-resize; }
+  .ovbox canvas { display: block; width: 100% !important; touch-action: none; cursor: crosshair; }
   .zlegend { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
   .zl { font-size: 9px; color: var(--muted); }
 
@@ -124,17 +124,27 @@
   thead th:first-child { text-align: left; }
   tbody tr { border-bottom: 1px solid var(--dim); }
   tbody tr:hover td { background: var(--s2); }
-  tbody tr.hl td { background: rgba(58,255,180,.06) !important; }
+  tbody tr.hl td { background: rgba(58,255,180,.08) !important; }
   tbody td { padding: 5px 9px; color: var(--muted); text-align: right; }
   tbody td:first-child { color: var(--text); text-align: left; }
   .curve-stats-col .twrap { max-height: 280px; }
 
-  /* ── Split row (laps + map) ── */
-  #splitrow { display: none; flex-wrap: wrap; gap: 0; padding: 0 14px 10px; }
-  #splitrow.on { display: flex; }
-  .split-col { flex: 1; min-width: 280px; padding-right: 10px; }
-  .split-col:last-child { padding-right: 0; }
-  .split-col .twrap { max-height: 180px; }
+  tbody tr.hl-g0 td { background: rgba(255,201,71,.09) !important; }
+  tbody tr.hl-g1 td { background: rgba(192,132,252,.09) !important; }
+  tbody tr.hl-g2 td { background: rgba(58,255,180,.09) !important; }
+  tbody tr.hl-g3 td { background: rgba(245,64,64,.09) !important; }
+  tbody tr.hl-g0 td:first-child { border-left: 3px solid #ffc947; }
+  tbody tr.hl-g1 td:first-child { border-left: 3px solid #c084fc; }
+  tbody tr.hl-g2 td:first-child { border-left: 3px solid #3affb4; }
+  tbody tr.hl-g3 td:first-child { border-left: 3px solid #f54040; }
+
+  /* ── Map-left + Stroke-right row ── */
+  #map-stroke-row { display: none; flex-wrap: wrap; gap: 10px; padding: 0 14px 10px; }
+  #map-stroke-row.on { display: flex; }
+  .map-col { flex: 0 0 330px; min-width: 260px; }
+  .map-col .sec-hd { margin-bottom: 4px; }
+  .stroke-col { flex: 1; min-width: 280px; overflow: hidden; }
+  .stroke-col .twrap { max-height: 480px; }
 
   /* ── Map — always dark regardless of theme ── */
   #mapbox { height: 280px; border-radius: 8px; overflow: hidden; background: #0b0e13; }
@@ -147,7 +157,7 @@
   #mapbox .leaflet-bar a:hover { background: #242c40; }
 
   /* ── Stroke table section ── */
-  #tbsec .twrap { max-height: 240px; }
+  #tbsec .sec-hd { margin-bottom: 6px; }
 
   /* ── Tooltip ── */
   #tooltip { display: none; position: fixed; z-index: 500; background: var(--s1); border: 1px solid var(--border); border-radius: 9px; padding: 10px 13px; pointer-events: none; min-width: 150px; box-shadow: 0 6px 24px rgba(0,0,0,.35); }
@@ -156,12 +166,12 @@
   #tooltip .tt-lbl { color: var(--muted); }
   #tooltip .tt-val { font-weight: 500; }
 
-  @media (max-width: 600px) {
+  @media (max-width: 700px) {
     #cards { padding: 10px; }
     .sec { padding: 0 10px 10px; }
     #selbar, #statsstrip { margin-left: 10px; margin-right: 10px; }
-    #splitrow { padding: 0 10px 10px; }
-    .split-col { padding-right: 0; }
+    #map-stroke-row { padding: 0 10px 10px; flex-direction: column; }
+    .map-col, .stroke-col { flex: none; width: 100%; }
     .curve-layout { flex-direction: column; }
   }
 </style>
@@ -234,7 +244,7 @@
   <!-- Overview minimap -->
   <div class="sec" style="padding-top:0">
     <div class="ovbox"><canvas id="ovC" height="44"></canvas></div>
-    <div class="hint" style="margin-top:3px;">Drag window to pan · drag edges to resize</div>
+    <div class="hint" style="margin-top:3px;">Drag to select strokes · drag group bands to move/resize</div>
   </div>
 
   <!-- Stats strip: zoom window averages, always visible -->
@@ -274,27 +284,27 @@
     <div class="cbox"><canvas id="hrC" height="130"></canvas></div>
   </div>
 
-  <!-- Laps + Map side by side -->
-  <div id="splitrow">
-    <div class="split-col" id="lapsec" style="display:none;">
-      <div class="sec-hd"><h2>Laps</h2></div>
-      <div class="twrap"><table id="laptbl"><thead></thead><tbody></tbody></table></div>
+  <!-- Map (left) + Stroke data (right) -->
+  <div id="map-stroke-row">
+    <div class="map-col">
+      <div id="lapsec" style="display:none;">
+        <div class="sec-hd" style="padding:0 0 4px;"><h2>Laps</h2></div>
+        <div class="twrap" style="max-height:160px;margin-bottom:8px;"><table id="laptbl"><thead></thead><tbody></tbody></table></div>
+      </div>
+      <div id="mapsec" style="display:none;">
+        <div class="sec-hd" style="padding:0 0 4px;"><h2>Route Map</h2><span id="maplbl" style="font-size:10px;color:var(--muted);"></span></div>
+        <div id="mapbox"></div>
+      </div>
     </div>
-    <div class="split-col" id="mapsec" style="display:none;">
-      <div class="sec-hd"><h2>Route Map</h2><span id="maplbl" style="font-size:10px;color:var(--muted);"></span></div>
-      <div id="mapbox"></div>
-    </div>
-  </div>
-
-  <!-- Stroke data (collapsible) -->
-  <div class="sec" id="tbsec">
-    <div class="sec-hd">
-      <h2>Stroke Data</h2>
-      <span id="tblcount" style="font-size:10px;color:var(--muted);"></span>
-      <button class="hbtn" id="tbltogglebtn" style="margin-left:auto;font-size:10px;" onclick="window.toggleTable()">Show ▾</button>
-    </div>
-    <div id="tblwrap" style="display:none;">
-      <div class="twrap"><table><thead id="sth"></thead><tbody id="stb"></tbody></table></div>
+    <div class="stroke-col" id="tbsec">
+      <div class="sec-hd">
+        <h2>Stroke Data</h2>
+        <span id="tblcount" style="font-size:10px;color:var(--muted);"></span>
+        <button class="hbtn" id="tbltogglebtn" style="margin-left:auto;font-size:10px;" onclick="window.toggleTable()">Hide ▴</button>
+      </div>
+      <div id="tblwrap">
+        <div class="twrap"><table><thead id="sth"></thead><tbody id="stb"></tbody></table></div>
+      </div>
     </div>
   </div>
 </div>
@@ -418,7 +428,7 @@ let selS=-1,selE=-1;
 let vis={pace:true,rate:true,slope:false,dps:true,impulse:false,rloss:false,schar:false,ratio:true,angle:false};
 let rafId=null;
 let isDragMain=false,isDragOv=false;
-let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
+let ovAbsSelS=-1,ovAbsSelE=-1;
 let leafletMap=null, mapBaseLine=null, mapGroupLines=[];
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -972,30 +982,40 @@ function drawOv(){
   // Full session pace (dim)
   ctx.beginPath();let s=false;
   for(let i=0;i<N;i++){const v=ST[i].pace;if(v<50||v>500){s=false;continue;}s?ctx.lineTo(toXov(xs[i]),toYov(v)):ctx.moveTo(toXov(xs[i]),toYov(v));s=true;}
-  ctx.strokeStyle=C.g;ctx.lineWidth=1;ctx.globalAlpha=0.28;ctx.stroke();ctx.globalAlpha=1;
+  ctx.strokeStyle=C.g;ctx.lineWidth=1;ctx.globalAlpha=0.25;ctx.stroke();ctx.globalAlpha=1;
 
-  // Group bands on overview
+  // Group bands — draw fill, then edge handles
   curveGroups.forEach(g=>{
-    const gx1=xs[g.absS],gx2=xs[g.absE];
-    ctx.fillStyle=g.bg;ctx.fillRect(toXov(gx1),P,toXov(gx2)-toXov(gx1),ph);
+    const gx1=toXov(xs[g.absS]),gx2=toXov(xs[g.absE]);
+    ctx.fillStyle=g.bg;ctx.fillRect(gx1,P,gx2-gx1,ph);
+    ctx.strokeStyle=g.color;ctx.lineWidth=2;ctx.globalAlpha=0.9;
+    ctx.beginPath();ctx.moveTo(gx1,P);ctx.lineTo(gx1,P+ph);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(gx2,P);ctx.lineTo(gx2,P+ph);ctx.stroke();
+    ctx.globalAlpha=1;
+    // Drag handle grips
+    ctx.fillStyle=g.color;
+    [gx1,gx2].forEach(hx=>{
+      ctx.beginPath();ctx.moveTo(hx-5,P+ph/2-5);ctx.lineTo(hx+5,P+ph/2-5);ctx.lineTo(hx+5,P+ph/2+5);ctx.lineTo(hx-5,P+ph/2+5);ctx.closePath();ctx.fill();
+    });
+    // Label
+    ctx.fillStyle=g.color;ctx.font='8px IBM Plex Mono,monospace';ctx.textAlign='center';
+    ctx.fillText(g.label,Math.min(gx2-4,Math.max(gx1+4,(gx1+gx2)/2)),P+9);
   });
 
-  // Zoom window
-  const vx1=toXov(xs[viewS]),vx2=toXov(xs[viewE]);
-  ctx.fillStyle=C.selFill;ctx.fillRect(vx1,P,vx2-vx1,ph);
-  ctx.strokeStyle=C.selStk;ctx.lineWidth=1.5;ctx.strokeRect(vx1,P,vx2-vx1,ph);
+  // Live drag selection (while dragging on overview in sel mode)
+  if(ovAbsSelS>=0&&ovAbsSelE>=0&&ovAbsSelS!==ovAbsSelE){
+    const s2=Math.min(ovAbsSelS,ovAbsSelE),e2=Math.max(ovAbsSelS,ovAbsSelE);
+    const sx1=toXov(xs[s2]),sx2=toXov(xs[e2]);
+    ctx.fillStyle='rgba(58,255,180,.22)';ctx.fillRect(sx1,P,sx2-sx1,ph);
+    ctx.strokeStyle=C.g;ctx.lineWidth=1.5;ctx.strokeRect(sx1,P,sx2-sx1,ph);
+  }
 
-  // In-view pace (brighter)
-  ctx.beginPath();s=false;
-  for(let i=viewS;i<=viewE;i++){const v=ST[i].pace;if(v<50||v>500){s=false;continue;}s?ctx.lineTo(toXov(xs[i]),toYov(v)):ctx.moveTo(toXov(xs[i]),toYov(v));s=true;}
-  ctx.strokeStyle=C.o;ctx.lineWidth=1.5;ctx.stroke();
-
-  // Current selection on overview
-  if(selS>=0&&selE>=0&&selS!==selE){
+  // Current selection band (after drag completed — selS/selE are absolute when viewS=0)
+  if(selS>=0&&selE>=0&&selS!==selE&&ovAbsSelS<0){
     const vlen=viewE-viewS+1;
     const s2=clamp(Math.min(selS,selE),0,vlen-1),e2=clamp(Math.max(selS,selE),0,vlen-1);
     const sx1=toXov(xs[viewS+s2]),sx2=toXov(xs[viewS+e2]);
-    ctx.fillStyle='rgba(58,255,180,.22)';ctx.fillRect(sx1,P,sx2-sx1,ph);
+    ctx.fillStyle='rgba(58,255,180,.15)';ctx.fillRect(sx1,P,sx2-sx1,ph);
     ctx.strokeStyle=C.g;ctx.lineWidth=1;ctx.strokeRect(sx1,P,sx2-sx1,ph);
   }
 
@@ -1190,7 +1210,7 @@ function removeCurveGroup(idx){
 }
 window.removeCurveGroup=removeCurveGroup;
 
-function clearAllCurves(){curveGroups=[];buildCurveSection();updateMapGroups();schedRender();}
+function clearAllCurves(){curveGroups=[];buildCurveSection();updateMapGroups();applyGroupHighlights();schedRender();}
 
 function computeGroupCurve(strokes){
   const valid=strokes.filter(s=>s.curve&&s.curve.length===CURVE_POINTS);
@@ -1215,6 +1235,7 @@ function buildCurveSection(){
   buildCurveStats();
   drawCurvePanel();
   updateMapGroups();
+  applyGroupHighlights();
 
   // Hint
   const hasCurves=curveGroups.some(g=>g.strokes.some(s=>s.curve));
@@ -1327,37 +1348,112 @@ function buildCurveStats(){
 }
 
 // ══════════════════════════════════════════════════════════════════════════
-// OVERVIEW INTERACTION
+// OVERVIEW INTERACTION — drag empty=select, drag band=move, drag edge=resize
 // ══════════════════════════════════════════════════════════════════════════
 let ovCanvas=null;
 function setupOvEvents(canvas){
   if(ovCanvas===canvas)return;
   ovCanvas=canvas;
+
+  let dragMode=null; // 'sel' | 'group-M' | 'group-L' | 'group-R'
+  let dragGroupIdx=-1;
+  let dragAnchorAbsIdx=0;
+  let dragOrigAbsS=0,dragOrigAbsE=0;
+
+  function hitTest(cx){
+    const g=ovCanvas._g;
+    if(!g)return{mode:'sel'};
+    const rect=ovCanvas.getBoundingClientRect();
+    const px=cx-rect.left;
+    const{P,pw,xs,xMin,xRng}=g;
+    const EDGE=10;
+    for(let i=curveGroups.length-1;i>=0;i--){
+      const grp=curveGroups[i];
+      const px1=P+(xs[grp.absS]-xMin)/xRng*pw;
+      const px2=P+(xs[grp.absE]-xMin)/xRng*pw;
+      if(px>=px1-EDGE&&px<=px2+EDGE){
+        if(px<=px1+EDGE)return{mode:'group-L',idx:i};
+        if(px>=px2-EDGE)return{mode:'group-R',idx:i};
+        return{mode:'group-M',idx:i};
+      }
+    }
+    return{mode:'sel'};
+  }
+
   function start(cx){
     isDragOv=true;
-    const idx=getOvIdx(cx);
-    const mg=Math.max(2,Math.round((viewE-viewS)*.08));
-    if(Math.abs(idx-viewS)<=mg)ovMode='L';
-    else if(Math.abs(idx-viewE)<=mg)ovMode='R';
-    else if(idx>=viewS&&idx<=viewE)ovMode='P';
-    else{ovMode='J';viewS=idx;viewE=Math.min(ST.length-1,idx+Math.max(50,ovVE0-ovVS0));}
-    ovAnch=cx;ovVS0=viewS;ovVE0=viewE;
+    const hit=hitTest(cx);
+    const absIdx=getOvIdx(cx);
+    if(hit.mode==='sel'){
+      dragMode='sel';
+      ovAbsSelS=ovAbsSelE=absIdx;
+    } else {
+      dragMode=hit.mode;
+      dragGroupIdx=hit.idx;
+      dragAnchorAbsIdx=absIdx;
+      dragOrigAbsS=curveGroups[hit.idx].absS;
+      dragOrigAbsE=curveGroups[hit.idx].absE;
+    }
     schedRender();
   }
+
   function move(cx){
     if(!isDragOv)return;
-    const n=ST.length,d=getOvIdx(cx)-getOvIdx(ovAnch);
-    if(ovMode==='P'){const sp=ovVE0-ovVS0;viewS=clamp(ovVS0+d,0,n-1-sp);viewE=viewS+sp;}
-    else if(ovMode==='L')viewS=clamp(ovVS0+d,0,viewE-5);
-    else if(ovMode==='R')viewE=clamp(ovVE0+d,viewS+5,n-1);
+    const absIdx=getOvIdx(cx);
+    const n=ST.length;
+    if(dragMode==='sel'){
+      ovAbsSelE=absIdx;
+    } else if(dragMode==='group-M'){
+      const grp=curveGroups[dragGroupIdx];
+      const span=dragOrigAbsE-dragOrigAbsS;
+      const d=absIdx-dragAnchorAbsIdx;
+      grp.absS=clamp(dragOrigAbsS+d,0,n-1-span);
+      grp.absE=grp.absS+span;
+    } else if(dragMode==='group-L'){
+      const grp=curveGroups[dragGroupIdx];
+      grp.absS=clamp(absIdx,0,grp.absE-2);
+    } else if(dragMode==='group-R'){
+      const grp=curveGroups[dragGroupIdx];
+      grp.absE=clamp(absIdx,grp.absS+2,n-1);
+    }
     schedRender();
   }
-  function end(){isDragOv=false;ovMode=null;}
+
+  function end(){
+    if(!isDragOv)return;
+    isDragOv=false;
+    if(dragMode==='sel'){
+      const s=Math.min(ovAbsSelS,ovAbsSelE),e=Math.max(ovAbsSelS,ovAbsSelE);
+      ovAbsSelS=-1;ovAbsSelE=-1;
+      if(s!==e){
+        viewS=0;viewE=ST.length-1;
+        selS=s;selE=e;
+        updateSel();
+      }
+    } else if(dragMode&&dragMode!=='sel'){
+      const grp=curveGroups[dragGroupIdx];
+      grp.strokes=ST.slice(grp.absS,grp.absE+1);
+      buildCurveSection();
+      applyGroupHighlights();
+    }
+    dragMode=null;
+    schedRender();
+  }
+
+  // Cursor feedback
+  canvas.addEventListener('mousemove',e=>{
+    if(isDragOv)return;
+    const hit=hitTest(e.clientX);
+    if(hit.mode==='group-L'||hit.mode==='group-R')canvas.style.cursor='ew-resize';
+    else if(hit.mode==='group-M')canvas.style.cursor='grab';
+    else canvas.style.cursor='crosshair';
+  });
+
   canvas.addEventListener('mousedown',e=>start(e.clientX));
   canvas.addEventListener('touchstart',e=>start(e.touches[0].clientX),{passive:true});
   canvas.addEventListener('touchmove',e=>{if(isDragOv)move(e.touches[0].clientX);},{passive:true});
   canvas.addEventListener('touchend',end);
-  canvas.addEventListener('dblclick',()=>resetZoom());
+  canvas.addEventListener('dblclick',()=>{ovAbsSelS=-1;ovAbsSelE=-1;resetZoom();});
   document.addEventListener('mousemove',e=>{if(isDragOv)move(e.clientX);});
   document.addEventListener('mouseup',end);
 }
@@ -1429,7 +1525,7 @@ function buildMap(){
 function buildLaps(){
   if(!LAPS.length)return;
   document.getElementById('lapsec').style.display='block';
-  document.getElementById('splitrow').classList.add('on');
+  document.getElementById('map-stroke-row').classList.add('on');
   const hasHR='avg_hr_bpm' in LAPS[0],hasCal='calories' in LAPS[0];
   document.querySelector('#laptbl thead').innerHTML=`<tr><th>Lap</th><th>Dist</th><th>Time</th><th>Pace</th><th>Rate</th>${hasHR?'<th>HR avg</th><th>HR max</th>':''}${hasCal?'<th>Cal</th>':''}</tr>`;
   document.querySelector('#laptbl tbody').innerHTML=LAPS.map((l,i)=>`<tr>
@@ -1469,6 +1565,18 @@ function hlRows(idxs){
   document.querySelectorAll('#stb tr').forEach(r=>{r.classList.toggle('hl',set.has(+r.dataset.i));});
   if(idxs.length){const f=document.querySelector(`#stb tr[data-i="${idxs[0]}"]`);if(f)f.scrollIntoView({block:'nearest',behavior:'smooth'});}
 }
+function applyGroupHighlights(){
+  const groupMap=new Map();
+  for(let gi=0;gi<curveGroups.length;gi++){
+    const g=curveGroups[gi];
+    for(let i=g.absS;i<=g.absE;i++)groupMap.set(i,gi);
+  }
+  document.querySelectorAll('#stb tr').forEach(r=>{
+    r.classList.remove('hl-g0','hl-g1','hl-g2','hl-g3');
+    const gi=groupMap.get(+r.dataset.i);
+    if(gi!=null)r.classList.add('hl-g'+gi);
+  });
+}
 window.toggleTable=function(){
   const wrap=document.getElementById('tblwrap'),btn=document.getElementById('tbltogglebtn');
   const shown=wrap.style.display!=='none';
@@ -1489,12 +1597,12 @@ function mountData(d,label){
   document.getElementById('dz').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('curvesec').style.display='none';
-  document.getElementById('tblwrap').style.display='none';
-  document.getElementById('tbltogglebtn').textContent='Show ▾';
+  document.getElementById('tblwrap').style.display='block';
+  document.getElementById('tbltogglebtn').textContent='Hide ▴';
+  document.getElementById('map-stroke-row').classList.add('on');
   buildMeta(label,d.sum);
   buildCards(d.sum);
   buildLaps();
-  document.getElementById('splitrow').classList.add('on');
   buildMap();
   buildStrokeTable();
   document.getElementById('hrsec').style.display=HR.length>10?'block':'none';
@@ -1503,7 +1611,7 @@ function mountData(d,label){
 
 function resetApp(){
   ST=[];HR=[];LAPS=[];GPSTRACE=[];curveGroups=[];
-  selS=-1;selE=-1;
+  selS=-1;selE=-1;ovAbsSelS=-1;ovAbsSelE=-1;
   if(leafletMap){leafletMap.remove();leafletMap=null;}
   document.getElementById('app').style.display='none';
   document.getElementById('dz').style.display='flex';
@@ -1511,11 +1619,11 @@ function resetApp(){
   document.getElementById('hrsec').style.display='none';
   document.getElementById('lapsec').style.display='none';
   document.getElementById('mapsec').style.display='none';
-  document.getElementById('splitrow').classList.remove('on');
+  document.getElementById('map-stroke-row').classList.remove('on');
   document.getElementById('curvesec').style.display='none';
   document.getElementById('statsstrip').style.display='none';
   document.getElementById('selbar').classList.remove('on');
-  document.getElementById('tblwrap').style.display='none';
+  document.getElementById('tblwrap').style.display='block';
   ['mainC','ovC','hrC'].forEach(id=>{const c=document.getElementById(id);if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);});
 }
 
@@ -1527,7 +1635,7 @@ document.getElementById('dz').onclick=()=>document.getElementById('fin').click()
 document.getElementById('fin').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);};
 document.getElementById('xmode').onchange=schedRender;
 document.getElementById('emaMode').onchange=schedRender;
-document.getElementById('selclear').onclick=()=>{selS=-1;selE=-1;document.getElementById('selbar').classList.remove('on');hlRows([]);schedRender();};
+document.getElementById('selclear').onclick=()=>{selS=-1;selE=-1;ovAbsSelS=-1;ovAbsSelE=-1;document.getElementById('selbar').classList.remove('on');hlRows([]);schedRender();};
 document.getElementById('addcurvebtn').onclick=pinSelection;
 document.getElementById('clearcurvebtn').onclick=clearAllCurves;
 

@@ -50,6 +50,7 @@
   .dzbtn-sec:hover { border-color: var(--g); color: var(--g); }
 
   #app { display: none; padding-bottom: 40px; }
+  #unitsbar { display: none; }
 
   /* ── Cards ── */
   #cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 6px; padding: 10px 14px; }
@@ -199,6 +200,8 @@
 <input type="file" id="fin" accept=".csv,.txt,.json" style="display:none">
 
 <div id="app">
+  <!-- Units toggle bar -->
+  <div id="unitsbar" style="padding:6px 12px 5px;background:var(--s2);border-bottom:1px solid var(--border);gap:4px;flex-wrap:wrap;align-items:center;"></div>
   <!-- Summary cards -->
   <div id="cards"></div>
 
@@ -416,6 +419,70 @@ function f2(v){return isNaN(v)?EM:v.toFixed(2);}
 function f0(v){return isNaN(v)?EM:String(Math.round(v));}
 function niceSteps(min,max,n){const r=max-min||1,raw=r/n,mag=Math.pow(10,Math.floor(Math.log10(raw)));let step=mag;for(const f of[1,2,2.5,5,10]){if(mag*f>=raw){step=mag*f;break;}}const out=[],start=Math.ceil(min/step)*step;for(let v=start;v<=max+step*.001;v+=step)out.push(parseFloat(v.toPrecision(8)));return out;}
 
+// ── Unit settings — loaded from session JSON, overridable by user ─────────────
+const _unitDefaults = { boatClass:'scull', paceUnit:'pace500', distUnit:'km', dpsUnit:'m' };
+let unitSettings = { ..._unitDefaults };
+
+function applySessionUnits(rawSession) {
+  if (rawSession && rawSession.settings && typeof rawSession.settings === 'object') {
+    unitSettings = { ..._unitDefaults, ...rawSession.settings };
+  } else {
+    unitSettings = { ..._unitDefaults };
+  }
+}
+function fmtPaceU(s500) {
+  if (!s500 || isNaN(s500) || s500 < 50 || s500 > 700) return EM;
+  switch (unitSettings.paceUnit) {
+    case 'pace500':  return fmtPace(s500);
+    case 'pace1000': return fmtPace(s500 * 2);
+    case 'pacemile': return fmtPace(s500 * 3.21868);
+    case 'kph':      return (1800 / s500).toFixed(1);
+    case 'mph':      return (1118.47 / s500).toFixed(1);
+    default:         return fmtPace(s500);
+  }
+}
+function paceULabel() {
+  switch (unitSettings.paceUnit) {
+    case 'pace500':  return '/500m';
+    case 'pace1000': return '/1km';
+    case 'pacemile': return '/mile';
+    case 'kph':      return 'km/h';
+    case 'mph':      return 'mph';
+    default:         return '/500m';
+  }
+}
+function fmtDPSU(m) {
+  if (isNaN(m) || m < 1) return EM;
+  switch (unitSettings.dpsUnit) {
+    case 'in': return (m * 39.3701).toFixed(0);
+    case 'ft': return (m * 3.28084).toFixed(1);
+    default:   return m.toFixed(1);
+  }
+}
+function dpsULabelU() {
+  switch (unitSettings.dpsUnit) {
+    case 'in': return 'in';
+    case 'ft': return 'ft';
+    default:   return 'm';
+  }
+}
+function fmtDistU(m) {
+  if (!m || isNaN(+m)) return '0.00';
+  if (unitSettings.distUnit === 'mi') return (+m / 1609.34).toFixed(2);
+  return (+m / 1000).toFixed(2);
+}
+function distULabelU() { return unitSettings.distUnit === 'mi' ? 'mi' : 'km'; }
+function setUnitsAndRebuild(key, val) {
+  unitSettings[key] = val;
+  buildUnitsBar();
+  buildMeta(_lastLabel, _lastSum);
+  buildCards(_lastSum);
+  buildLaps();
+  buildStrokeTable();
+  schedRender();
+}
+let _lastLabel = '', _lastSum = {};
+
 // ── State ──────────────────────────────────────────────────────────────────
 const CURVE_POINTS = 80;
 const GROUP_COLORS = ['#ffc947','#c084fc','#3affb4','#f54040','#54a0ff','#fd79a8','#e17055','#00cec9'];
@@ -425,10 +492,10 @@ const GROUP_BG     = ['rgba(255,201,71,.14)','rgba(192,132,252,.14)','rgba(58,25
 // filter: returns valid values from a stroke array
 // fmt: formats a single averaged/min value
 const METRIC_DEFS = [
-  {k:'pace',   l:'Pace',        c:'var(--g)', filter:s=>s.pace>50&&s.pace<500,        val:s=>s.pace,        fmtAvg:v=>fmtPace(v),       fmtBest:v=>fmtPace(v), showBest:true,  bestIsMin:true},
+  {k:'pace',   l:'Pace',        c:'var(--g)', filter:s=>s.pace>50&&s.pace<500,        val:s=>s.pace,        fmtAvg:v=>fmtPaceU(v),      fmtBest:v=>fmtPaceU(v), showBest:true,  bestIsMin:true},
   {k:'rate',   l:'Rate',        c:'var(--y)', filter:s=>s.rate>5&&s.rate<50,          val:s=>s.rate,        fmtAvg:v=>f1(v)+' spm',     fmtBest:null},
   {k:'slope',  l:'Catch Slope', c:'var(--r)', filter:s=>s.slope>0&&s.slope<300,       val:s=>s.slope,       fmtAvg:v=>f0(v),            fmtBest:null},
-  {k:'dps',    l:'DPS',         c:'var(--p)', filter:s=>s.dps>1&&s.dps<25,            val:s=>s.dps,         fmtAvg:v=>f1(v)+'m',        fmtBest:null},
+  {k:'dps',    l:'DPS',         c:'var(--p)', filter:s=>s.dps>1&&s.dps<25,            val:s=>s.dps,         fmtAvg:v=>fmtDPSU(v)+dpsULabelU(), fmtBest:null},
   {k:'schar',  l:'Stroke Char', c:'var(--o)', filter:s=>!isNaN(s.schar)&&s.schar>0&&s.schar<=100, val:s=>s.schar,       fmtAvg:v=>f0(v)+'%',        fmtBest:null},
   {k:'rloss',  l:'Run Loss',    c:'var(--b)', filter:s=>!isNaN(s.rloss)&&s.rloss>0&&s.rloss<100, val:s=>s.rloss, fmtAvg:v=>f2(v)+'m',  fmtBest:null},
   {k:'impulse',l:'Impulse',     c:'var(--i)', filter:s=>s.impulse>0&&s.impulse<10,    val:s=>s.impulse,     fmtAvg:v=>f2(v),            fmtBest:null},
@@ -566,8 +633,10 @@ function loadFile(f) {
       if (name.endsWith('.json')) {
         const session=JSON.parse(e.target.result);
         const s=Array.isArray(session)?session[0]:session;
+        applySessionUnits(s);
         d=sessionToAnalyserFmt(s);
       } else {
+        applySessionUnits(null);
         d=parseCSV(e.target.result);
       }
       if (!d.strokes.length) { alert('No stroke data found in this file.'); return; }
@@ -585,7 +654,7 @@ async function loadFromDrive() {
     if (!files.length) { toast('No sessions found on Drive'); return; }
     showDrivePicker(files, async (fileId,label) => {
       toast('Loading '+label+'…');
-      try { const session=await AnalyserDrive.fetchSession(fileId); mountData(sessionToAnalyserFmt(session),label); }
+      try { const session=await AnalyserDrive.fetchSession(fileId); applySessionUnits(session); mountData(sessionToAnalyserFmt(session),label); }
       catch(err) { toast('Load failed: '+err.message); }
     });
   } catch(err) { toast('Drive error: '+err.message); }
@@ -673,7 +742,8 @@ function showDrivePicker(files, onSelect) {
 // STROKE ANGLE (IMU or estimated)
 // ══════════════════════════════════════════════════════════════════════════
 function computeStrokeAngles(strokes) {
-  const OUTBOARD=2.0, MAX_WIN=5, R2D=180/Math.PI;
+  const OUTBOARD = unitSettings.boatClass === 'sweep' ? 2.6 : 2.0;
+  const MAX_WIN=5, R2D=180/Math.PI;
   const hasIMU=strokes.some(s=>!isNaN(s.oarAngle)&&s.oarAngle>20&&s.oarAngle<180);
   if (hasIMU) { for(let i=0;i<strokes.length;i++){const a=strokes[i].oarAngle;strokes[i].strokeAngle=(!isNaN(a)&&a>20&&a<180)?a:NaN;} return; }
   const raw=new Array(strokes.length).fill(NaN);
@@ -701,10 +771,11 @@ function computeStrokeAngles(strokes) {
 // META / CARDS
 // ══════════════════════════════════════════════════════════════════════════
 function buildMeta(fname,sum) {
+  _lastLabel=fname; _lastSum=sum;
   const date=(sum.start_time||'').substring(0,10);
   const dur=fmtTime(+sum.duration_s);
-  const km=((+sum.distance_m||0)/1000).toFixed(2);
-  document.getElementById('hdrmeta').innerHTML=fname+'<br>'+date+' · '+km+'km · '+dur;
+  const dist=fmtDistU(+sum.distance_m||0)+distULabelU();
+  document.getElementById('hdrmeta').innerHTML=fname+'<br>'+date+' · '+dist+' · '+dur;
 }
 function sessionStats() {
   const pv=[],rv=[],jv=[],dv=[],iv=[],hv=[],ratv=[],av=[];
@@ -713,7 +784,8 @@ function sessionStats() {
   return {pv,rv,jv,dv,iv,hv,ratv,av};
 }
 function buildCards(sum) {
-  const km=((+sum.distance_m||0)/1000).toFixed(2);
+  const distDisp=fmtDistU(+sum.distance_m||0);
+  const distLbl=distULabelU();
   const dur=fmtTime(+sum.duration_s);
   const movPace=+sum.avg_moving_pace_s_per_500m||0;
   // Session-level per-metric averages
@@ -722,17 +794,17 @@ function buildCards(sum) {
   const hv=HR.filter(h=>h.bpm>40&&h.bpm<220).map(h=>h.bpm);
   const card=(cls,lbl,val,sub)=>`<div class="card ${cls}"><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;
   let html=
-    card('cw','Distance',km,'km')+
+    card('cw','Distance',distDisp,distLbl)+
     card('cw','Duration',dur,ST.length+' strokes')+
-    (vals.pace?card('cg','Avg Pace',fmtPace(vals.pace.mean),movPace>0?'mov '+fmtPace(movPace):'/500m'):'')  +
+    (vals.pace?card('cg','Avg Pace',fmtPaceU(vals.pace.mean),movPace>0?'mov '+fmtPaceU(movPace):paceULabel()):'')  +
     (vals.rate?card('cy','Rate',f1(vals.rate.mean),'spm · max '+f0(vals.rate.max)):'')  +
     (vals.slope?card('cr','Catch Slope',f0(vals.slope.mean),'peak '+f1(vals.slope.max)):'')  +
-    (vals.dps?card('cp','DPS',f1(vals.dps.mean),'m/stroke'):'')  +
+    (vals.dps?card('cp','DPS',fmtDPSU(vals.dps.mean),dpsULabelU()+'/stroke'):'')  +
     (vals.schar?card('co','Stroke Char',f0(vals.schar.mean)+'%',''):'')  +
     (vals.rloss?card('cb','Run Loss',f2(vals.rloss.mean)+'m','avg/stroke'):'')  +
     (vals.impulse?card('ci','Impulse',f2(vals.impulse.mean),'peak '+f2(vals.impulse.max)):'')  +
     (vals.ratio?card('cd','Ratio',f2(vals.ratio.mean),'rec÷drive'):'')  +
-    (vals.angle?`<div class="card" style="border-top:2px solid #2de0d4"><div class="lbl">Oar Arc</div><div class="val" style="color:#2de0d4">${f1(vals.angle.mean)}°</div><div class="sub">drive phase</div></div>`:'')  +
+    (vals.angle?`<div class="card" style="border-top:2px solid #2de0d4"><div class="lbl">Oar Arc</div><div class="val" style="color:#2de0d4">${f1(vals.angle.mean)}°</div><div class="sub">${unitSettings.boatClass==='sweep'?'sweep':'scull'}</div></div>`:'')  +
     (hv.length?card('cb','Avg HR',f0(arrMean(hv)),'max '+f0(arrMax(hv))+' bpm'):'');
   document.getElementById('cards').innerHTML=html;
 }
@@ -958,7 +1030,7 @@ function drawMain(){
   ctx.font='9px IBM Plex Mono,monospace';
 
   // Grid
-  niceSteps(yPMin,yPMax,5).forEach(g=>{const y=toYP(g);ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+pw,y);ctx.strokeStyle=C.gridLn;ctx.lineWidth=1;ctx.stroke();ctx.fillStyle=C.gridLb;ctx.textAlign='right';ctx.fillText(fmtPace(g),PL-4,y+3);});
+  niceSteps(yPMin,yPMax,5).forEach(g=>{const y=toYP(g);ctx.beginPath();ctx.moveTo(PL,y);ctx.lineTo(PL+pw,y);ctx.strokeStyle=C.gridLn;ctx.lineWidth=1;ctx.stroke();ctx.fillStyle=C.gridLb;ctx.textAlign='right';ctx.fillText(fmtPaceU(g),PL-4,y+3);});
   niceSteps(xMin,xMax,6).forEach(g=>{const x=toX(g);ctx.beginPath();ctx.moveTo(x,PT);ctx.lineTo(x,PT+ph);ctx.strokeStyle=C.gridLn;ctx.lineWidth=1;ctx.stroke();ctx.fillStyle=C.gridLb;ctx.textAlign='center';ctx.fillText(g.toFixed(0),x,PT+ph+13);});
   if(vis.rate||vis.slope){niceSteps(yRMin,yRMax,5).forEach(g=>{ctx.fillStyle=C.gridLb;ctx.textAlign='left';ctx.fillText(g.toFixed(0),PL+pw+4,toYR(g)+3);});}
 
@@ -1140,9 +1212,9 @@ function showTooltip(e){
     <div class="tt-hd">Stroke ${s.n}</div>
     ${ttRow('Time',fmtTime(s.elapsed))}
     ${ttRow('Distance',isNaN(s.dist)?EM:s.dist.toFixed(0)+'m')}
-    ${ttRow('Pace',fmtPace(s.pace),C.g)}
+    ${ttRow('Pace',fmtPaceU(s.pace),C.g)}
     ${ttRow('Rate',isNaN(s.rate)||s.rate<1?EM:f1(s.rate)+' spm',C.y)}
-    ${ttRow('DPS',isNaN(s.dps)||s.dps<1?EM:f1(s.dps)+'m',C.p)}
+    ${ttRow('DPS',isNaN(s.dps)||s.dps<1?EM:fmtDPSU(s.dps)+dpsULabelU(),C.p)}
     ${ttRow('Catch slope',isNaN(s.slope)||s.slope<=0?EM:f0(s.slope),C.r)}
     ${ttRow('Impulse',isNaN(s.impulse)||s.impulse<=0?EM:s.impulse.toFixed(2),C.i)}
     ${ttRow('Run Loss',isNaN(s.rloss)||s.rloss<=0?EM:f2(s.rloss)+' m',C.b)}
@@ -1644,7 +1716,7 @@ function buildMap(){
       if(!best||bestDelta>200)continue;
       const icon=L.divIcon({html:`<div class="lap-marker">${i+1}</div>`,iconSize:[20,20],iconAnchor:[10,10],className:''});
       const lap=scullLaps[i];
-      L.marker([best.lat,best.lon],{icon}).bindPopup(`<b>Lap ${i+1}</b><br>${Math.round(lap.distance_m)}m · ${fmtPace(lap.pace_s_per_500m)}/500m · ${lap.stroke_rate_spm?Math.round(lap.stroke_rate_spm)+' spm':''}`).addTo(leafletMap);
+      L.marker([best.lat,best.lon],{icon}).bindPopup(`<b>Lap ${i+1}</b><br>${Math.round(lap.distance_m)}m · ${fmtPaceU(lap.pace_s_per_500m)} ${paceULabel()} · ${lap.stroke_rate_spm?Math.round(lap.stroke_rate_spm)+' spm':''}`).addTo(leafletMap);
     }
   }
   leafletMap.fitBounds(mapBaseLine.getBounds(),{padding:[20,20]});
@@ -1669,7 +1741,7 @@ function buildLaps(){
     <td>Lap ${i+1}</td>
     <td>${(+l.distance_m||0).toFixed(0)}m</td>
     <td>${fmtTime(+l.time_s)}</td>
-    <td style="color:var(--g)">${fmtPace(+l.pace_s_per_500m)}</td>
+    <td style="color:var(--g)">${fmtPaceU(+l.pace_s_per_500m)}</td>
     <td style="color:var(--y)">${l.avg_spm||l.stroke_rate_spm||EM}</td>
     ${hasHR?`<td style="color:var(--b)">${l.avg_hr_bpm||EM}</td><td style="color:var(--b)">${l.max_hr_bpm||EM}</td>`:''}
     ${hasCal?`<td>${l.calories||EM}</td>`:''}
@@ -1680,16 +1752,16 @@ function buildLaps(){
 // STROKE TABLE
 // ══════════════════════════════════════════════════════════════════════════
 function buildStrokeTable(){
-  document.getElementById('sth').innerHTML=`<tr><th>#</th><th>Dist m</th><th>Time</th><th>Pace /500</th><th>Rate</th><th>Catch slope</th><th>Consist σ</th><th>DPS m</th><th>Stroke Char%</th><th>Run Loss m</th><th>Impulse</th><th>Ratio</th><th>Oar Arc°</th></tr>`;
+  document.getElementById('sth').innerHTML=`<tr><th>#</th><th>Dist m</th><th>Time</th><th>Pace ${paceULabel()}</th><th>Rate</th><th>Catch slope</th><th>Consist σ</th><th>DPS ${dpsULabelU()}</th><th>Stroke Char%</th><th>Run Loss m</th><th>Impulse</th><th>Ratio</th><th>Oar Arc°</th></tr>`;
   document.getElementById('stb').innerHTML=ST.slice(0,1000).map(s=>`<tr data-i="${s.n-1}">
     <td>${s.n}</td>
     <td>${isNaN(s.dist)?EM:s.dist.toFixed(0)}</td>
     <td>${fmtTime(s.elapsed)}</td>
-    <td style="color:var(--g)">${fmtPace(s.pace)}</td>
+    <td style="color:var(--g)">${fmtPaceU(s.pace)}</td>
     <td style="color:var(--y)">${isNaN(s.rate)||s.rate<1?EM:f0(s.rate)}</td>
     <td style="color:var(--r)">${isNaN(s.slope)||s.slope<=0?EM:f1(s.slope)}</td>
     <td>${isNaN(s.consistency)||s.consistency<=0?EM:f1(s.consistency)}</td>
-    <td style="color:var(--p)">${isNaN(s.dps)||s.dps<1?EM:f1(s.dps)}</td>
+    <td style="color:var(--p)">${isNaN(s.dps)||s.dps<1?EM:fmtDPSU(s.dps)}</td>
     <td style="color:var(--o)">${isNaN(s.schar)||s.schar<=0?EM:f0(s.schar)+'%'}</td>
     <td style="color:var(--b)">${isNaN(s.rloss)||s.rloss<=0?EM:f2(s.rloss)+' m'}</td>
     <td style="color:var(--i)">${isNaN(s.impulse)||s.impulse<=0?EM:s.impulse.toFixed(2)}</td>
@@ -1734,6 +1806,24 @@ window.toggleTable=function(){
 };
 
 // ══════════════════════════════════════════════════════════════════════════
+// UNITS BAR
+// ══════════════════════════════════════════════════════════════════════════
+function buildUnitsBar() {
+  const bar = document.getElementById('unitsbar');
+  if (!bar) return;
+  function seg(key, options) {
+    return options.map(([v,l]) =>
+      `<button onclick="setUnitsAndRebuild('${key}','${v}')" style="padding:3px 8px;border-radius:3px;border:1px solid var(--border);background:${unitSettings[key]===v?'var(--g)':'var(--s3)'};color:${unitSettings[key]===v?'#000':'var(--muted)'};font-family:IBM Plex Mono,monospace;font-size:10px;cursor:pointer;">${l}</button>`
+    ).join('');
+  }
+  bar.innerHTML =
+    `<span style="color:var(--muted);font-size:10px;margin-right:2px;">Pace</span>${seg('paceUnit',[['pace500','/500m'],['pace1000','/1km'],['pacemile','/mi'],['kph','km/h'],['mph','mph']])}` +
+    `<span style="color:var(--muted);font-size:10px;margin-left:8px;margin-right:2px;">Dist</span>${seg('distUnit',[['km','km'],['mi','mi']])}` +
+    `<span style="color:var(--muted);font-size:10px;margin-left:8px;margin-right:2px;">DPS</span>${seg('dpsUnit',[['m','m'],['ft','ft'],['in','in']])}`;
+}
+window.setUnitsAndRebuild = setUnitsAndRebuild;
+
+// ══════════════════════════════════════════════════════════════════════════
 // MOUNT / RESET
 // ══════════════════════════════════════════════════════════════════════════
 function mountData(d,label){
@@ -1745,10 +1835,12 @@ function mountData(d,label){
   else if(!ST.length){toast('No stroke data found in this file',4000);return;}
   document.getElementById('dz').style.display='none';
   document.getElementById('app').style.display='block';
+  document.getElementById('unitsbar').style.display='flex';
   document.getElementById('curvesec').style.display='none';
   document.getElementById('tblwrap').style.display='block';
   document.getElementById('tbltogglebtn').textContent='Hide ▴';
   document.getElementById('map-stroke-row').classList.add('on');
+  buildUnitsBar();
   buildMeta(label,d.sum);
   buildCards(d.sum);
   buildLaps();
@@ -1761,8 +1853,10 @@ function mountData(d,label){
 function resetApp(){
   ST=[];HR=[];LAPS=[];GPSTRACE=[];curveGroups=[];
   selS=-1;selE=-1;ovAbsSelS=-1;ovAbsSelE=-1;
+  unitSettings={..._unitDefaults};
   if(leafletMap){leafletMap.remove();leafletMap=null;}
   document.getElementById('app').style.display='none';
+  document.getElementById('unitsbar').style.display='none';
   document.getElementById('dz').style.display='flex';
   document.getElementById('fin').value='';
   document.getElementById('hrsec').style.display='none';

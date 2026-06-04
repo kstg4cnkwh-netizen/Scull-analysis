@@ -79,6 +79,8 @@
   .dot { width: 7px; height: 7px; border-radius: 50%; }
   select { background: var(--s2); border: 1px solid var(--border); color: var(--text); padding: 4px 7px; border-radius: 5px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; cursor: pointer; outline: none; }
   select:focus { border-color: var(--g); }
+  .zoom-btn { background: var(--s2); border: 1px solid var(--border); color: var(--muted); width: 22px; height: 22px; border-radius: 5px; font-size: 13px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+  .zoom-btn:hover { border-color: var(--g); color: var(--g); }
   .cbox { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 10px 10px 4px; position: relative; }
   .cbox canvas { display: block; width: 100% !important; touch-action: none; cursor: crosshair; }
   .hint { text-align: center; font-size: 9px; color: var(--faint); margin-top: 3px; }
@@ -196,7 +198,10 @@
       <h2>Stroke Chart</h2>
       <div class="legend" id="leg"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;">
-        <span style="font-size:9px;color:var(--muted)">X:</span>
+        <button class="zoom-btn" onclick="window.zoomChart(1)">＋</button>
+        <input type="range" id="zoomSlider" min="0" max="100" value="100" style="width:70px;cursor:pointer;accent-color:var(--g);" oninput="window.zoomSlide(this.value)">
+        <button class="zoom-btn" onclick="window.zoomChart(-1)">－</button>
+        <span style="font-size:9px;color:var(--muted);margin-left:4px;">X:</span>
         <select id="xmode">
           <option value="stroke">Stroke #</option>
           <option value="dist">Distance (m)</option>
@@ -414,7 +419,7 @@ let vis={pace:true,rate:true,slope:false,dps:true,impulse:false,rloss:false,scha
 let rafId=null;
 let isDragMain=false,isDragOv=false;
 let ovMode=null,ovAnch=0,ovVS0=0,ovVE0=0;
-let leafletMap=null;
+let leafletMap=null, mapBaseLine=null, mapGroupLines=[];
 
 // ══════════════════════════════════════════════════════════════════════════
 // PARSE CSV
@@ -724,6 +729,7 @@ function schedRender() {
     buildLegend(); drawMain(); drawOv();
     if (HR.length>10) drawHR();
     updateStatsStrip();
+    updateZoomSlider();
     if (curveGroups.length) drawCurvePanel();
   });
 }
@@ -741,6 +747,38 @@ function scrollZoom(canvas, deltaY, cx) {
   viewS=clamp(centerIdx-half,0,n-1-newSpan);
   viewE=clamp(viewS+newSpan,newSpan,n-1);
   schedRender();
+}
+
+window.zoomChart=function(dir){
+  if(!ST.length)return;
+  const n=ST.length;
+  const center=Math.round((viewS+viewE)/2);
+  const span=viewE-viewS;
+  const newSpan=Math.round(clamp(span*(dir>0?0.65:1.5),4,n-1));
+  const half=Math.round(newSpan/2);
+  viewS=clamp(center-half,0,n-1-newSpan);
+  viewE=clamp(viewS+newSpan,newSpan,n-1);
+  schedRender();
+};
+
+window.zoomSlide=function(val){
+  if(!ST.length)return;
+  const n=ST.length;
+  const pct=parseFloat(val)/100;
+  const center=Math.round((viewS+viewE)/2);
+  const newSpan=Math.round(clamp(4+pct*(n-5),4,n-1));
+  const half=Math.round(newSpan/2);
+  viewS=clamp(center-half,0,n-1-newSpan);
+  viewE=clamp(viewS+newSpan,newSpan,n-1);
+  schedRender();
+};
+
+function updateZoomSlider(){
+  const sl=document.getElementById('zoomSlider');
+  if(!sl||!ST.length)return;
+  const n=ST.length;
+  const span=viewE-viewS+1;
+  sl.value=Math.round(((span-4)/(n-4))*100);
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1085,9 +1123,8 @@ function updateSel(){
   const sel=ST.slice(viewS+s2,viewS+e2+1);
   if(!sel.length){bar.classList.remove('on');return;}
   const hasCurves=sel.some(s=>s.curve&&s.curve.length===CURVE_POINTS);
-  const canAdd=hasCurves&&curveGroups.length<4;
-  document.getElementById('selnote').textContent=`${sel.length} strokes selected${hasCurves?' · has curves':''}`;
-  document.getElementById('addcurvebtn').style.display=canAdd?'inline-block':'none';
+  document.getElementById('selnote').textContent=`${sel.length} strokes${hasCurves?' · has curves':''}`;
+  document.getElementById('addcurvebtn').style.display=curveGroups.length<4?'inline-block':'none';
   bar.classList.add('on');
   const absIdxs=[];for(let i=s2;i<=e2;i++)absIdxs.push(viewS+i);
   hlRows(absIdxs);
@@ -1146,14 +1183,14 @@ function pinSelection(){
 
 function removeCurveGroup(idx){
   curveGroups.splice(idx,1);
-  // Renumber
   curveGroups.forEach((g,i)=>{g.label='G'+(i+1);g.color=GROUP_COLORS[i];g.bg=GROUP_BG[i];});
   buildCurveSection();
+  updateMapGroups();
   schedRender();
 }
 window.removeCurveGroup=removeCurveGroup;
 
-function clearAllCurves(){curveGroups=[];buildCurveSection();schedRender();}
+function clearAllCurves(){curveGroups=[];buildCurveSection();updateMapGroups();schedRender();}
 
 function computeGroupCurve(strokes){
   const valid=strokes.filter(s=>s.curve&&s.curve.length===CURVE_POINTS);
@@ -1177,6 +1214,7 @@ function buildCurveSection(){
 
   buildCurveStats();
   drawCurvePanel();
+  updateMapGroups();
 
   // Hint
   const hasCurves=curveGroups.some(g=>g.strokes.some(s=>s.curve));
@@ -1336,19 +1374,33 @@ function getOvIdx(cx){
 // ══════════════════════════════════════════════════════════════════════════
 // MAP — GPS route, always dark tiles
 // ══════════════════════════════════════════════════════════════════════════
+function updateMapGroups(){
+  if(!leafletMap)return;
+  mapGroupLines.forEach(l=>leafletMap.removeLayer(l));
+  mapGroupLines=[];
+  const hasGroups=curveGroups.length>0;
+  if(mapBaseLine) mapBaseLine.setStyle({opacity:hasGroups?0.25:0.85});
+  if(!GPSTRACE.length||!hasGroups)return;
+  curveGroups.forEach(g=>{
+    if(!ST[g.absS]||!ST[g.absE])return;
+    const t1=ST[g.absS].ms, t2=ST[g.absE].ms;
+    const pts=GPSTRACE.filter(p=>p.t>=t1&&p.t<=t2).map(p=>[p.lat,p.lon]);
+    if(pts.length<2)return;
+    mapGroupLines.push(L.polyline(pts,{color:g.color,weight:5,opacity:0.9}).addTo(leafletMap));
+  });
+}
+
 function buildMap(){
   const sec=document.getElementById('mapsec');
   if(!GPSTRACE.length){sec.style.display='none';return;}
   sec.style.display='block';
-  if(leafletMap){leafletMap.remove();leafletMap=null;}
+  if(leafletMap){leafletMap.remove();leafletMap=null;mapBaseLine=null;mapGroupLines=[];}
   const latlngs=GPSTRACE.map(p=>[p.lat,p.lon]);
   leafletMap=L.map('mapbox',{zoomControl:true,attributionControl:false});
-  // CartoDB dark tiles — always dark regardless of app theme
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(leafletMap);
-  const routeLine=L.polyline(latlngs,{color:'#3affb4',weight:3,opacity:0.85}).addTo(leafletMap);
+  mapBaseLine=L.polyline(latlngs,{color:'#3affb4',weight:3,opacity:0.85}).addTo(leafletMap);
   L.circleMarker(latlngs[0],{radius:6,fillColor:'#fff',color:'#000',weight:2,fillOpacity:1}).bindTooltip('Start',{permanent:false}).addTo(leafletMap);
   L.circleMarker(latlngs[latlngs.length-1],{radius:6,fillColor:'#f54040',color:'#000',weight:2,fillOpacity:1}).bindTooltip('Finish',{permanent:false}).addTo(leafletMap);
-  // Scull lap boundary markers by cumulative distance
   const scullLaps=LAPS.filter(l=>l.stroke_rate_spm!=null||l.pace_s_per_500m!=null);
   if(scullLaps.length>1){
     let cumDist=0;
@@ -1362,10 +1414,11 @@ function buildMap(){
       L.marker([best.lat,best.lon],{icon}).bindPopup(`<b>Lap ${i+1}</b><br>${Math.round(lap.distance_m)}m · ${fmtPace(lap.pace_s_per_500m)}/500m · ${lap.stroke_rate_spm?Math.round(lap.stroke_rate_spm)+' spm':''}`).addTo(leafletMap);
     }
   }
-  leafletMap.fitBounds(routeLine.getBounds(),{padding:[20,20]});
+  leafletMap.fitBounds(mapBaseLine.getBounds(),{padding:[20,20]});
   const nPts=GPSTRACE.length;
   const distM=GPSTRACE[nPts-1].dist??0;
   document.getElementById('maplbl').textContent=`${nPts} GPS pts · ${Math.round(distM)}m`;
+  updateMapGroups();
 }
 
 // ══════════════════════════════════════════════════════════════════════════

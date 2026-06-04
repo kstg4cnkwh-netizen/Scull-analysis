@@ -230,8 +230,9 @@
       </div>
     </div>
     <div class="cbox"><canvas id="mainC" height="250"></canvas>
-      <div class="hint">Drag to select · scroll to zoom · double-click to reset</div>
+      <div class="hint">Drag to select · scroll to zoom · swipe/scroll sideways to pan · double-click to reset</div>
     </div>
+    <div id="panBarWrap" style="display:none;padding:1px 11px 0;"><input type="range" id="panSlider" min="0" max="100" value="0" style="width:100%;cursor:pointer;accent-color:var(--g);margin:0;" oninput="window.panSlide(this.value)"></div>
   </div>
 
   <!-- Selection action bar -->
@@ -759,6 +760,7 @@ function schedRender() {
     if (HR.length>10) drawHR();
     updateStatsStrip();
     updateZoomSlider();
+    updatePanSlider();
     if (curveGroups.length) drawCurvePanel();
   });
 }
@@ -809,6 +811,41 @@ function updateZoomSlider(){
   const span=viewE-viewS+1;
   sl.value=Math.round(((span-4)/(n-4))*100);
 }
+
+function updatePanSlider(){
+  const wrap=document.getElementById('panBarWrap');
+  const sl=document.getElementById('panSlider');
+  if(!wrap||!sl||!ST.length)return;
+  const n=ST.length;
+  const span=viewE-viewS;
+  const maxStart=n-1-span;
+  if(maxStart<=0){wrap.style.display='none';return;}
+  wrap.style.display='block';
+  sl.max=maxStart;
+  sl.value=viewS;
+}
+
+function panBy(deltaStrokes){
+  if(!ST.length)return;
+  const n=ST.length;
+  const span=viewE-viewS;
+  const maxStart=n-1-span;
+  if(maxStart<=0)return;
+  const newS=clamp(viewS+deltaStrokes,0,maxStart);
+  viewS=newS;
+  viewE=newS+span;
+  schedRender();
+}
+
+window.panSlide=function(val){
+  if(!ST.length)return;
+  const n=ST.length;
+  const span=viewE-viewS;
+  const newS=clamp(parseInt(val),0,n-1-span);
+  viewS=newS;
+  viewE=newS+span;
+  schedRender();
+};
 
 // ══════════════════════════════════════════════════════════════════════════
 // EMA SMOOTHING
@@ -1144,12 +1181,56 @@ function setupMainEvents(canvas){
     if(isDragMain){selE=getMainIdx(e.clientX-canvas.getBoundingClientRect().left);schedRender();}
     else showTooltip(e);
   });
-  canvas.addEventListener('touchstart',e=>{isDragMain=true;selS=selE=getMainIdx(e.touches[0].clientX-canvas.getBoundingClientRect().left);schedRender();},{passive:true});
-  canvas.addEventListener('touchmove',e=>{if(isDragMain){selE=getMainIdx(e.touches[0].clientX-canvas.getBoundingClientRect().left);schedRender();}},{passive:true});
-  canvas.addEventListener('touchend',()=>{isDragMain=false;updateSel(false);});
+
+  // Touch: detect horizontal swipe = pan (when zoomed), vertical/ambiguous = select
+  let touchStartX=0,touchStartY=0,touchLastX=0,touchMode=null;
+  canvas.addEventListener('touchstart',e=>{
+    const t=e.touches[0];
+    touchStartX=touchLastX=t.clientX;
+    touchStartY=t.clientY;
+    touchMode=null;
+    isDragMain=false;
+  },{passive:true});
+  canvas.addEventListener('touchmove',e=>{
+    if(!e.touches.length)return;
+    const t=e.touches[0];
+    const dx=t.clientX-touchStartX;
+    const dy=t.clientY-touchStartY;
+    if(touchMode===null&&(Math.abs(dx)>8||Math.abs(dy)>8)){
+      const zoomed=(ST.length>0)&&(viewE-viewS<ST.length-1);
+      touchMode=(Math.abs(dx)>Math.abs(dy)&&zoomed)?'pan':'select';
+      if(touchMode==='select'){
+        isDragMain=true;
+        selS=selE=getMainIdx(touchStartX-canvas.getBoundingClientRect().left);
+      }
+    }
+    if(touchMode==='pan'){
+      const deltaX=t.clientX-touchLastX;
+      touchLastX=t.clientX;
+      if(mainCanvas&&mainCanvas._g){
+        const{pw,N}=mainCanvas._g;
+        if(pw>0) panBy(-Math.round(deltaX/pw*N));
+      }
+    } else if(touchMode==='select'&&isDragMain){
+      selE=getMainIdx(t.clientX-canvas.getBoundingClientRect().left);
+      schedRender();
+    }
+  },{passive:true});
+  canvas.addEventListener('touchend',()=>{isDragMain=false;touchMode=null;updateSel(false);});
+
   canvas.addEventListener('dblclick',()=>resetZoom());
   canvas.addEventListener('mouseleave',hideTooltip);
-  canvas.addEventListener('wheel',e=>{e.preventDefault();scrollZoom(canvas,e.deltaY,e.clientX);},{passive:false});
+  canvas.addEventListener('wheel',e=>{
+    e.preventDefault();
+    if(Math.abs(e.deltaX)>Math.abs(e.deltaY)){
+      if(mainCanvas&&mainCanvas._g){
+        const{pw,N}=mainCanvas._g;
+        if(pw>0) panBy(Math.round(e.deltaX/pw*N));
+      }
+    } else {
+      scrollZoom(canvas,e.deltaY,e.clientX);
+    }
+  },{passive:false});
 }
 document.addEventListener('mouseup',()=>{if(isDragMain){isDragMain=false;updateSel(false);}});
 

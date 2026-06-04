@@ -1415,6 +1415,8 @@ function buildMap(){
     }
   }
   leafletMap.fitBounds(mapBaseLine.getBounds(),{padding:[20,20]});
+  // Leaflet needs the container to be fully laid out before it can size correctly
+  setTimeout(()=>{ if(leafletMap) leafletMap.invalidateSize(); }, 120);
   const nPts=GPSTRACE.length;
   const distM=GPSTRACE[nPts-1].dist??0;
   document.getElementById('maplbl').textContent=`${nPts} GPS pts · ${Math.round(distM)}m`;
@@ -1492,8 +1494,8 @@ function mountData(d,label){
   buildMeta(label,d.sum);
   buildCards(d.sum);
   buildLaps();
+  document.getElementById('splitrow').classList.add('on');
   buildMap();
-  if(GPSTRACE.length) document.getElementById('splitrow').classList.add('on');
   buildStrokeTable();
   document.getElementById('hrsec').style.display=HR.length>10?'block':'none';
   schedRender();

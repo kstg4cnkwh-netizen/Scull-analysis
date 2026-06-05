@@ -311,6 +311,15 @@
       </div>
     </div>
   </div>
+  <!-- Workout Benchmark -->
+  <div id="bmksec" style="display:none;padding:0 14px 16px;">
+    <div class="sec-hd" style="padding:0 0 6px;">
+      <h2>Workout Benchmark</h2>
+      <span id="bmk-wktname" style="font-size:10px;color:var(--muted);margin-left:6px;font-family:monospace;"></span>
+      <button class="hbtn" id="bmk-drive-btn" style="margin-left:auto;font-size:10px;">Compare via Drive ▾</button>
+    </div>
+    <div id="bmk-body"></div>
+  </div>
 </div>
 
 <div id="tooltip"></div>
@@ -633,7 +642,10 @@ function sessionToAnalyserFmt(s) {
   const laps = (s.laps||[]).map(l=>({ lap:l.n, distance_m:l.dist, time_s:l.time, pace_s_per_500m:l.pace, stroke_rate_spm:l.rate }));
   const glaps = (s.garminLaps||[]).map(l=>({ lap:l.n, distance_m:l.dist, time_s:l.time, pace_s_per_500m:l.pace, avg_hr_bpm:l.avgHr, max_hr_bpm:l.maxHr, calories:l.cal, strokes:l.garminStrokes, avg_spm:l.garminAvgSpm, avg_stroke_dist_m:l.avgStrokeDist }));
   const gpsTrace = (s.gpsTrace||[]).filter(p=>p.lat!=null&&p.lon!=null).map(p=>({ lat:p.lat, lon:p.lon, t:p.t, dist:p.dist }));
-  return { sum, strokes, hr, laps, glaps, gpsTrace };
+  return { sum, strokes, hr, laps, glaps, gpsTrace,
+    workoutLapMetrics: s.workoutLapMetrics || null,
+    workoutId: s.workoutId || null,
+    workoutName: s.workoutName || null };
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1901,6 +1913,7 @@ function mountData(d,label){
   buildMap();
   buildStrokeTable();
   document.getElementById('hrsec').style.display=HR.length>10?'block':'none';
+  buildBenchmark(d);
   schedRender();
 }
 
@@ -1916,6 +1929,8 @@ function resetApp(){
   document.getElementById('dz').style.display='flex';
   document.getElementById('fin').value='';
   document.getElementById('hrsec').style.display='none';
+  document.getElementById('bmksec').style.display='none';
+  _bmkSessions=[];
   document.getElementById('lapsec').style.display='none';
   document.getElementById('mapsec').style.display='none';
   document.getElementById('map-stroke-row').classList.remove('on');
@@ -1924,6 +1939,194 @@ function resetApp(){
   document.getElementById('selbar').classList.remove('on');
   document.getElementById('tblwrap').style.display='block';
   ['mainC','ovC','hrC'].forEach(id=>{const c=document.getElementById(id);if(c)c.getContext('2d').clearRect(0,0,c.width,c.height);});
+}
+
+// ── Benchmark comparison ────────────────────────────────────────────────────
+const BMK_COLORS=['#0077cc','#e07b00','#27ae60','#9b59b6','#e74c3c','#1abc9c','#f39c12','#2980b9','#d35400','#16a085'];
+const BMK_CP=80; // must match Metrics CURVE_POINTS
+let _bmkSessions=[];
+
+function buildBenchmark(d){
+  const sec=document.getElementById('bmksec');
+  const lm=d.workoutLapMetrics;
+  if(!lm||!lm.length){sec.style.display='none';return;}
+  if(!lm.some(s=>s.type==='work')){sec.style.display='none';return;}
+  _bmkSessions=[{date:d.sum?.start_time,lm,isCurrent:true}];
+  sec.style.display='block';
+  document.getElementById('bmk-wktname').textContent=d.workoutName||d.workoutId||'';
+  _renderBmk(_bmkSessions);
+  document.getElementById('bmk-drive-btn').onclick=()=>loadBenchmarkCompare(d.workoutId,d.workoutName);
+}
+
+async function loadBenchmarkCompare(workoutId,workoutName){
+  if(!AnalyserDrive.isSignedIn()){toast('Redirecting to Google sign-in…');setTimeout(()=>AnalyserDrive.signIn(),400);return;}
+  const btn=document.getElementById('bmk-drive-btn');
+  btn.textContent='Loading…';btn.disabled=true;
+  try{
+    toast('Fetching Drive sessions…');
+    const files=await AnalyserDrive.list();
+    const matching=[_bmkSessions[0]];
+    let n=0;
+    for(const f of files){
+      try{
+        const s=await AnalyserDrive.fetchSession(f.id);
+        n++;btn.textContent=`Checked ${n}/${files.length}…`;
+        const match=workoutId?(s.workoutId===workoutId):(workoutName&&s.workoutName===workoutName);
+        if(match&&s.workoutLapMetrics?.length){
+          if(!matching.some(m=>m.startTime&&m.startTime===s.startTime))
+            matching.push({date:new Date(s.startTime).toISOString(),lm:s.workoutLapMetrics,startTime:s.startTime,isCurrent:false});
+        }
+      }catch{}
+    }
+    matching.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    _bmkSessions=matching;
+    _renderBmk(matching);
+    toast(`${matching.length} session${matching.length===1?'':'s'} matched`);
+  }catch(e){toast('Drive error: '+e.message);}
+  finally{btn.textContent='Compare via Drive ▾';btn.disabled=false;}
+}
+
+const BMK_METRICS=[
+  {k:'lapPace',       lbl:'Pace',        fmt:v=>fmtPace(v>0?v:NaN),          col:'#e74c3c'},
+  {k:'rate',          lbl:'Rate spm',    fmt:v=>v?Math.round(v)+' spm':EM,    col:'#27ae60'},
+  {k:'catchAvg',      lbl:'Catch',       fmt:v=>v?Math.round(v):EM,           col:'#3498db'},
+  {k:'impulse',       lbl:'Impulse',     fmt:v=>v?v.toFixed(2):EM,            col:'#3498db'},
+  {k:'avgChar',       lbl:'Char %',      fmt:v=>v?Math.round(v)+'%':EM,       col:'#27ae60'},
+  {k:'avgRatio',      lbl:'Ratio',       fmt:v=>v?v.toFixed(2):EM,            col:'#27ae60'},
+  {k:'runLoss',       lbl:'Run loss m',  fmt:v=>v?v.toFixed(2):EM,            col:'#e74c3c'},
+  {k:'avgOarAngle',   lbl:'Oar °',       fmt:v=>v?Math.round(v)+'°':EM,       col:'#27ae60'},
+  {k:'dps',           lbl:'DPS m',       fmt:v=>v?v.toFixed(1):EM,            col:'#e74c3c'},
+  {k:'avgConsistency',lbl:'Consist.',    fmt:v=>v?v.toFixed(1):EM,            col:'#3498db'},
+  {k:'avgCheckDelta', lbl:'Check Δ',     fmt:v=>v?v.toFixed(2):EM,            col:'#3498db'},
+  {k:'dist',          lbl:'Dist m',      fmt:v=>v?Math.round(v)+'m':EM,       col:'var(--muted)'},
+  {k:'time',          lbl:'Time',        fmt:v=>v?fmtTime(v):EM,              col:'var(--muted)'},
+];
+
+function _renderBmk(sessions){
+  const maxWork=Math.max(...sessions.map(s=>s.lm.filter(x=>x.type==='work').length));
+  if(!maxWork){document.getElementById('bmk-body').innerHTML='<p style="font-size:11px;color:var(--muted);">No work intervals found.</p>';return;}
+
+  // Session colour legend
+  let html='<div style="display:flex;flex-wrap:wrap;gap:5px 14px;margin-bottom:12px;">';
+  sessions.forEach((sess,i)=>{
+    const dt=sess.date?new Date(sess.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'2-digit'}):'--';
+    const col=BMK_COLORS[i%BMK_COLORS.length];
+    html+=`<div style="display:flex;align-items:center;gap:5px;font-size:10px;${sess.isCurrent?'font-weight:700;':''}">`
+         +`<div style="width:22px;height:3px;background:${col};border-radius:2px;flex-shrink:0;"></div>`
+         +`${dt}${sess.isCurrent?' ●':''}</div>`;
+  });
+  html+='</div>';
+
+  for(let r=0;r<maxWork;r++){
+    const repSteps=sessions.map(s=>s.lm.filter(x=>x.type==='work')[r]||null);
+    const gl=repSteps.find(s=>s?.groupLabel)?.groupLabel||null;
+    html+=`<div style="margin-bottom:20px;">`
+         +`<div style="font-size:11px;font-weight:700;letter-spacing:.06em;padding-bottom:4px;margin-bottom:6px;border-bottom:1px solid var(--border);">`
+         +`REP ${r+1}${gl?' · '+gl:''}</div>`;
+
+    // Metrics table: rows=metrics, cols=sessions
+    html+='<div style="overflow-x:auto;margin-bottom:8px;"><table style="border-collapse:collapse;font-size:10px;white-space:nowrap;">';
+    html+='<thead><tr><th style="text-align:left;padding:3px 12px 3px 0;font-size:9px;color:var(--muted);min-width:72px;border-bottom:1px solid var(--border);"></th>';
+    sessions.forEach((sess,i)=>{
+      const col=BMK_COLORS[i%BMK_COLORS.length];
+      const dt=sess.date?new Date(sess.date).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}):'--';
+      html+=`<th style="padding:3px 8px;text-align:right;border-bottom:2px solid ${col};min-width:54px;font-size:9px;${sess.isCurrent?'font-weight:700;':''}">${dt}</th>`;
+    });
+    html+='</tr></thead><tbody>';
+    for(const m of BMK_METRICS){
+      const hasAny=repSteps.some(s=>s&&s[m.k]!=null&&s[m.k]!==0&&!isNaN(s[m.k]));
+      if(!hasAny)continue;
+      html+=`<tr><td style="padding:3px 12px 3px 0;color:${m.col};font-size:9px;letter-spacing:.03em;">${m.lbl}</td>`;
+      sessions.forEach((sess,i)=>{
+        const step=repSteps[i];
+        const val=step?m.fmt(step[m.k]):EM;
+        const bg=sess.isCurrent?'background:rgba(39,174,96,.07);':'';
+        html+=`<td style="padding:3px 8px;text-align:right;border-bottom:1px solid var(--border);${bg}">${val}</td>`;
+      });
+      html+='</tr>';
+    }
+    html+='</tbody></table></div>';
+
+    // Curve canvas — one per rep, all sessions overlaid
+    if(repSteps.some(s=>s&&Array.isArray(s.curve)&&s.curve.length===BMK_CP)){
+      html+=`<canvas id="bmkc-${r}" height="80" style="width:100%;display:block;border-radius:4px;background:var(--s2);margin-top:4px;"></canvas>`;
+    }
+    html+='</div>';
+  }
+  html+='<p style="font-size:9px;color:var(--muted);margin-top:2px;">Red = condition-dependent &nbsp;·&nbsp; Blue = boat-dependent &nbsp;·&nbsp; Green = condition-independent</p>';
+
+  document.getElementById('bmk-body').innerHTML=html;
+  requestAnimationFrame(()=>_drawBmkCurves(sessions,maxWork));
+}
+
+function _drawBmkCurves(sessions,maxWork){
+  for(let r=0;r<maxWork;r++){
+    const canvas=document.getElementById(`bmkc-${r}`);
+    if(!canvas)continue;
+    const repSteps=sessions.map(s=>s.lm.filter(x=>x.type==='work')[r]||null);
+    if(!repSteps.some(s=>s&&Array.isArray(s.curve)&&s.curve.length===BMK_CP))continue;
+
+    const dpr=window.devicePixelRatio||1;
+    const W=canvas.offsetWidth||320,H=80;
+    canvas.width=W*dpr;canvas.height=H*dpr;
+    const ctx=canvas.getContext('2d');
+    ctx.scale(dpr,dpr);
+
+    // y range across all curves for this rep
+    let yMin=Infinity,yMax=-Infinity;
+    for(const step of repSteps){
+      if(!step||!step.curve)continue;
+      for(const v of step.curve){if(v<yMin)yMin=v;if(v>yMax)yMax=v;}
+    }
+    if(!isFinite(yMin))continue;
+    const yPad=(yMax-yMin)*0.15||1;
+    yMin-=yPad;yMax+=yPad;
+    const ph=8,pv=6;
+    const sx=i=>ph+(i/(BMK_CP-1))*(W-2*ph);
+    const sy=v=>H-pv-((v-yMin)/(yMax-yMin))*(H-2*pv);
+    const y0=sy(0);
+
+    // Zero line
+    ctx.save();
+    ctx.strokeStyle='rgba(128,128,128,.25)';ctx.lineWidth=1;ctx.setLineDash([3,5]);
+    ctx.beginPath();ctx.moveTo(ph,y0);ctx.lineTo(W-ph,y0);ctx.stroke();
+    ctx.setLineDash([]);ctx.restore();
+
+    // Drive/recovery divider — averaged driveFrac across sessions that have it
+    const dfs=repSteps.filter(s=>s&&s.curveDriveFrac!=null).map(s=>s.curveDriveFrac);
+    if(dfs.length){
+      const adf=dfs.reduce((a,b)=>a+b,0)/dfs.length;
+      const xd=sx(Math.round(adf*(BMK_CP-1)));
+      ctx.save();
+      ctx.strokeStyle='rgba(128,128,128,.4)';ctx.lineWidth=1;ctx.setLineDash([3,4]);
+      ctx.beginPath();ctx.moveTo(xd,pv);ctx.lineTo(xd,H-pv);ctx.stroke();
+      ctx.setLineDash([]);ctx.restore();
+      ctx.fillStyle='rgba(0,100,180,.5)';ctx.font='7px Roboto,sans-serif';
+      ctx.textAlign='left';ctx.fillText('DRIVE',ph+2,H-2);
+      ctx.fillStyle='rgba(180,100,0,.5)';
+      ctx.textAlign='right';ctx.fillText('RECOVERY',W-ph-2,H-2);
+    }
+
+    // Y-axis range labels
+    ctx.fillStyle='rgba(128,128,128,.6)';ctx.font='7px Roboto,sans-serif';ctx.textAlign='left';
+    ctx.fillText((yMax-yPad).toFixed(0),ph,pv+7);
+    ctx.fillText((yMin+yPad).toFixed(0),ph,H-pv-2);
+
+    // Each session's curve, current session on top (drawn last)
+    const order=[...repSteps.map((_,i)=>i)].sort((a,b)=>(sessions[a].isCurrent?1:-1)-(sessions[b].isCurrent?1:-1));
+    for(const si of order){
+      const step=repSteps[si];
+      if(!step||!Array.isArray(step.curve)||step.curve.length!==BMK_CP)continue;
+      ctx.beginPath();
+      step.curve.forEach((v,i)=>{const x=sx(i),y=sy(v);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});
+      ctx.strokeStyle=BMK_COLORS[si%BMK_COLORS.length];
+      ctx.lineWidth=sessions[si].isCurrent?2.5:1.5;
+      ctx.lineJoin='round';
+      ctx.globalAlpha=sessions[si].isCurrent?1:0.7;
+      ctx.stroke();
+      ctx.globalAlpha=1;
+    }
+  }
 }
 
 // ── Wiring ──────────────────────────────────────────────────────────────────

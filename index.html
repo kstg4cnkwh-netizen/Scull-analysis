@@ -175,6 +175,22 @@
     .map-col, .stroke-col { flex: none; width: 100%; }
     .curve-layout { flex-direction: column; }
   }
+#startup{min-height:calc(100vh - 52px);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:28px 16px 40px;box-sizing:border-box;}
+#startup.over{background:var(--s2);}
+.sz-prompt{display:flex;flex-direction:column;align-items:center;gap:12px;text-align:center;padding:40px 20px;}
+.sz-prompt .ico{font-size:2.4rem;}
+.sz-prompt h2{font-size:1.1rem;font-weight:700;margin:0;}
+.sz-prompt p{font-size:.85rem;color:var(--muted);margin:0;}
+.sz-list{width:100%;max-width:480px;}
+.sz-lhd{font-size:.75rem;font-weight:700;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+.sz-signout{font-size:.75rem;color:var(--g);cursor:pointer;font-weight:400;text-transform:none;letter-spacing:0;}
+.sz-signout:hover{text-decoration:underline;}
+.sz-file-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.sz-file-btn{flex:1;text-align:left;padding:8px 12px;background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:IBM Plex Mono,monospace;font-size:.85rem;cursor:pointer;line-height:1.5;}
+.sz-file-btn:hover{border-color:var(--g);}
+.sz-del{padding:9px 10px;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:6px;color:#e74c3c;cursor:pointer;font-size:.85rem;flex-shrink:0;}
+.sz-loading{color:var(--muted);font-size:.85rem;padding:20px 0;text-align:center;}
+.sz-drop-hint{font-size:.75rem;color:var(--faint);margin-top:20px;text-align:center;}
 </style>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -189,14 +205,7 @@
   <button class="hbtn" id="hdrThemeBtn">Dark Mode</button>
 </div>
 
-<div id="dz">
-  <div class="ico">🚣</div>
-  <h2>Drop Scull Metrics export</h2>
-  <p>CSV export · JSON session file · Heart rate · Laps<br>Nothing leaves your device</p>
-  <button class="dzbtn dzbtn-pri" id="browsebtn">Browse file</button>
-  <button class="dzbtn dzbtn-sec" id="drivebtn">☁ Load from Drive</button>
-  <p style="margin-top:4px;font-size:10px;color:var(--faint)">CSV from Scull Metrics · or JSON from Drive sync</p>
-</div>
+<div id="startup"></div>
 <input type="file" id="fin" accept=".csv,.txt,.json" style="display:none">
 
 <div id="app">
@@ -382,12 +391,7 @@ const AnalyserDrive = {
   },
   _check() { if (!this._token) throw new Error('Not signed in to Drive'); },
   _expire() { this._token = null; sessionStorage.removeItem('_ad_token'); this._updateBtn(); },
-  _updateBtn() {
-    const btn = document.getElementById('drivebtn');
-    if (!btn) return;
-    if (this._token) { btn.textContent = '☁ Drive (linked)'; btn.classList.add('linked'); }
-    else { btn.textContent = '☁ Load from Drive'; btn.classList.remove('linked'); }
-  },
+  _updateBtn() {},
 };
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -1899,7 +1903,7 @@ function mountData(d,label){
   curveGroups=[];
   if(!ST.length&&LAPS.length){toast('No stroke data — showing laps only',4000);}
   else if(!ST.length){toast('No stroke data found in this file',4000);return;}
-  document.getElementById('dz').style.display='none';
+  document.getElementById('startup').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('unitsbar').style.display='flex';
   document.getElementById('curvesec').style.display='none';
@@ -1926,8 +1930,8 @@ function resetApp(){
   if(leafletMap){leafletMap.remove();leafletMap=null;}
   document.getElementById('app').style.display='none';
   document.getElementById('unitsbar').style.display='none';
-  document.getElementById('dz').style.display='flex';
   document.getElementById('fin').value='';
+  showStartup();
   document.getElementById('hrsec').style.display='none';
   document.getElementById('bmksec').style.display='none';
   _bmkSessions=[];
@@ -2129,11 +2133,71 @@ function _drawBmkCurves(sessions,maxWork){
   }
 }
 
+// ── Startup screen ──────────────────────────────────────────────────────────
+async function showStartup(){
+  const el=document.getElementById('startup');
+  el.style.display='flex';
+  el.innerHTML='';
+
+  if(!AnalyserDrive.isSignedIn()){
+    el.innerHTML=`<div class="sz-prompt">
+      <div class="ico">🚣</div>
+      <h2>Scull Analyser</h2>
+      <p>Connect Google Drive to access your sessions</p>
+      <button class="dzbtn dzbtn-pri" id="sz-signin">☁ Sign in to Google</button>
+      <p class="sz-drop-hint">or drop a session file here</p>
+    </div>`;
+    document.getElementById('sz-signin').onclick=()=>AnalyserDrive.signIn();
+    return;
+  }
+
+  el.innerHTML=`<div class="sz-list">
+    <div class="sz-lhd">Sessions<span class="sz-signout" id="sz-signout">Sign out</span></div>
+    <div id="sz-files" class="sz-loading">Loading…</div>
+    <div class="sz-drop-hint">or drop a session file here</div>
+  </div>`;
+  document.getElementById('sz-signout').onclick=()=>{AnalyserDrive.signOut();showStartup();};
+
+  try{
+    const files=await AnalyserDrive.list();
+    const container=document.getElementById('sz-files');
+    if(!container)return;
+    if(!files.length){container.innerHTML='<div class="sz-loading">No sessions on Drive</div>';return;}
+    let fileList=[...files];
+    function parseStats(name){const m=name.match(/_(\d+)m_(\d+)s\.json$/);return m?{dist:parseInt(m[1]),dur:parseInt(m[2])}:null;}
+    function renderList(){
+      container.innerHTML='';
+      fileList.forEach(f=>{
+        const label=f.name.replace('RowSess_','').replace('.json','').replace('_',' ');
+        const row=document.createElement('div');row.className='sz-file-row';
+        const btn=document.createElement('button');btn.className='sz-file-btn';
+        const stats=parseStats(f.name);
+        btn.innerHTML=`<div>${label}</div><div style="font-size:.72rem;color:var(--muted);margin-top:1px;">${stats?(stats.dist/1000).toFixed(2)+'km · '+fmtTime(stats.dur):new Date(f.createdTime).toLocaleDateString()}</div>`;
+        btn.onclick=async()=>{
+          btn.disabled=true;btn.style.opacity='.5';
+          try{const session=await AnalyserDrive.fetchSession(f.id);applySessionUnits(session);mountData(sessionToAnalyserFmt(session),label);}
+          catch(err){toast('Load failed: '+err.message);btn.disabled=false;btn.style.opacity='';}
+        };
+        const del=document.createElement('button');del.className='sz-del';del.textContent='🗑';del.title='Delete from Drive';
+        del.onclick=async()=>{
+          if(!confirm('Delete "'+label+'" from Drive?'))return;
+          del.textContent='…';del.disabled=true;
+          try{await AnalyserDrive.deleteFile(f.id);fileList=fileList.filter(x=>x.id!==f.id);renderList();}
+          catch(e){toast('Delete failed: '+e.message);del.textContent='🗑';del.disabled=false;}
+        };
+        row.appendChild(btn);row.appendChild(del);
+        container.appendChild(row);
+      });
+    }
+    renderList();
+  }catch(err){
+    const c=document.getElementById('sz-files');
+    if(c)c.innerHTML=`<div class="sz-loading" style="color:#e74c3c;">${err.message}</div>`;
+  }
+}
+
 // ── Wiring ──────────────────────────────────────────────────────────────────
 document.getElementById('resetbtn').onclick=resetApp;
-document.getElementById('browsebtn').onclick=e=>{e.stopPropagation();document.getElementById('fin').click();};
-document.getElementById('drivebtn').onclick=e=>{e.stopPropagation();loadFromDrive();};
-document.getElementById('dz').onclick=()=>document.getElementById('fin').click();
 document.getElementById('fin').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);};
 document.getElementById('xmode').onchange=schedRender;
 document.getElementById('emaMode').onchange=schedRender;
@@ -2141,10 +2205,10 @@ document.getElementById('selclear').onclick=()=>{selS=-1;selE=-1;ovAbsSelS=-1;ov
 document.getElementById('addcurvebtn').onclick=pinSelection;
 document.getElementById('clearcurvebtn').onclick=clearAllCurves;
 
-const dz=document.getElementById('dz');
-dz.addEventListener('dragover',e=>{e.preventDefault();dz.classList.add('over');});
-dz.addEventListener('dragleave',()=>dz.classList.remove('over'));
-dz.addEventListener('drop',e=>{e.preventDefault();dz.classList.remove('over');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+const su=document.getElementById('startup');
+su.addEventListener('dragover',e=>{e.preventDefault();su.classList.add('over');});
+su.addEventListener('dragleave',()=>su.classList.remove('over'));
+su.addEventListener('drop',e=>{e.preventDefault();su.classList.remove('over');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
 
 window.addEventListener('resize',()=>{if(ST.length)schedRender();});
 
@@ -2158,6 +2222,7 @@ function toast(msg,ms=2500){
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 AnalyserDrive.init();
+showStartup();
 </script>
 </body>
 </html>

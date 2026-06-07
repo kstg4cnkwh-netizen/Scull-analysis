@@ -357,7 +357,21 @@ const AnalyserDrive = {
       }
     } else {
       const saved = sessionStorage.getItem('_ad_token');
-      if (saved) this._token = saved;
+      if (saved) { this._token = saved; }
+      else {
+        // Cross-tab token passed from Metrics via localStorage
+        const xferTok = localStorage.getItem('scull_xfer_token');
+        if (xferTok) {
+          try {
+            localStorage.removeItem('scull_xfer_token');
+            const parsed = JSON.parse(xferTok);
+            if (parsed.t && Date.now() < parsed.e) {
+              this._token = parsed.t;
+              sessionStorage.setItem('_ad_token', parsed.t);
+            }
+          } catch {}
+        }
+      }
     }
     this._updateBtn();
   },
@@ -2205,84 +2219,59 @@ function exportTCX() {
   const pad2=n=>String(n).padStart(2,'0');
   const pad3=n=>String(n).padStart(3,'0');
   const isoMs=ms=>{const d=new Date(ms);return d.getUTCFullYear()+'-'+pad2(d.getUTCMonth()+1)+'-'+pad2(d.getUTCDate())+'T'+pad2(d.getUTCHours())+':'+pad2(d.getUTCMinutes())+':'+pad2(d.getUTCSeconds())+'.'+pad3(d.getUTCMilliseconds())+'Z';};
-
-  // Build HR lookup: for a given ms timestamp, find nearest HR sample
-  function nearestHR(ms) {
-    if (!HR.length) return null;
-    let best=null, bestDiff=Infinity;
-    for (const h of HR) {
-      const t=new Date(h.ts).getTime();
-      const diff=Math.abs(t-ms);
-      if (diff<bestDiff) { bestDiff=diff; best=h.bpm; }
-      if (diff>bestDiff) break; // HR array is time-ordered, can exit early once getting worse
-    }
-    return bestDiff<30000 ? best : null; // ignore if >30s away
-  }
-
-  const startMs = _lastSum ? new Date(_lastSum.start_time).getTime() : (ST[0]?.ms||Date.now());
-  const actId = isoMs(startMs);
-
-  let trackpoints = '';
-
-  if (GPSTRACE.length) {
-    // GPS-based trackpoints: one per GPS point, interpolate cadence from nearest stroke
-    for (const gp of GPSTRACE) {
-      const gpMs = gp.t;
-      // Find nearest stroke by timestamp
-      let nearStroke = null, nearDiff = Infinity;
-      for (const st of ST) {
-        const diff = Math.abs(st.ms - gpMs);
-        if (diff < nearDiff) { nearDiff=diff; nearStroke=st; }
-      }
-      const spm = nearStroke ? Math.round(nearStroke.rate||0) : null;
-      const hr = nearestHR(gpMs);
-      const distM = gp.dist != null ? gp.dist.toFixed(1) : null;
-      trackpoints += `        <Trackpoint>
+  function nearestHR(ms){if(!HR.length)return null;let best=null,bestDiff=Infinity;for(const h of HR){const t=new Date(h.ts).getTime(),diff=Math.abs(t-ms);if(diff<bestDiff){bestDiff=diff;best=h.bpm;}if(diff>bestDiff)break;}return bestDiff<30000?best:null;}
+  const startMs=_lastSum?new Date(_lastSum.start_time).getTime():(ST[0]?.ms||Date.now());
+  let trackpoints='';
+  if(GPSTRACE.length){
+    for(const gp of GPSTRACE){
+      const gpMs=gp.t;
+      let nearStroke=null,nearDiff=Infinity;
+      for(const st of ST){const diff=Math.abs(st.ms-gpMs);if(diff<nearDiff){nearDiff=diff;nearStroke=st;}}
+      const spm=nearStroke?Math.round(nearStroke.rate||0):null;
+      const hr=nearestHR(gpMs);
+      const distM=gp.dist!=null?gp.dist.toFixed(1):null;
+      trackpoints+=`        <Trackpoint>
           <Time>${isoMs(gpMs)}</Time>
           <Position><LatitudeDegrees>${gp.lat.toFixed(7)}</LatitudeDegrees><LongitudeDegrees>${gp.lon.toFixed(7)}</LongitudeDegrees></Position>
-          ${distM != null ? '<DistanceMeters>'+distM+'</DistanceMeters>' : ''}
-          ${spm != null ? '<Cadence>'+spm+'</Cadence>' : ''}
-          ${hr != null ? '<HeartRateBpm><Value>'+hr+'</Value></HeartRateBpm>' : ''}
+          ${distM!=null?'<DistanceMeters>'+distM+'</DistanceMeters>':''}
+          ${spm!=null?'<Cadence>'+spm+'</Cadence>':''}
+          ${hr!=null?'<HeartRateBpm><Value>'+hr+'</Value></HeartRateBpm>':''}
         </Trackpoint>
 `;
     }
-  } else {
-    // No GPS: stroke-based trackpoints using elapsed time from startMs
-    for (const st of ST) {
-      const tpMs = st.ms || (startMs + (st.elapsed||0)*1000);
-      const hr = nearestHR(tpMs);
-      const spm = Math.round(st.rate||0);
-      const distM = st.dist != null ? st.dist.toFixed(1) : null;
-      trackpoints += `        <Trackpoint>
+  }else{
+    for(const st of ST){
+      const tpMs=st.ms||(startMs+(st.elapsed||0)*1000);
+      const hr=nearestHR(tpMs);
+      const spm=Math.round(st.rate||0);
+      const distM=st.dist!=null?st.dist.toFixed(1):null;
+      trackpoints+=`        <Trackpoint>
           <Time>${isoMs(tpMs)}</Time>
-          ${distM != null ? '<DistanceMeters>'+distM+'</DistanceMeters>' : ''}
-          ${spm ? '<Cadence>'+spm+'</Cadence>' : ''}
-          ${hr != null ? '<HeartRateBpm><Value>'+hr+'</Value></HeartRateBpm>' : ''}
+          ${distM!=null?'<DistanceMeters>'+distM+'</DistanceMeters>':''}
+          ${spm?'<Cadence>'+spm+'</Cadence>':''}
+          ${hr!=null?'<HeartRateBpm><Value>'+hr+'</Value></HeartRateBpm>':''}
         </Trackpoint>
 `;
     }
   }
-
-  const totalDist = _lastSum ? (+_lastSum.distance_m||0).toFixed(1) : '0';
-  const totalTime = _lastSum ? (+_lastSum.duration_s||0).toFixed(1) : '0';
-  const maxSPM = ST.length ? Math.max(...ST.map(s=>s.rate||0)).toFixed(0) : '0';
-  const avgHR = HR.length ? Math.round(HR.filter(h=>h.bpm>40&&h.bpm<220).reduce((a,h)=>a+h.bpm,0)/HR.filter(h=>h.bpm>40&&h.bpm<220).length||0) : null;
-  const maxHR = HR.length ? Math.max(...HR.filter(h=>h.bpm>40&&h.bpm<220).map(h=>h.bpm)) : null;
-
-  const tcx = `<?xml version="1.0" encoding="UTF-8"?>
-<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd">
+  const totalDist=_lastSum?(+_lastSum.distance_m||0).toFixed(1):'0';
+  const totalTime=_lastSum?(+_lastSum.duration_s||0).toFixed(1):'0';
+  const maxSPM=ST.length?Math.max(...ST.map(s=>s.rate||0)).toFixed(0):'0';
+  const hrValid=HR.filter(h=>h.bpm>40&&h.bpm<220);
+  const avgHR=hrValid.length?Math.round(hrValid.reduce((a,h)=>a+h.bpm,0)/hrValid.length):null;
+  const maxHR=hrValid.length?Math.max(...hrValid.map(h=>h.bpm)):null;
+  const tcx=`<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd">
   <Activities>
     <Activity Sport="Other">
-      <Id>${actId}</Id>
-      <Lap StartTime="${actId}">
+      <Id>${isoMs(startMs)}</Id>
+      <Lap StartTime="${isoMs(startMs)}">
         <TotalTimeSeconds>${totalTime}</TotalTimeSeconds>
         <DistanceMeters>${totalDist}</DistanceMeters>
         <MaximumSpeed>0</MaximumSpeed>
         <Calories>0</Calories>
-        ${avgHR != null ? '<AverageHeartRateBpm><Value>'+avgHR+'</Value></AverageHeartRateBpm>' : ''}
-        ${maxHR != null ? '<MaximumHeartRateBpm><Value>'+maxHR+'</Value></MaximumHeartRateBpm>' : ''}
+        ${avgHR!=null?'<AverageHeartRateBpm><Value>'+avgHR+'</Value></AverageHeartRateBpm>':''}
+        ${maxHR!=null?'<MaximumHeartRateBpm><Value>'+maxHR+'</Value></MaximumHeartRateBpm>':''}
         <Intensity>Active</Intensity>
         <Cadence>${maxSPM}</Cadence>
         <TriggerMethod>Manual</TriggerMethod>
@@ -2292,16 +2281,12 @@ ${trackpoints}        </Track>
     </Activity>
   </Activities>
 </TrainingCenterDatabase>`;
-
-  const blob = new Blob([tcx], {type:'application/vnd.garmin.tcx+xml'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  const d = new Date(startMs);
-  a.download = 'Scull_'+d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes())+'.tcx';
-  a.click();
-  URL.revokeObjectURL(url);
-  toast('TCX exported');
+  const blob=new Blob([tcx],{type:'application/vnd.garmin.tcx+xml'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;
+  const d=new Date(startMs);
+  a.download='Scull_'+d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes())+'.tcx';
+  a.click();URL.revokeObjectURL(url);toast('TCX exported');
 }
 
 // ── Wiring ──────────────────────────────────────────────────────────────────

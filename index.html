@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Scull Analyser</title>
+<title>BoatRun Analyser</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@500;600;700&display=swap');
 
@@ -198,7 +198,7 @@
 <body class="light">
 
 <div id="hdr">
-  <h1>⊳ Scull</h1>
+  <h1>⊳ BoatRun</h1>
   <div class="meta" id="hdrmeta"></div>
   <div class="sp"></div>
   <button class="hbtn" id="tcxbtn" style="display:none;">⬇ Export TCX</button>
@@ -2159,7 +2159,7 @@ async function showStartup(){
   if(!AnalyserDrive.isSignedIn()){
     el.innerHTML=`<div class="sz-prompt">
       <div class="ico">🚣</div>
-      <h2>Scull Analyser</h2>
+      <h2>BoatRun Analyser</h2>
       <p>Connect Google Drive to access your sessions</p>
       <button class="dzbtn dzbtn-pri" id="sz-signin">☁ Sign in to Google</button>
       <p class="sz-drop-hint">or drop a session file here</p>
@@ -2285,7 +2285,7 @@ ${trackpoints}        </Track>
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;
   const d=new Date(startMs);
-  a.download='Scull_'+d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes())+'.tcx';
+  a.download='BoatRun_'+d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes())+'.tcx';
   a.click();URL.revokeObjectURL(url);toast('TCX exported');
 }
 

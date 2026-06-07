@@ -201,6 +201,7 @@
   <h1>⊳ Scull</h1>
   <div class="meta" id="hdrmeta"></div>
   <div class="sp"></div>
+  <button class="hbtn" id="tcxbtn" style="display:none;">⬇ Export TCX</button>
   <button class="hbtn" id="resetbtn">↩ New file</button>
   <button class="hbtn" id="hdrThemeBtn">Dark Mode</button>
 </div>
@@ -1905,6 +1906,7 @@ function mountData(d,label){
   else if(!ST.length){toast('No stroke data found in this file',4000);return;}
   document.getElementById('startup').style.display='none';
   document.getElementById('app').style.display='block';
+  document.getElementById('tcxbtn').style.display='';
   document.getElementById('unitsbar').style.display='flex';
   document.getElementById('curvesec').style.display='none';
   document.getElementById('tblwrap').style.display='block';
@@ -1930,6 +1932,7 @@ function resetApp(){
   if(leafletMap){leafletMap.remove();leafletMap=null;}
   document.getElementById('app').style.display='none';
   document.getElementById('unitsbar').style.display='none';
+  document.getElementById('tcxbtn').style.display='none';
   document.getElementById('fin').value='';
   showStartup();
   document.getElementById('hrsec').style.display='none';
@@ -2196,8 +2199,114 @@ async function showStartup(){
   }
 }
 
+// ── TCX Export ───────────────────────────────────────────────────────────────
+function exportTCX() {
+  if (!ST.length) { toast('No session loaded'); return; }
+  const pad2=n=>String(n).padStart(2,'0');
+  const pad3=n=>String(n).padStart(3,'0');
+  const isoMs=ms=>{const d=new Date(ms);return d.getUTCFullYear()+'-'+pad2(d.getUTCMonth()+1)+'-'+pad2(d.getUTCDate())+'T'+pad2(d.getUTCHours())+':'+pad2(d.getUTCMinutes())+':'+pad2(d.getUTCSeconds())+'.'+pad3(d.getUTCMilliseconds())+'Z';};
+
+  // Build HR lookup: for a given ms timestamp, find nearest HR sample
+  function nearestHR(ms) {
+    if (!HR.length) return null;
+    let best=null, bestDiff=Infinity;
+    for (const h of HR) {
+      const t=new Date(h.ts).getTime();
+      const diff=Math.abs(t-ms);
+      if (diff<bestDiff) { bestDiff=diff; best=h.bpm; }
+      if (diff>bestDiff) break; // HR array is time-ordered, can exit early once getting worse
+    }
+    return bestDiff<30000 ? best : null; // ignore if >30s away
+  }
+
+  const startMs = _lastSum ? new Date(_lastSum.start_time).getTime() : (ST[0]?.ms||Date.now());
+  const actId = isoMs(startMs);
+
+  let trackpoints = '';
+
+  if (GPSTRACE.length) {
+    // GPS-based trackpoints: one per GPS point, interpolate cadence from nearest stroke
+    for (const gp of GPSTRACE) {
+      const gpMs = gp.t;
+      // Find nearest stroke by timestamp
+      let nearStroke = null, nearDiff = Infinity;
+      for (const st of ST) {
+        const diff = Math.abs(st.ms - gpMs);
+        if (diff < nearDiff) { nearDiff=diff; nearStroke=st; }
+      }
+      const spm = nearStroke ? Math.round(nearStroke.rate||0) : null;
+      const hr = nearestHR(gpMs);
+      const distM = gp.dist != null ? gp.dist.toFixed(1) : null;
+      trackpoints += `        <Trackpoint>
+          <Time>${isoMs(gpMs)}</Time>
+          <Position><LatitudeDegrees>${gp.lat.toFixed(7)}</LatitudeDegrees><LongitudeDegrees>${gp.lon.toFixed(7)}</LongitudeDegrees></Position>
+          ${distM != null ? '<DistanceMeters>'+distM+'</DistanceMeters>' : ''}
+          ${spm != null ? '<Cadence>'+spm+'</Cadence>' : ''}
+          ${hr != null ? '<HeartRateBpm><Value>'+hr+'</Value></HeartRateBpm>' : ''}
+        </Trackpoint>
+`;
+    }
+  } else {
+    // No GPS: stroke-based trackpoints using elapsed time from startMs
+    for (const st of ST) {
+      const tpMs = st.ms || (startMs + (st.elapsed||0)*1000);
+      const hr = nearestHR(tpMs);
+      const spm = Math.round(st.rate||0);
+      const distM = st.dist != null ? st.dist.toFixed(1) : null;
+      trackpoints += `        <Trackpoint>
+          <Time>${isoMs(tpMs)}</Time>
+          ${distM != null ? '<DistanceMeters>'+distM+'</DistanceMeters>' : ''}
+          ${spm ? '<Cadence>'+spm+'</Cadence>' : ''}
+          ${hr != null ? '<HeartRateBpm><Value>'+hr+'</Value></HeartRateBpm>' : ''}
+        </Trackpoint>
+`;
+    }
+  }
+
+  const totalDist = _lastSum ? (+_lastSum.distance_m||0).toFixed(1) : '0';
+  const totalTime = _lastSum ? (+_lastSum.duration_s||0).toFixed(1) : '0';
+  const maxSPM = ST.length ? Math.max(...ST.map(s=>s.rate||0)).toFixed(0) : '0';
+  const avgHR = HR.length ? Math.round(HR.filter(h=>h.bpm>40&&h.bpm<220).reduce((a,h)=>a+h.bpm,0)/HR.filter(h=>h.bpm>40&&h.bpm<220).length||0) : null;
+  const maxHR = HR.length ? Math.max(...HR.filter(h=>h.bpm>40&&h.bpm<220).map(h=>h.bpm)) : null;
+
+  const tcx = `<?xml version="1.0" encoding="UTF-8"?>
+<TrainingCenterDatabase xmlns="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2 http://www.garmin.com/xmlschemas/TrainingCenterDatabasev2.xsd">
+  <Activities>
+    <Activity Sport="Other">
+      <Id>${actId}</Id>
+      <Lap StartTime="${actId}">
+        <TotalTimeSeconds>${totalTime}</TotalTimeSeconds>
+        <DistanceMeters>${totalDist}</DistanceMeters>
+        <MaximumSpeed>0</MaximumSpeed>
+        <Calories>0</Calories>
+        ${avgHR != null ? '<AverageHeartRateBpm><Value>'+avgHR+'</Value></AverageHeartRateBpm>' : ''}
+        ${maxHR != null ? '<MaximumHeartRateBpm><Value>'+maxHR+'</Value></MaximumHeartRateBpm>' : ''}
+        <Intensity>Active</Intensity>
+        <Cadence>${maxSPM}</Cadence>
+        <TriggerMethod>Manual</TriggerMethod>
+        <Track>
+${trackpoints}        </Track>
+      </Lap>
+    </Activity>
+  </Activities>
+</TrainingCenterDatabase>`;
+
+  const blob = new Blob([tcx], {type:'application/vnd.garmin.tcx+xml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const d = new Date(startMs);
+  a.download = 'Scull_'+d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes())+'.tcx';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('TCX exported');
+}
+
 // ── Wiring ──────────────────────────────────────────────────────────────────
 document.getElementById('resetbtn').onclick=resetApp;
+document.getElementById('tcxbtn').onclick=exportTCX;
 document.getElementById('fin').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);};
 document.getElementById('xmode').onchange=schedRender;
 document.getElementById('emaMode').onchange=schedRender;
@@ -2222,7 +2331,21 @@ function toast(msg,ms=2500){
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 AnalyserDrive.init();
-showStartup();
+(function(){
+  const xfer=localStorage.getItem('scull_xfer_session');
+  if(xfer){
+    try{
+      localStorage.removeItem('scull_xfer_session');
+      const session=JSON.parse(xfer);
+      applySessionUnits(session);
+      const d=sessionToAnalyserFmt(session);
+      const label=session.startTime?new Date(session.startTime).toLocaleDateString()+' (from Metrics)':'Transferred session';
+      mountData(d,label);
+      return;
+    }catch(e){console.error('xfer load failed',e);}
+  }
+  showStartup();
+})();
 </script>
 </body>
 </html>

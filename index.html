@@ -506,13 +506,9 @@ function fmtDistU(m) {
   return (+m / 1000).toFixed(2);
 }
 function distULabelU() { return unitSettings.distUnit === 'mi' ? 'mi' : 'km'; }
-function fmtRunLossU(m) {
-  if (isNaN(m) || m == null) return EM;
-  switch (unitSettings.dpsUnit) {
-    case 'in': return (m * 39.3701).toFixed(0) + 'in';
-    case 'ft': return (m * 3.28084).toFixed(1) + 'ft';
-    default:   return m.toFixed(2) + 'm';
-  }
+function fmtRunLossU(pct) {
+  if (isNaN(pct) || pct == null) return EM;
+  return pct.toFixed(1) + '%';
 }
 function setUnitsAndRebuild(key, val) {
   unitSettings[key] = val;
@@ -595,7 +591,7 @@ function parseCSV(text) {
           slope:parseFloat(row.catch_ms3), schar:parseFloat(row.char),
           consistency:parseFloat(row.consistency), rate:parseFloat(row.rate_spm),
           pace:parseFloat(row.pace_s500), dist:parseFloat(row.dist_m),
-          dps:parseFloat(row.dps_m), rloss:parseFloat(row.run_loss_m),
+          dps:parseFloat(row.dps_m), rloss:(parseFloat(row.run_loss_m)>0&&parseFloat(row.dps_m)>0?parseFloat(row.run_loss_m)/parseFloat(row.dps_m)*100:NaN),
           ratio:parseFloat(row.ratio), impulse:parseFloat(row.impulse) });
         break;
       }
@@ -655,7 +651,7 @@ function sessionToAnalyserFmt(s) {
     n:i+1, ms:r.t, elapsed:(r.t-t0)/1000,
     slope:num(r.catchPeak), schar:num(r.char), consistency:num(r.catchConsistency),
     rate:num(r.rate), pace:num(r.pace), dist:num(r.dist), dps:num(r.dps),
-    rloss:num(r.runLossM), runeff:num(r.runEfficiency), impulse:num(r.driveImpulse),
+    rloss:!isNaN(num(r.runLossPct))?num(r.runLossPct):(num(r.runLossM)>0&&num(r.dps)>0?num(r.runLossM)/num(r.dps)*100:NaN), runeff:num(r.runEfficiency), impulse:num(r.driveImpulse),
     ratio:num(r.strokeRatio), oarAngle:num(r.oarAngle), checkDelta:num(r.checkDelta),
     curve: r.curve||null, curveDriveFrac: r.curveDriveFrac||null,
   }));
@@ -1833,7 +1829,7 @@ function buildLaps(){
 // STROKE TABLE
 // ══════════════════════════════════════════════════════════════════════════
 function buildStrokeTable(){
-  document.getElementById('sth').innerHTML=`<tr><th>#</th><th>Dist m</th><th>Time</th><th>Pace ${paceULabel()}</th><th>Rate</th><th>DPS ${dpsULabelU()}</th><th>Chk Δ m/s</th><th>Run Loss m</th><th>Oar Arc°</th><th>Impulse</th><th>Catch slope</th><th>Consist σ</th><th>Ratio</th><th>Stroke Char%</th></tr>`;
+  document.getElementById('sth').innerHTML=`<tr><th>#</th><th>Dist m</th><th>Time</th><th>Pace ${paceULabel()}</th><th>Rate</th><th>DPS ${dpsULabelU()}</th><th>Chk Δ m/s</th><th>Run Loss %</th><th>Oar Arc°</th><th>Impulse</th><th>Catch slope</th><th>Consist σ</th><th>Ratio</th><th>Stroke Char%</th></tr>`;
   document.getElementById('stb').innerHTML=ST.slice(0,1000).map(s=>`<tr data-i="${s.n-1}">
     <td>${s.n}</td>
     <td>${isNaN(s.dist)?EM:s.dist.toFixed(0)}</td>
@@ -2014,7 +2010,7 @@ const BMK_METRICS=[
   {k:'impulse',       lbl:'Impulse',     fmt:v=>v?v.toFixed(2):EM,            col:'#3498db'},
   {k:'avgChar',       lbl:'Char %',      fmt:v=>v?Math.round(v)+'%':EM,       col:'#27ae60'},
   {k:'avgRatio',      lbl:'Ratio',       fmt:v=>v?v.toFixed(2):EM,            col:'#27ae60'},
-  {k:'runLoss',       lbl:'Run loss m',  fmt:v=>v?v.toFixed(2):EM,            col:'#e74c3c'},
+  {k:'runLossPct',    lbl:'Run loss %',  fmt:v=>v?v.toFixed(1)+'%':EM,        col:'#e74c3c'},
   {k:'avgOarAngle',   lbl:'Oar °',       fmt:v=>v?Math.round(v)+'°':EM,       col:'#27ae60'},
   {k:'dps',           lbl:'DPS m',       fmt:v=>v?v.toFixed(1):EM,            col:'#e74c3c'},
   {k:'avgConsistency',lbl:'Consist.',    fmt:v=>v?v.toFixed(1):EM,            col:'#3498db'},

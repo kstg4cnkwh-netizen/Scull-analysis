@@ -1487,8 +1487,6 @@ function drawCurvePanel(){
     ctx.fillText('No curve data available',W/2,H/2);return;
   }
 
-  function argmin(a){let j=0;for(let i=1;i<a.length;i++)if(a[i]<a[j])j=i;return j;}
-  function rotateCurve(data,off){const n=data.length,out=new Array(n);for(let i=0;i<n;i++)out[i]=data[(i+off)%n];return out;}
   function integrateSpeed(accel,rate,dps){
     if(!rate)return null;
     const T=60/rate,dt=T/(CURVE_POINTS-1);
@@ -1499,13 +1497,10 @@ function drawCurvePanel(){
     return{v:v.map(x=>x+off),T};
   }
 
+  // x=0 is blade entry (catch) — no rotation needed, curve is already catch-to-catch
   const enriched=curves.map(c=>{
-    const minIdx=argmin(c.data);
-    const accelRot=rotateCurve(c.data,minIdx);
-    const sp=integrateSpeed(accelRot,c.avgRate,c.avgDPS);
-    const catchIdx=(CURVE_POINTS-minIdx)%CURVE_POINTS;
-    const catchFrac=catchIdx/(CURVE_POINTS-1);
-    return{...c,accelRot,catchFrac,finishFrac:catchFrac+c.driveFrac,speed:sp?sp.v:null,T:sp?sp.T:null};
+    const sp=integrateSpeed(c.data,c.avgRate,c.avgDPS);
+    return{...c,accelRot:c.data,catchFrac:0,finishFrac:c.driveFrac,speed:sp?sp.v:null,T:sp?sp.T:null};
   });
 
   const maxT=Math.max(...enriched.map(c=>c.T||0));
@@ -1567,15 +1562,15 @@ function drawCurvePanel(){
   enriched.forEach(c=>{
     if(!c.T)return;
     const step=c.T/(CURVE_POINTS-1);
-    const catchX=toPx(c.catchFrac*c.T);
+    // catch is at x=0 (left border) — only draw finish dashed line
     const finishX=c.finishFrac<=1?toPx(c.finishFrac*c.T):-1;
 
-    // Catch / finish dashed lines on both panels
     [[accelTop,ph1],[speedTop,ph2]].forEach(([top,ph])=>{
-      ctx.setLineDash([3,4]);ctx.strokeStyle=c.color;ctx.lineWidth=1;ctx.globalAlpha=0.45;
-      ctx.beginPath();ctx.moveTo(catchX,top);ctx.lineTo(catchX,top+ph);ctx.stroke();
-      if(finishX>0){ctx.beginPath();ctx.moveTo(finishX,top);ctx.lineTo(finishX,top+ph);ctx.stroke();}
-      ctx.setLineDash([]);ctx.globalAlpha=1;
+      if(finishX>0){
+        ctx.setLineDash([3,4]);ctx.strokeStyle=c.color;ctx.lineWidth=1;ctx.globalAlpha=0.45;
+        ctx.beginPath();ctx.moveTo(finishX,top);ctx.lineTo(finishX,top+ph);ctx.stroke();
+        ctx.setLineDash([]);ctx.globalAlpha=1;
+      }
     });
 
     // Accel fill
@@ -1608,7 +1603,7 @@ function drawCurvePanel(){
     ctx.fillText(t.toFixed(1)+'s',x,speedTop+ph2+13);
   }
   ctx.fillStyle=C.muted;ctx.font='7px IBM Plex Mono,monospace';ctx.textAlign='left';
-  ctx.fillText('x=0: max decel  \u2502  dashed: catch / finish',PL,speedTop+ph2+26);
+  ctx.fillText('x=0: blade entry  \u2502  dashed: finish',PL,speedTop+ph2+26);
 
   // Legend in gap between panels
   let lx=PL;

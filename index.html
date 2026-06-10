@@ -67,9 +67,9 @@
   .ci{border-top:2px solid var(--i)}.ci .val{color:var(--i)}
   .cd{border-top:2px solid var(--d)}.cd .val{color:var(--d)}
   .cw .val{color:var(--text)}
-  .card[onclick]{cursor:pointer;transition:opacity .15s;}
+  .card.clickable{cursor:pointer;transition:opacity .15s;}
   .card.dim{opacity:.28;}
-  .card[onclick]:hover{opacity:1!important;}
+  .card.clickable:hover{opacity:1!important;}
 
   /* ── Sections ── */
   .sec { padding: 0 14px 10px; }
@@ -868,7 +868,7 @@ function buildCards(sum) {
   const vals={};
   for(const m of METRIC_DEFS){const arr=ST.filter(m.filter).map(m.val);vals[m.k]=arr.length?{mean:arrMean(arr),min:arrMin(arr),max:arrMax(arr),n:arr.length}:null;}
   const hv=HR.filter(h=>h.bpm>40&&h.bpm<220).map(h=>h.bpm);
-  const card=(cls,lbl,val,sub,k)=>`<div class="card ${cls}${k&&!vis[k]?' dim':''}"${k?` id="card-${k}" onclick="toggleVis('${k}')"`:''}>` +
+  const card=(cls,lbl,val,sub,k)=>`<div class="card ${cls}${k?' clickable':''}${k&&!vis[k]?' dim':''}"${k?` id="card-${k}" data-vis="${k}"`:''}>` +
     `<div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;
   let html=
     card('cw','Distance',distDisp,distLbl)+
@@ -876,9 +876,9 @@ function buildCards(sum) {
     (vals.pace?card('cg','Pace',fmtPaceU(vals.pace.mean),movPace>0?'mov '+fmtPaceU(movPace):paceULabel(),'pace'):'')  +
     (vals.rate?card('cy','Rate',f1(vals.rate.mean),'spm · max '+f0(vals.rate.max),'rate'):'')  +
     (vals.dps?card('cp','DPS',fmtDPSU(vals.dps.mean),dpsULabelU()+'/stroke','dps'):'')  +
-    (vals.cdelta?`<div class="card${!vis.cdelta?' dim':''}" id="card-cdelta" onclick="toggleVis('cdelta')" style="border-top:2px solid #2980b9"><div class="lbl">Check Delta</div><div class="val" style="color:#2980b9">${f2(vals.cdelta.mean)} m/s</div><div class="sub">speed range</div></div>`:'')  +
+    (vals.cdelta?`<div class="card clickable${!vis.cdelta?' dim':''}" id="card-cdelta" data-vis="cdelta" style="border-top:2px solid #2980b9"><div class="lbl">Check Delta</div><div class="val" style="color:#2980b9">${f2(vals.cdelta.mean)} m/s</div><div class="sub">speed range</div></div>`:'')  +
     (vals.rloss?card('cb','Run Loss',fmtRunLossU(vals.rloss.mean),'avg/stroke','rloss'):'')  +
-    (vals.angle?`<div class="card${!vis.angle?' dim':''}" id="card-angle" onclick="toggleVis('angle')" style="border-top:2px solid #2de0d4"><div class="lbl">Oar Arc</div><div class="val" style="color:#2de0d4">${f1(vals.angle.mean)}°</div><div class="sub">${unitSettings.boatClass==='sweep'?'sweep':'scull'}</div></div>`:'')  +
+    (vals.angle?`<div class="card clickable${!vis.angle?' dim':''}" id="card-angle" data-vis="angle" style="border-top:2px solid #2de0d4"><div class="lbl">Oar Arc</div><div class="val" style="color:#2de0d4">${f1(vals.angle.mean)}°</div><div class="sub">${unitSettings.boatClass==='sweep'?'sweep':'scull'}</div></div>`:'')  +
     (vals.impulse?card('ci','Impulse',f2(vals.impulse.mean),'peak '+f2(vals.impulse.max),'impulse'):'')  +
     (vals.slope?card('cr','Catch Slope',f0(vals.slope.mean),'peak '+f1(vals.slope.max),'slope'):'')  +
     (vals.ratio?card('cd','Ratio',f2(vals.ratio.mean),'rec÷drive','ratio'):'')  +
@@ -2298,6 +2298,7 @@ document.getElementById('emaMode').onchange=schedRender;
 document.getElementById('selclear').onclick=()=>{selS=-1;selE=-1;ovAbsSelS=-1;ovAbsSelE=-1;document.getElementById('selbar').classList.remove('on');hlRows([]);schedRender();};
 document.getElementById('addcurvebtn').onclick=pinSelection;
 document.getElementById('clearcurvebtn').onclick=clearAllCurves;
+document.getElementById('cards').addEventListener('click',e=>{const c=e.target.closest('[data-vis]');if(c)window.toggleVis(c.dataset.vis);});
 
 const su=document.getElementById('startup');
 su.addEventListener('dragover',e=>{e.preventDefault();su.classList.add('over');});

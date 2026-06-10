@@ -1481,10 +1481,21 @@ function drawCurvePanel(){
     ctx.fillText('No curve data available',W/2,H/2);return;
   }
 
-  const PL=10,PR=10,PT=14,PB=28;
+  // Integrate accel curve → relative speed (mean-centred)
+  function integrateSpeed(data){
+    const v=new Array(CURVE_POINTS);
+    v[0]=0;
+    const dt=1/(CURVE_POINTS-1);
+    for(let i=1;i<CURVE_POINTS;i++) v[i]=v[i-1]+data[i]*dt;
+    const mean=v.reduce((a,b)=>a+b,0)/CURVE_POINTS;
+    return v.map(x=>x-mean);
+  }
+  const speedCurves=curves.map(c=>({sdata:integrateSpeed(c.data),color:c.color}));
+
+  const PL=10,PR=44,PT=14,PB=28;
   const pw=W-PL-PR,ph=H-PT-PB;
 
-  // Y range: find global min/max across all curves
+  // Accel Y range (left axis)
   let yMin=Infinity,yMax=-Infinity;
   curves.forEach(c=>{for(let i=0;i<CURVE_POINTS;i++){if(c.data[i]<yMin)yMin=c.data[i];if(c.data[i]>yMax)yMax=c.data[i];}});
   const yPad=(yMax-yMin)*0.12;
@@ -1493,7 +1504,15 @@ function drawCurvePanel(){
   const toX=t=>PL+t*pw;
   const toY=v=>PT+ph-(v-yMin)/yRng*ph;
 
-  // Grid
+  // Speed Y range (right axis)
+  let sMin=Infinity,sMax=-Infinity;
+  speedCurves.forEach(c=>{c.sdata.forEach(v=>{if(v<sMin)sMin=v;if(v>sMax)sMax=v;});});
+  const sPad=(sMax-sMin)*0.12;
+  sMin-=sPad;sMax+=sPad;
+  const sRng=sMax-sMin||1;
+  const toSY=v=>PT+ph-(v-sMin)/sRng*ph;
+
+  // Grid lines (accel axis)
   ctx.strokeStyle=C.gridLn;ctx.lineWidth=1;
   niceSteps(yMin,yMax,4).forEach(g=>{
     const y=toY(g);
@@ -1502,29 +1521,48 @@ function drawCurvePanel(){
     ctx.fillText(g.toFixed(1),PL+2,y-2);
   });
 
-  // Zero line
+  // Right axis tick labels (speed)
+  ctx.fillStyle=C.gridLb;ctx.font='8px IBM Plex Mono,monospace';ctx.textAlign='left';
+  niceSteps(sMin,sMax,4).forEach(g=>{
+    const y=toSY(g);if(y<PT-4||y>PT+ph+4)return;
+    ctx.fillText(g.toFixed(2),PL+pw+5,y+3);
+  });
+
+  // Right axis label rotated
+  ctx.save();ctx.translate(W-5,PT+ph/2);ctx.rotate(-Math.PI/2);
+  ctx.fillStyle=C.muted;ctx.font='7px IBM Plex Mono,monospace';ctx.textAlign='center';
+  ctx.fillText('spd (rel)',0,0);ctx.restore();
+
+  // Zero line (accel)
   if(yMin<0&&yMax>0){
     const y0=toY(0);
     ctx.strokeStyle=C.frameLn;ctx.lineWidth=1.5;
     ctx.beginPath();ctx.moveTo(PL,y0);ctx.lineTo(PL+pw,y0);ctx.stroke();
   }
 
-  // Each group curve
-  curves.forEach(c=>{
+  // Each group: fill + accel line + speed overlay + drive boundary
+  curves.forEach((c,ci)=>{
     const step=1/(CURVE_POINTS-1);
+    const sc=speedCurves[ci];
 
-    // Fill between curve and zero
+    // Accel fill
     const y0=clamp(toY(0),PT,PT+ph);
-    ctx.beginPath();
-    ctx.moveTo(toX(0),y0);
+    ctx.beginPath();ctx.moveTo(toX(0),y0);
     for(let i=0;i<CURVE_POINTS;i++) ctx.lineTo(toX(i*step),toY(c.data[i]));
     ctx.lineTo(toX(1),y0);ctx.closePath();
     ctx.fillStyle=c.color+'28';ctx.fill();
 
-    // Curve line
+    // Accel line
     ctx.beginPath();
     for(let i=0;i<CURVE_POINTS;i++){const x=toX(i*step),y=toY(c.data[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
-    ctx.strokeStyle=c.color;ctx.lineWidth=2.5;ctx.stroke();
+    ctx.strokeStyle=c.color;ctx.lineWidth=2.5;ctx.setLineDash([]);ctx.globalAlpha=1;ctx.stroke();
+
+    // Speed overlay — dashed, same colour, thinner
+    ctx.setLineDash([5,3]);ctx.lineWidth=1.5;ctx.strokeStyle=c.color;ctx.globalAlpha=0.75;
+    ctx.beginPath();
+    for(let i=0;i<CURVE_POINTS;i++){const x=toX(i*step),y=toSY(sc.sdata[i]);i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.stroke();
+    ctx.setLineDash([]);ctx.globalAlpha=1;
 
     // Drive/recovery boundary
     const dfX=toX(c.driveFrac);
@@ -1533,19 +1571,24 @@ function drawCurvePanel(){
     ctx.setLineDash([]);ctx.globalAlpha=1;
   });
 
-  // X axis labels: 0 = catch, 1 = catch
+  // X axis labels
   ctx.fillStyle=C.gridLb;ctx.font='8px IBM Plex Mono,monospace';ctx.textAlign='center';
   ctx.fillText('Catch',PL,PT+ph+12);ctx.fillText('Catch',PL+pw,PT+ph+12);
   ctx.fillText('←Drive→  ←Recovery→',PL+pw/2,PT+ph+22);
 
-  // Legend (bottom)
+  // Legend: group entries then speed key
   let lx=PL;
   curves.forEach(c=>{
-    ctx.fillStyle=c.color;ctx.fillRect(lx,PT+ph+12,10,3);
+    ctx.setLineDash([]);ctx.fillStyle=c.color;ctx.fillRect(lx,PT+ph+12,10,3);
     ctx.fillStyle=C.text;ctx.font='8px IBM Plex Mono,monospace';ctx.textAlign='left';
     ctx.fillText(`${c.label} (${c.n}/${c.total})`,lx+13,PT+ph+16);
     lx+=60;
   });
+  ctx.setLineDash([5,3]);ctx.strokeStyle=C.muted;ctx.lineWidth=1.5;ctx.globalAlpha=0.75;
+  ctx.beginPath();ctx.moveTo(lx,PT+ph+14);ctx.lineTo(lx+10,PT+ph+14);ctx.stroke();
+  ctx.setLineDash([]);ctx.globalAlpha=1;
+  ctx.fillStyle=C.muted;ctx.font='8px IBM Plex Mono,monospace';ctx.textAlign='left';
+  ctx.fillText('speed',lx+13,PT+ph+16);
 
   ctx.strokeStyle=C.frameLn;ctx.lineWidth=1;ctx.strokeRect(PL,PT,pw,ph);
 }

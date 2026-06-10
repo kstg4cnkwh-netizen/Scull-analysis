@@ -67,6 +67,9 @@
   .ci{border-top:2px solid var(--i)}.ci .val{color:var(--i)}
   .cd{border-top:2px solid var(--d)}.cd .val{color:var(--d)}
   .cw .val{color:var(--text)}
+  .card[onclick]{cursor:pointer;transition:opacity .15s;}
+  .card.dim{opacity:.28;}
+  .card[onclick]:hover{opacity:1!important;}
 
   /* ── Sections ── */
   .sec { padding: 0 14px 10px; }
@@ -219,7 +222,6 @@
   <div class="sec">
     <div class="sec-hd">
       <h2>Stroke Chart</h2>
-      <div class="legend" id="leg"></div>
       <div style="display:flex;align-items:center;gap:6px;margin-left:auto;flex-wrap:wrap;">
         <button class="zoom-btn" onclick="window.zoomChart(1)">＋</button>
         <input type="range" id="zoomSlider" min="0" max="100" value="100" style="width:70px;cursor:pointer;accent-color:var(--g);" oninput="window.zoomSlide(this.value)">
@@ -550,7 +552,7 @@ let curveGroups = []; // [{color,bg,strokes,absS,absE,label}]
 let currentView=[];
 let viewS=0,viewE=0;
 let selS=-1,selE=-1;
-let vis={pace:true,rate:true,slope:false,dps:true,impulse:false,rloss:false,schar:false,ratio:true,angle:false,cdelta:false};
+let vis={pace:true,rate:true,slope:false,dps:false,impulse:false,rloss:false,schar:false,ratio:false,angle:false,cdelta:false};
 let rafId=null;
 let isDragMain=false,isDragOv=false;
 let ovAbsSelS=-1,ovAbsSelE=-1;
@@ -866,34 +868,32 @@ function buildCards(sum) {
   const vals={};
   for(const m of METRIC_DEFS){const arr=ST.filter(m.filter).map(m.val);vals[m.k]=arr.length?{mean:arrMean(arr),min:arrMin(arr),max:arrMax(arr),n:arr.length}:null;}
   const hv=HR.filter(h=>h.bpm>40&&h.bpm<220).map(h=>h.bpm);
-  const card=(cls,lbl,val,sub)=>`<div class="card ${cls}"><div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;
+  const card=(cls,lbl,val,sub,k)=>`<div class="card ${cls}${k&&!vis[k]?' dim':''}"${k?` id="card-${k}" onclick="toggleVis('${k}')"`:''}>` +
+    `<div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;
   let html=
     card('cw','Distance',distDisp,distLbl)+
     card('cw','Duration',dur,ST.length+' strokes')+
-    (vals.pace?card('cg','Avg Pace',fmtPaceU(vals.pace.mean),movPace>0?'mov '+fmtPaceU(movPace):paceULabel()):'')  +
-    (vals.rate?card('cy','Rate',f1(vals.rate.mean),'spm · max '+f0(vals.rate.max)):'')  +
-    (vals.dps?card('cp','DPS',fmtDPSU(vals.dps.mean),dpsULabelU()+'/stroke'):'')  +
-    (vals.cdelta?`<div class="card" style="border-top:2px solid #2980b9"><div class="lbl">Check Delta</div><div class="val" style="color:#2980b9">${f2(vals.cdelta.mean)} m/s</div><div class="sub">speed range</div></div>`:'')  +
-    (vals.rloss?card('cb','Run Loss',fmtRunLossU(vals.rloss.mean),'avg/stroke'):'')  +
-    (vals.angle?`<div class="card" style="border-top:2px solid #2de0d4"><div class="lbl">Oar Arc</div><div class="val" style="color:#2de0d4">${f1(vals.angle.mean)}°</div><div class="sub">${unitSettings.boatClass==='sweep'?'sweep':'scull'}</div></div>`:'')  +
-    (vals.impulse?card('ci','Impulse',f2(vals.impulse.mean),'peak '+f2(vals.impulse.max)):'')  +
-    (vals.slope?card('cr','Catch Slope',f0(vals.slope.mean),'peak '+f1(vals.slope.max)):'')  +
-    (vals.ratio?card('cd','Ratio',f2(vals.ratio.mean),'rec÷drive'):'')  +
-    (vals.schar?card('co','Stroke Char',f0(vals.schar.mean)+'%',''):'')  +
+    (vals.pace?card('cg','Pace',fmtPaceU(vals.pace.mean),movPace>0?'mov '+fmtPaceU(movPace):paceULabel(),'pace'):'')  +
+    (vals.rate?card('cy','Rate',f1(vals.rate.mean),'spm · max '+f0(vals.rate.max),'rate'):'')  +
+    (vals.dps?card('cp','DPS',fmtDPSU(vals.dps.mean),dpsULabelU()+'/stroke','dps'):'')  +
+    (vals.cdelta?`<div class="card${!vis.cdelta?' dim':''}" id="card-cdelta" onclick="toggleVis('cdelta')" style="border-top:2px solid #2980b9"><div class="lbl">Check Delta</div><div class="val" style="color:#2980b9">${f2(vals.cdelta.mean)} m/s</div><div class="sub">speed range</div></div>`:'')  +
+    (vals.rloss?card('cb','Run Loss',fmtRunLossU(vals.rloss.mean),'avg/stroke','rloss'):'')  +
+    (vals.angle?`<div class="card${!vis.angle?' dim':''}" id="card-angle" onclick="toggleVis('angle')" style="border-top:2px solid #2de0d4"><div class="lbl">Oar Arc</div><div class="val" style="color:#2de0d4">${f1(vals.angle.mean)}°</div><div class="sub">${unitSettings.boatClass==='sweep'?'sweep':'scull'}</div></div>`:'')  +
+    (vals.impulse?card('ci','Impulse',f2(vals.impulse.mean),'peak '+f2(vals.impulse.max),'impulse'):'')  +
+    (vals.slope?card('cr','Catch Slope',f0(vals.slope.mean),'peak '+f1(vals.slope.max),'slope'):'')  +
+    (vals.ratio?card('cd','Ratio',f2(vals.ratio.mean),'rec÷drive','ratio'):'')  +
+    (vals.schar?card('co','Stroke Char',f0(vals.schar.mean)+'%','','schar'):'')  +
     (hv.length?card('cb','Avg HR',f0(arrMean(hv)),'max '+f0(arrMax(hv))+' bpm'):'');
   document.getElementById('cards').innerHTML=html;
 }
 
 // ── Legend ──────────────────────────────────────────────────────────────────
-const SERIES=[
-  {k:'pace',l:'Pace',c:'var(--g)'},{k:'rate',l:'Rate',c:'var(--y)'},{k:'dps',l:'DPS',c:'var(--p)'},
-  {k:'cdelta',l:'Check Delta',c:'#2980b9'},{k:'rloss',l:'Run Loss',c:'var(--b)'},{k:'angle',l:'Oar Angle',c:'#2de0d4'},
-  {k:'impulse',l:'Impulse',c:'var(--i)'},{k:'slope',l:'Catch slope',c:'var(--r)'},{k:'ratio',l:'Stroke Ratio',c:'var(--d)'},{k:'schar',l:'Stroke Char',c:'var(--o)'},
-];
-function buildLegend() {
-  document.getElementById('leg').innerHTML=SERIES.map(s=>`<div class="leg${vis[s.k]?'':' off'}" onclick="toggleVis('${s.k}')"><div class="dot" style="background:${s.c}"></div>${s.l}</div>`).join('');
-}
-window.toggleVis=function(k){vis[k]=!vis[k];buildLegend();schedRender();};
+window.toggleVis=function(k){
+  vis[k]=!vis[k];
+  const card=document.getElementById('card-'+k);
+  if(card)card.classList.toggle('dim',!vis[k]);
+  schedRender();
+};
 
 // ── X helper ────────────────────────────────────────────────────────────────
 function getX(s){const m=document.getElementById('xmode').value;if(m==='dist')return s.dist||0;if(m==='time')return(s.elapsed||0)/60;return s.n;}
@@ -903,7 +903,7 @@ function schedRender() {
   if (rafId) cancelAnimationFrame(rafId);
   rafId=requestAnimationFrame(()=>{
     rafId=null;
-    buildLegend(); drawMain(); drawOv();
+    drawMain(); drawOv();
     if (HR.length>10) drawHR();
     updateStatsStrip();
     updateZoomSlider();

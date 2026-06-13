@@ -1010,18 +1010,39 @@ function emaSmooth(view,alpha){
 // ══════════════════════════════════════════════════════════════════════════
 function computeLapBoundaryXValues(){
   const useLaps=LAPS.filter(l=>'stroke_rate_spm' in l);
-  if(useLaps.length<2)return[];
+  if(useLaps.length<2||!ST.length)return[];
   const mode=document.getElementById('xmode').value;
   const result=[];
-  let cumDist=0,cumTime=0;
+  let cumDist=0;
   for(let li=0;li<useLaps.length-1;li++){
     cumDist+=+(useLaps[li].distance_m||0);
-    cumTime+=+(useLaps[li].time_s||0);
-    if(mode==='dist'){result.push(cumDist);}
-    else if(mode==='time'){result.push(cumTime/60);}
-    else{let idx=ST.findIndex(s=>(s.dist||0)>=cumDist);if(idx<0)idx=ST.length-1;result.push(idx>0?ST[idx].n-0.5:ST[idx].n);}
+    let best=0,bestDiff=Infinity;
+    for(let i=0;i<ST.length;i++){
+      const d=Math.abs((ST[i].dist||0)-cumDist);
+      if(d<bestDiff){bestDiff=d;best=i;}
+    }
+    const s=ST[best];
+    if(mode==='dist')result.push(s.dist||0);
+    else if(mode==='time')result.push((s.elapsed||0)/60);
+    else result.push(s.n>0?s.n-0.5:s.n);
   }
   return result;
+}
+function assignLapNumbers(){
+  const useLaps=LAPS.filter(l=>'stroke_rate_spm' in l);
+  if(useLaps.length<2){ST.forEach(s=>s.lapNum=null);return;}
+  const bounds=[];let cumDist=0;
+  for(let li=0;li<useLaps.length-1;li++){
+    cumDist+=+(useLaps[li].distance_m||0);
+    bounds.push(cumDist);
+  }
+  ST.forEach(s=>{
+    let lap=1;
+    for(let i=0;i<bounds.length;i++){
+      if((s.dist||0)>bounds[i])lap=i+2;else break;
+    }
+    s.lapNum=lap;
+  });
 }
 function drawLapLines(ctx,lapXVals,toX,xMin,xRng,PT,ph,showLabels){
   if(!lapXVals.length)return;
@@ -1913,9 +1934,10 @@ function buildLaps(){
 // STROKE TABLE
 // ══════════════════════════════════════════════════════════════════════════
 function buildStrokeTable(){
-  document.getElementById('sth').innerHTML=`<tr><th>#</th><th>Dist m</th><th>Time</th><th>Pace ${paceULabel()}</th><th>Rate</th><th>DPS ${dpsULabelU()}</th><th>Chk Δ m/s</th><th>Run Loss %</th><th>Oar Arc°</th><th>Impulse</th><th>Catch slope</th><th>Consist σ</th><th>Ratio</th><th>Stroke Char%</th><th>Catch Dur ms</th></tr>`;
+  document.getElementById('sth').innerHTML=`<tr><th>#</th><th>Lap</th><th>Dist m</th><th>Time</th><th>Pace ${paceULabel()}</th><th>Rate</th><th>DPS ${dpsULabelU()}</th><th>Chk Δ m/s</th><th>Run Loss %</th><th>Oar Arc°</th><th>Impulse</th><th>Catch slope</th><th>Consist σ</th><th>Ratio</th><th>Stroke Char%</th><th>Catch Dur ms</th></tr>`;
   document.getElementById('stb').innerHTML=ST.slice(0,1000).map(s=>`<tr data-i="${s.n-1}">
     <td>${s.n}</td>
+    <td style="color:rgba(160,180,255,0.7)">${s.lapNum!=null?s.lapNum:EM}</td>
     <td>${isNaN(s.dist)?EM:s.dist.toFixed(0)}</td>
     <td>${fmtTime(s.elapsed)}</td>
     <td style="color:var(--g)">${fmtPaceU(s.pace)}</td>
@@ -2011,6 +2033,7 @@ function mountData(d,label){
   buildMeta(label,d.sum);
   buildCards(d.sum);
   buildLaps();
+  assignLapNumbers();
   buildMap();
   buildStrokeTable();
   document.getElementById('hrsec').style.display=HR.length>10?'block':'none';

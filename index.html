@@ -1365,7 +1365,7 @@ function setupMainEvents(canvas){
   });
 
   // Touch: always drag-to-select (pan via scrollbar or horizontal wheel/trackpad)
-  canvas.addEventListener('mousedown',e=>{hideTooltip();isDragMain=true;selS=selE=getMainIdx(e.clientX-canvas.getBoundingClientRect().left);schedRender();});
+  canvas.addEventListener('touchstart',e=>{hideTooltip();isDragMain=true;selS=selE=getMainIdx(e.touches[0].clientX-canvas.getBoundingClientRect().left);schedRender();},{passive:true});
   canvas.addEventListener('touchmove',e=>{if(isDragMain){selE=getMainIdx(e.touches[0].clientX-canvas.getBoundingClientRect().left);schedRender();}},{passive:true});
   canvas.addEventListener('touchend',()=>{isDragMain=false;updateSel(false);});
   canvas.addEventListener('dblclick',()=>resetZoom());

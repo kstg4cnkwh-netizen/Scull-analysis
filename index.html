@@ -1365,10 +1365,9 @@ function setupMainEvents(canvas){
   });
 
   // Touch: always drag-to-select (pan via scrollbar or horizontal wheel/trackpad)
-  canvas.addEventListener('touchstart',e=>{isDragMain=true;selS=selE=getMainIdx(e.touches[0].clientX-canvas.getBoundingClientRect().left);schedRender();},{passive:true});
+  canvas.addEventListener('mousedown',e=>{hideTooltip();isDragMain=true;selS=selE=getMainIdx(e.clientX-canvas.getBoundingClientRect().left);schedRender();});
   canvas.addEventListener('touchmove',e=>{if(isDragMain){selE=getMainIdx(e.touches[0].clientX-canvas.getBoundingClientRect().left);schedRender();}},{passive:true});
   canvas.addEventListener('touchend',()=>{isDragMain=false;updateSel(false);});
-
   canvas.addEventListener('dblclick',()=>resetZoom());
   canvas.addEventListener('mouseleave',hideTooltip);
   canvas.addEventListener('wheel',e=>{
@@ -1424,6 +1423,10 @@ function updateStatsStrip(){
 
   function sp(l,v,c){return`<div class="sp-stat"><div class="l">${l}</div><div class="v" style="color:${c||'var(--text)'}">${v}</div></div>`;}
   let html='';
+    if(strokes.length){
+    const dur=strokes[strokes.length-1].elapsed-strokes[0].elapsed;
+    html+=sp('Time',fmtTime(dur));
+  }
   for(const m of METRIC_DEFS){
     const arr=strokes.filter(m.filter).map(m.val);
     if(!arr.length)continue;

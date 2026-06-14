@@ -207,6 +207,7 @@
   <button class="hbtn" id="tcxbtn" style="display:none;">⬇ Export TCX</button>
   <button class="hbtn" id="resetbtn">↩ New file</button>
   <button class="hbtn" id="hdrThemeBtn">Dark Mode</button>
+  <button class="hbtn" id="infobtn" title="What the metrics mean">ⓘ Info</button>
 </div>
 
 <div id="startup"></div>
@@ -532,7 +533,7 @@ const GROUP_BG     = ['rgba(255,201,71,.14)','rgba(192,132,252,.14)','rgba(58,25
 // filter: returns valid values from a stroke array
 // fmt: formats a single averaged/min value
 const METRIC_DEFS = [
-  {k:'pace',   l:'Pace',        c:'var(--g)', filter:s=>s.pace>50&&s.pace<500,        val:s=>s.pace,        fmtAvg:v=>fmtPaceU(v),      fmtBest:v=>fmtPaceU(v), showBest:true,  bestIsMin:true, tip:'Average speed expressed as time per 500m. GPS-derived — only valid for comparing the same stretch, direction and tide.'},
+  {k:'pace',   l:'Pace',        c:'var(--g)', filter:s=>s.pace>50&&s.pace<500,        val:s=>s.pace,        fmtAvg:v=>fmtPaceU(v),      fmtBest:v=>fmtPaceU(v), showBest:true,  bestIsMin:true, tip:'Boat speed, shown in your selected unit (pace per 500m/1km/mile, or km/h/mph). GPS-derived — only valid for comparing the same stretch, direction and tide.'},
   {k:'rate',   l:'Rate',        c:'var(--y)', filter:s=>s.rate>5&&s.rate<50,          val:s=>s.rate,        fmtAvg:v=>f1(v)+' spm',     fmtBest:null, tip:'Average stroke rate, in strokes per minute (SPM).'},
   {k:'dps',    l:'DPS',         c:'var(--p)', filter:s=>s.dps>1&&s.dps<25,            val:s=>s.dps,         fmtAvg:v=>fmtDPSU(v)+dpsULabelU(), fmtBest:null, tip:'Distance per stroke — average boat travel per stroke cycle.'},
   {k:'cdelta', l:'Check Delta', c:'#2980b9',  filter:s=>!isNaN(s.checkDelta)&&s.checkDelta>0.05&&s.checkDelta<5, val:s=>s.checkDelta, fmtAvg:v=>f2(v)+' m/s', fmtBest:null, tip:'Boat speed swing within one stroke — max minus min speed, catch to catch. Lower means a smoother, more continuous run or lower speed.'},
@@ -2397,10 +2398,29 @@ ${trackpoints}        </Track>
   a.download='BoatRun_'+d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate())+'_'+pad2(d.getHours())+pad2(d.getMinutes())+'.tcx';
   a.click();URL.revokeObjectURL(url);toast('TCX exported');
 }
-
+function showInfoModal(){
+  const items=[
+    {l:'Distance', t:'Total distance travelled (GPS), in km or mi based on units setting.'},
+    {l:'Duration', t:'Total elapsed time of the session.'},
+    ...METRIC_DEFS.map(m=>({l:m.l,t:m.tip})),
+    {l:'Avg HR', t:'Average heart rate during the session, in beats per minute.'}
+  ];
+  const rows=items.map(it=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);"><div style="font-weight:600;font-size:11px;color:var(--text);margin-bottom:3px;">${it.l}</div><div style="font-size:11px;color:var(--muted);line-height:1.5;">${it.t}</div></div>`).join('');
+  const overlay=document.createElement('div');
+  overlay.id='_info_modal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;z-index:9999;padding:16px;';
+  const panel=document.createElement('div');
+  panel.style.cssText='background:var(--s1);border:1px solid var(--border);border-radius:10px;max-width:420px;width:100%;max-height:80vh;overflow-y:auto;padding:14px 16px;';
+  panel.innerHTML=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;"><div style="font-size:13px;font-weight:600;color:var(--text);">Metric Definitions</div><button id="_info_close" style="margin-left:auto;background:var(--s3);border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 10px;font-family:inherit;font-size:11px;cursor:pointer;">Close</button></div>${rows}`;
+  overlay.appendChild(panel);
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  document.body.appendChild(overlay);
+  document.getElementById('_info_close').onclick=()=>overlay.remove();
+}
 // ── Wiring ──────────────────────────────────────────────────────────────────
 document.getElementById('resetbtn').onclick=resetApp;
 document.getElementById('tcxbtn').onclick=exportTCX;
+document.getElementById('infobtn').onclick=showInfoModal;
 document.getElementById('fin').onchange=e=>{if(e.target.files[0])loadFile(e.target.files[0]);};
 document.getElementById('xmode').onchange=schedRender;
 document.getElementById('emaMode').onchange=schedRender;

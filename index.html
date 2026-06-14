@@ -1663,6 +1663,7 @@ function buildCurveStats(){
   const rows=[
     {l:'Strokes',fn:g=>String(g.strokes.length)},
     {l:'w/ curves',fn:g=>String(g.strokes.filter(s=>s.curve&&s.curve.length).length)},
+    {l:'Time',fn:g=>{const a=g.strokes;return a.length?fmtTime(a[a.length-1].elapsed-a[0].elapsed):EM;}},
   ];
   for(const m of METRIC_DEFS){
     rows.push({l:'Avg '+m.l, c:m.c, fn:g=>{

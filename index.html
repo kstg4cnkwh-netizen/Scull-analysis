@@ -532,17 +532,17 @@ const GROUP_BG     = ['rgba(255,201,71,.14)','rgba(192,132,252,.14)','rgba(58,25
 // filter: returns valid values from a stroke array
 // fmt: formats a single averaged/min value
 const METRIC_DEFS = [
-  {k:'pace',   l:'Pace',        c:'var(--g)', filter:s=>s.pace>50&&s.pace<500,        val:s=>s.pace,        fmtAvg:v=>fmtPaceU(v),      fmtBest:v=>fmtPaceU(v), showBest:true,  bestIsMin:true},
-  {k:'rate',   l:'Rate',        c:'var(--y)', filter:s=>s.rate>5&&s.rate<50,          val:s=>s.rate,        fmtAvg:v=>f1(v)+' spm',     fmtBest:null},
-  {k:'dps',    l:'DPS',         c:'var(--p)', filter:s=>s.dps>1&&s.dps<25,            val:s=>s.dps,         fmtAvg:v=>fmtDPSU(v)+dpsULabelU(), fmtBest:null},
-  {k:'cdelta', l:'Check Delta', c:'#2980b9',  filter:s=>!isNaN(s.checkDelta)&&s.checkDelta>0.05&&s.checkDelta<5, val:s=>s.checkDelta, fmtAvg:v=>f2(v)+' m/s', fmtBest:null},
-  {k:'rloss',  l:'Run Loss',    c:'var(--b)', filter:s=>!isNaN(s.rloss)&&s.rloss>0&&s.rloss<100, val:s=>s.rloss, fmtAvg:v=>fmtRunLossU(v), fmtBest:null},
-  {k:'angle',  l:'Oar Arc',     c:'#2de0d4',  filter:s=>!isNaN(s.strokeAngle)&&s.strokeAngle>20&&s.strokeAngle<180, val:s=>s.strokeAngle, fmtAvg:v=>f1(v)+'°', fmtBest:null},
-  {k:'impulse',l:'Impulse',     c:'var(--i)', filter:s=>s.impulse>0&&s.impulse<1000,  val:s=>s.impulse,     fmtAvg:v=>Math.round(v).toString(),fmtBest:null},
-  {k:'slope',  l:'Catch Slope', c:'var(--r)', filter:s=>s.slope>0&&s.slope<300,       val:s=>s.slope,       fmtAvg:v=>f0(v),            fmtBest:null},
-  {k:'ratio',  l:'Ratio',       c:'var(--d)', filter:s=>!isNaN(s.ratio)&&s.ratio>0.5&&s.ratio<5, val:s=>s.ratio, fmtAvg:v=>f2(v),       fmtBest:null},
-  {k:'schar',  l:'Stroke Char', c:'var(--o)', filter:s=>!isNaN(s.schar)&&s.schar>0&&s.schar<=100, val:s=>s.schar,       fmtAvg:v=>f0(v)+'%',        fmtBest:null},
-  {k:'cdur',   l:'Catch Dur',   c:'#a29bfe',  filter:s=>!isNaN(s.catchDuration)&&s.catchDuration>10&&s.catchDuration<500, val:s=>s.catchDuration, fmtAvg:v=>f0(v)+' ms', fmtBest:null},
+  {k:'pace',   l:'Pace',        c:'var(--g)', filter:s=>s.pace>50&&s.pace<500,        val:s=>s.pace,        fmtAvg:v=>fmtPaceU(v),      fmtBest:v=>fmtPaceU(v), showBest:true,  bestIsMin:true, tip:'Average speed expressed as time per 500m. GPS-derived — only valid for comparing the same stretch, direction and tide.'},
+  {k:'rate',   l:'Rate',        c:'var(--y)', filter:s=>s.rate>5&&s.rate<50,          val:s=>s.rate,        fmtAvg:v=>f1(v)+' spm',     fmtBest:null, tip:'Average stroke rate, in strokes per minute (SPM).'},
+  {k:'dps',    l:'DPS',         c:'var(--p)', filter:s=>s.dps>1&&s.dps<25,            val:s=>s.dps,         fmtAvg:v=>fmtDPSU(v)+dpsULabelU(), fmtBest:null, tip:'Distance per stroke — average boat travel per stroke cycle.'},
+  {k:'cdelta', l:'Check Delta', c:'#2980b9',  filter:s=>!isNaN(s.checkDelta)&&s.checkDelta>0.05&&s.checkDelta<5, val:s=>s.checkDelta, fmtAvg:v=>f2(v)+' m/s', fmtBest:null, tip:'Boat speed swing within one stroke — max minus min speed, catch to catch. Lower means a smoother, more continuous run or lower speed.'},
+  {k:'rloss',  l:'Run Loss',    c:'var(--b)', filter:s=>!isNaN(s.rloss)&&s.rloss>0&&s.rloss<100, val:s=>s.rloss, fmtAvg:v=>fmtRunLossU(v), fmtBest:null, tip:'Percentage of drive speed lost to deceleration during recovery. Accelerometer-derived, condition-independent. Lower is better.'},
+  {k:'angle',  l:'Oar Arc',     c:'#2de0d4',  filter:s=>!isNaN(s.strokeAngle)&&s.strokeAngle>20&&s.strokeAngle<180, val:s=>s.strokeAngle, fmtAvg:v=>f1(v)+'°', fmtBest:null, tip:'Effective oar angle — arc swept based on boat displacement during the drive, corrected for ~10% blade slip. Not the oar true mechanical sweep.'},
+  {k:'impulse',l:'Impulse',     c:'var(--i)', filter:s=>s.impulse>0&&s.impulse<1000,  val:s=>s.impulse,     fmtAvg:v=>Math.round(v).toString(),fmtBest:null, tip:'Total positive acceleration during the drive, integrated as a change in velocity (Δv). Higher means more drive power applied to the hull — not a peak value.'},
+  {k:'slope',  l:'Catch Slope', c:'var(--r)', filter:s=>s.slope>0&&s.slope<300,       val:s=>s.slope,       fmtAvg:v=>f0(v),            fmtBest:null, tip:'Rate of acceleration rise at the catch. Higher means a sharper, more aggressive catch.'},
+  {k:'ratio',  l:'Ratio',       c:'var(--d)', filter:s=>!isNaN(s.ratio)&&s.ratio>0.5&&s.ratio<5, val:s=>s.ratio, fmtAvg:v=>f2(v),       fmtBest:null, tip:'Recovery time ÷ drive time. Higher means a longer, more relaxed recovery relative to the drive.'},
+  {k:'schar',  l:'Stroke Char', c:'var(--o)', filter:s=>!isNaN(s.schar)&&s.schar>0&&s.schar<=100, val:s=>s.schar,       fmtAvg:v=>f0(v)+'%',        fmtBest:null, tip:'Where peak power (acceleration) occurs during the drive, as % of drive duration. ~30-45% = front-loaded catch (preferred), ~65%+ = back-loaded/late catch.'},
+  {k:'cdur',   l:'Catch Dur',   c:'#a29bfe',  filter:s=>!isNaN(s.catchDuration)&&s.catchDuration>10&&s.catchDuration<500, val:s=>s.catchDuration, fmtAvg:v=>f0(v)+' ms', fmtBest:null, tip:'Time spent in the catch — from the deceleration spike at body stop and blade entry until drive force builds and the boat accelerates again. Shorter usually means a quicker, more direct connection at the catch.'},
 ];
 
 let ST=[],HR=[],LAPS=[],GPSTRACE=[];
@@ -867,23 +867,24 @@ function buildCards(sum) {
   const vals={};
   for(const m of METRIC_DEFS){const arr=ST.filter(m.filter).map(m.val);vals[m.k]=arr.length?{mean:arrMean(arr),min:arrMin(arr),max:arrMax(arr),n:arr.length}:null;}
   const hv=HR.filter(h=>h.bpm>40&&h.bpm<220).map(h=>h.bpm);
-  const card=(cls,lbl,val,sub,k)=>`<div class="card ${cls}${k?' clickable':''}${k&&!vis[k]?' dim':''}"${k?` id="card-${k}" data-vis="${k}"`:''}>` +
+  const tipOf=k=>{const m=METRIC_DEFS.find(d=>d.k===k);return m?m.tip:'';};
+  const card=(cls,lbl,val,sub,k,tip)=>`<div class="card ${cls}${k?' clickable':''}${k&&!vis[k]?' dim':''}"${k?` id="card-${k}" data-vis="${k}"`:''}${tip?` title="${tip}"`:''}>` +
     `<div class="lbl">${lbl}</div><div class="val">${val}</div><div class="sub">${sub}</div></div>`;
   let html=
-    card('cw','Distance',distDisp,distLbl)+
-    card('cw','Duration',dur,ST.length+' strokes')+
-    (vals.pace?card('cg','Pace',fmtPaceU(vals.pace.mean),movPace>0?'mov '+fmtPaceU(movPace):paceULabel(),'pace'):'')  +
-    (vals.rate?card('cy','Rate',f1(vals.rate.mean),'spm · max '+f0(vals.rate.max),'rate'):'')  +
-    (vals.dps?card('cp','DPS',fmtDPSU(vals.dps.mean),dpsULabelU()+'/stroke','dps'):'')  +
-    (vals.cdelta?`<div class="card clickable${!vis.cdelta?' dim':''}" id="card-cdelta" data-vis="cdelta" style="border-top:2px solid #2980b9"><div class="lbl">Check Delta</div><div class="val" style="color:#2980b9">${f2(vals.cdelta.mean)} m/s</div><div class="sub">speed range</div></div>`:'')  +
-    (vals.rloss?card('cb','Run Loss',fmtRunLossU(vals.rloss.mean),'avg/stroke','rloss'):'')  +
-    (vals.angle?`<div class="card clickable${!vis.angle?' dim':''}" id="card-angle" data-vis="angle" style="border-top:2px solid #2de0d4"><div class="lbl">Oar Arc</div><div class="val" style="color:#2de0d4">${f1(vals.angle.mean)}°</div><div class="sub">${unitSettings.boatClass==='sweep'?'sweep':'scull'}</div></div>`:'')  +
-    (vals.impulse?card('ci','Impulse',Math.round(vals.impulse.mean),'peak '+Math.round(vals.impulse.max),'impulse'):'')  +
-    (vals.slope?card('cr','Catch Slope',f0(vals.slope.mean),'peak '+f1(vals.slope.max),'slope'):'')  +
-    (vals.ratio?card('cd','Ratio',f2(vals.ratio.mean),'rec÷drive','ratio'):'')  +
-    (vals.schar?card('co','Stroke Char',f0(vals.schar.mean)+'%','','schar'):'')  +
-    (vals.cdur?`<div class="card clickable${!vis.cdur?' dim':''}" id="card-cdur" data-vis="cdur" style="border-top:2px solid #a29bfe"><div class="lbl">Catch Dur</div><div class="val" style="color:#a29bfe">${f0(vals.cdur.mean)} ms</div><div class="sub">avg/stroke</div></div>`:'')  +
-    (hv.length?card('cb','Avg HR',f0(arrMean(hv)),'max '+f0(arrMax(hv))+' bpm'):'');
+    card('cw','Distance',distDisp,distLbl,null,'Total distance travelled (GPS), in km or mi based on units setting.')+
+    card('cw','Duration',dur,ST.length+' strokes',null,'Total elapsed time of the session.')+
+    (vals.pace?card('cg','Pace',fmtPaceU(vals.pace.mean),movPace>0?'mov '+fmtPaceU(movPace):paceULabel(),'pace',tipOf('pace')):'')  +
+    (vals.rate?card('cy','Rate',f1(vals.rate.mean),'spm · max '+f0(vals.rate.max),'rate',tipOf('rate')):'')  +
+    (vals.dps?card('cp','DPS',fmtDPSU(vals.dps.mean),dpsULabelU()+'/stroke','dps',tipOf('dps')):'')  +
+    (vals.cdelta?`<div class="card clickable${!vis.cdelta?' dim':''}" id="card-cdelta" data-vis="cdelta" style="border-top:2px solid #2980b9" title="${tipOf('cdelta')}"><div class="lbl">Check Delta</div><div class="val" style="color:#2980b9">${f2(vals.cdelta.mean)} m/s</div><div class="sub">speed range</div></div>`:'')  +
+    (vals.rloss?card('cb','Run Loss',fmtRunLossU(vals.rloss.mean),'avg/stroke','rloss',tipOf('rloss')):'')  +
+    (vals.angle?`<div class="card clickable${!vis.angle?' dim':''}" id="card-angle" data-vis="angle" style="border-top:2px solid #2de0d4" title="${tipOf('angle')}"><div class="lbl">Oar Arc</div><div class="val" style="color:#2de0d4">${f1(vals.angle.mean)}°</div><div class="sub">${unitSettings.boatClass==='sweep'?'sweep':'scull'}</div></div>`:'')  +
+    (vals.impulse?card('ci','Impulse',Math.round(vals.impulse.mean),'peak '+Math.round(vals.impulse.max),'impulse',tipOf('impulse')):'')  +
+    (vals.slope?card('cr','Catch Slope',f0(vals.slope.mean),'peak '+f1(vals.slope.max),'slope',tipOf('slope')):'')  +
+    (vals.ratio?card('cd','Ratio',f2(vals.ratio.mean),'rec÷drive','ratio',tipOf('ratio')):'')  +
+    (vals.schar?card('co','Stroke Char',f0(vals.schar.mean)+'%','','schar',tipOf('schar')):'')  +
+    (vals.cdur?`<div class="card clickable${!vis.cdur?' dim':''}" id="card-cdur" data-vis="cdur" style="border-top:2px solid #a29bfe" title="${tipOf('cdur')}"><div class="lbl">Catch Dur</div><div class="val" style="color:#a29bfe">${f0(vals.cdur.mean)} ms</div><div class="sub">avg/stroke</div></div>`:'')  +
+    (hv.length?card('cb','Avg HR',f0(arrMean(hv)),'max '+f0(arrMax(hv))+' bpm',null,'Average heart rate during the session, in beats per minute.'):'');
   document.getElementById('cards').innerHTML=html;
 }
 

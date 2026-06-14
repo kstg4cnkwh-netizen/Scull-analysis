@@ -85,7 +85,7 @@
   .zoom-btn { background: var(--s2); border: 1px solid var(--border); color: var(--muted); width: 22px; height: 22px; border-radius: 5px; font-size: 13px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
   .zoom-btn:hover { border-color: var(--g); color: var(--g); }
   .cbox { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 10px 10px 4px; position: relative; }
-  .cbox canvas { display: block; width: 100% !important; touch-action: none; cursor: crosshair; }
+  .cbox canvas { display: block; width: 100% !important; touch-action: none; cursor: crosshair; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
   .hint { text-align: center; font-size: 9px; color: var(--faint); margin-top: 3px; }
 
   /* ── Selection action bar ── */
@@ -99,7 +99,7 @@
 
   /* ── Overview ── */
   .ovbox { background: var(--s1); border: 1px solid var(--border); border-radius: 10px; padding: 5px 8px 2px; }
-  .ovbox canvas { display: block; width: 100% !important; touch-action: none; cursor: crosshair; }
+  .ovbox canvas { display: block; width: 100% !important; touch-action: none; cursor: crosshair; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
   .zlegend { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
   .zl { font-size: 9px; color: var(--muted); }
 
